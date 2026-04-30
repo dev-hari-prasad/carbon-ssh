@@ -1,6 +1,14 @@
 import { useSyncExternalStore } from "react";
-import type { Connection, LogEntry, Tab } from "./types";
-import { loadConnections, saveConnections, uid } from "./storage";
+import type { Bang, Connection, LogEntry, Tab, ThemeMode } from "./types";
+import {
+  loadBangs,
+  loadConnections,
+  loadTheme,
+  saveBangs,
+  saveConnections,
+  saveTheme,
+  uid,
+} from "./storage";
 
 interface State {
   connections: Connection[];
@@ -8,6 +16,8 @@ interface State {
   activeTabId: string | null;
   logs: LogEntry[];
   bottomOpen: boolean;
+  bangs: Bang[];
+  theme: ThemeMode;
 }
 
 let state: State = {
@@ -16,6 +26,8 @@ let state: State = {
   activeTabId: null,
   logs: [],
   bottomOpen: true,
+  bangs: [],
+  theme: "dark",
 };
 
 let initialized = false;
@@ -31,10 +43,22 @@ function setState(patch: Partial<State> | ((s: State) => Partial<State>)) {
   emit();
 }
 
+function applyTheme(t: ThemeMode) {
+  if (typeof document === "undefined") return;
+  document.documentElement.classList.toggle("light", t === "light");
+}
+
 function ensureInit() {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
-  state = { ...state, connections: loadConnections() };
+  const theme = loadTheme();
+  state = {
+    ...state,
+    connections: loadConnections(),
+    bangs: loadBangs(),
+    theme,
+  };
+  applyTheme(theme);
 }
 
 export function useStore<T>(selector: (s: State) => T): T {
@@ -49,8 +73,6 @@ export function useStore<T>(selector: (s: State) => T): T {
   );
 }
 
-// ---- actions ----
-
 export const actions = {
   upsertConnection(input: Omit<Connection, "id" | "createdAt"> & { id?: string }) {
     ensureInit();
@@ -61,16 +83,16 @@ export const actions = {
         c.id === existing.id ? { ...existing, ...input, id: existing.id } : c,
       );
     } else {
-      const conn: Connection = {
-        ...input,
-        id: uid(),
-        createdAt: Date.now(),
-      };
+      const conn: Connection = { ...input, id: uid(), createdAt: Date.now() };
       next = [...state.connections, conn];
     }
     setState({ connections: next });
     saveConnections(next);
-    actions.log("info", "connections", existing ? `Updated ${input.name}` : `Saved ${input.name}`);
+    actions.log(
+      "info",
+      "connections",
+      existing ? `Updated ${input.name}` : `Saved ${input.name}`,
+    );
   },
 
   deleteConnection(id: string) {
@@ -126,5 +148,49 @@ export const actions = {
 
   clearLogs() {
     setState({ logs: [] });
+  },
+
+  upsertBang(input: Omit<Bang, "id" | "createdAt"> & { id?: string }) {
+    ensureInit();
+    const trigger = input.trigger.replace(/^!/, "").trim();
+    if (!trigger || !input.command.trim()) return;
+    const existing = input.id ? state.bangs.find((b) => b.id === input.id) : null;
+    let next: Bang[];
+    if (existing) {
+      next = state.bangs.map((b) =>
+        b.id === existing.id
+          ? { ...existing, ...input, trigger, id: existing.id }
+          : b,
+      );
+    } else {
+      next = [
+        ...state.bangs,
+        {
+          id: uid(),
+          trigger,
+          command: input.command,
+          description: input.description,
+          createdAt: Date.now(),
+        },
+      ];
+    }
+    setState({ bangs: next });
+    saveBangs(next);
+  },
+
+  deleteBang(id: string) {
+    const next = state.bangs.filter((b) => b.id !== id);
+    setState({ bangs: next });
+    saveBangs(next);
+  },
+
+  setTheme(t: ThemeMode) {
+    setState({ theme: t });
+    saveTheme(t);
+    applyTheme(t);
+  },
+
+  toggleTheme() {
+    actions.setTheme(state.theme === "dark" ? "light" : "dark");
   },
 };
