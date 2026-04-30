@@ -1,6 +1,10 @@
 import { useEffect, useRef } from "react";
-import { Terminal as XTerm } from "@xterm/xterm";
-import { FitAddon } from "@xterm/addon-fit";
+import xtermPkg from "@xterm/xterm";
+import fitPkg from "@xterm/addon-fit";
+const XTerm = xtermPkg.Terminal;
+const FitAddon = fitPkg.FitAddon;
+type XTerm = InstanceType<typeof XTerm>;
+type FitAddon = InstanceType<typeof FitAddon>;
 import type { Connection, Tab } from "@/lib/types";
 import { actions } from "@/lib/store";
 
