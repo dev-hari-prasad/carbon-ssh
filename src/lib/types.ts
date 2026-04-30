@@ -26,3 +26,13 @@ export interface LogEntry {
   source: string;
   message: string;
 }
+
+export interface Bang {
+  id: string;
+  trigger: string; // e.g. "update"
+  command: string; // e.g. "apt update && apt upgrade"
+  description?: string;
+  createdAt: number;
+}
+
+export type ThemeMode = "dark" | "light";
