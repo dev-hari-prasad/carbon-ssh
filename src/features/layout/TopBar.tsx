@@ -17,7 +17,7 @@ import { actions, useStore } from "@/lib/store";
 import type { Connection } from "@/lib/types";
 import { ConnectionForm } from "@/features/connections/ConnectionForm";
 
-const menu = ["File", "Edit", "View", "Session", "Terminal", "Help"];
+const menu = ["Session", "Settings", "Terminal", "Help"];
 
 type Popover = "machines" | "bookmarks" | "history" | null;
 
