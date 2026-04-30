@@ -4,34 +4,40 @@ import {
   BookmarkSimple,
   Clock,
   HardDrives,
-  CaretLeft,
-  CaretRight,
   Plus,
   DotsThreeVertical,
   Circle,
   PencilSimple,
   Trash,
   Plug,
+  Sun,
+  Moon,
+  Lightning,
 } from "@phosphor-icons/react";
 import { actions, useStore } from "@/lib/store";
-import type { Connection } from "@/lib/types";
+import type { Bang, Connection } from "@/lib/types";
 import { ConnectionForm } from "@/features/connections/ConnectionForm";
+import { BangForm } from "@/features/bangs/BangForm";
 
-const menu = ["Session", "Settings", "Terminal", "Help"];
-
-type Popover = "machines" | "bookmarks" | "history" | null;
+type Popover = "machines" | "bookmarks" | "history" | "bangs" | null;
 
 export function TopBar() {
   const tabs = useStore((s) => s.tabs);
   const activeTabId = useStore((s) => s.activeTabId);
   const connections = useStore((s) => s.connections);
+  const bangs = useStore((s) => s.bangs);
+  const theme = useStore((s) => s.theme);
   const logs = useStore((s) => s.logs);
 
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<Popover>(null);
+  const [openAnchor, setOpenAnchor] = useState<"search" | "tools">("search");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Connection | null>(null);
-  const popRef = useRef<HTMLDivElement>(null);
+  const [bangFormOpen, setBangFormOpen] = useState(false);
+  const [editingBang, setEditingBang] = useState<Bang | null>(null);
+
+  const wrapRef = useRef<HTMLDivElement>(null);
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const activeConn = activeTab
@@ -43,43 +49,55 @@ export function TopBar() {
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      if (!popRef.current) return;
-      if (!popRef.current.contains(e.target as Node)) setOpen(null);
+      if (!wrapRef.current) return;
+      if (!wrapRef.current.contains(e.target as Node)) setOpen(null);
     };
     if (open) document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
 
-  const filtered = connections.filter((c) => {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
-    return (
+  const q = query.trim().toLowerCase();
+  const filteredConns = connections.filter(
+    (c) =>
+      !q ||
       c.name.toLowerCase().includes(q) ||
       c.host.toLowerCase().includes(q) ||
-      c.username.toLowerCase().includes(q)
-    );
-  });
-
+      c.username.toLowerCase().includes(q),
+  );
   const recent = [...connections]
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, 8);
 
-  function openEdit(c: Connection) {
+  function openEditConn(c: Connection) {
     setEditing(c);
     setFormOpen(true);
     setOpen(null);
   }
-
-  function openNew() {
+  function openNewConn() {
     setEditing(null);
     setFormOpen(true);
     setOpen(null);
   }
+  function openEditBang(b: Bang) {
+    setEditingBang(b);
+    setBangFormOpen(true);
+    setOpen(null);
+  }
+  function openNewBang() {
+    setEditingBang(null);
+    setBangFormOpen(true);
+    setOpen(null);
+  }
+
+  function toggleTool(kind: NonNullable<Popover>) {
+    setOpenAnchor("tools");
+    setOpen((o) => (o === kind ? null : kind));
+  }
 
   return (
-    <div className="border-b border-border bg-bg-panel select-none">
-      {/* Row 1: app brand + menu + search bar + actions */}
-      <div className="h-11 px-3 flex items-center gap-3">
+    <div className="border-b border-border bg-bg-panel select-none" ref={wrapRef}>
+      <div className="h-12 px-3 flex items-center gap-3">
+        {/* Brand */}
         <div className="flex items-center gap-2 pr-3 border-r border-border h-full">
           <div className="w-6 h-6 rounded-md bg-accent/15 border border-accent/30 flex items-center justify-center">
             <Circle size={8} weight="fill" className="text-accent" />
@@ -89,36 +107,10 @@ export function TopBar() {
           </div>
         </div>
 
-        <nav className="flex items-center gap-0.5">
-          {menu.map((m) => (
-            <button
-              key={m}
-              className="h-7 px-2 rounded text-[12.5px] font-sans text-fg-muted hover:text-fg hover:bg-bg-elev transition-colors"
-            >
-              {m}
-            </button>
-          ))}
-        </nav>
-
-        <div className="flex items-center gap-1 ml-2">
-          <button
-            className="w-7 h-7 grid place-items-center rounded text-fg-muted hover:text-fg hover:bg-bg-elev"
-            aria-label="Back"
-          >
-            <CaretLeft size={14} weight="bold" />
-          </button>
-          <button
-            className="w-7 h-7 grid place-items-center rounded text-fg-muted hover:text-fg hover:bg-bg-elev"
-            aria-label="Forward"
-          >
-            <CaretRight size={14} weight="bold" />
-          </button>
-        </div>
-
         {/* URL / search bar */}
-        <div className="flex-1 max-w-2xl mx-auto relative" ref={popRef}>
+        <div className="flex-1 max-w-2xl mx-auto relative">
           <div className="h-8 flex items-center bg-bg border border-border rounded-md focus-within:border-accent transition-colors">
-            <div className="pl-2.5 pr-1.5 text-fg-dim flex items-center gap-1.5">
+            <div className="pl-2.5 pr-2 text-fg-dim flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-success" />
               <MagnifyingGlass size={12} weight="bold" />
             </div>
@@ -126,68 +118,110 @@ export function TopBar() {
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
-                if (e.target.value && open !== "machines") setOpen("machines");
+                setOpenAnchor("search");
+                setOpen(e.target.value.startsWith("!") ? "bangs" : "machines");
               }}
-              onFocus={() => setOpen("machines")}
+              onFocus={() => {
+                setOpenAnchor("search");
+                setOpen(query.startsWith("!") ? "bangs" : "machines");
+              }}
               placeholder={url}
-              className="flex-1 h-full bg-transparent text-[12.5px] font-mono text-fg placeholder:text-fg-dim focus:outline-none"
+              className="flex-1 h-full bg-transparent text-[12.5px] font-mono text-fg placeholder:text-fg-dim focus:outline-none pr-2"
             />
-            <div className="flex items-center pr-1 gap-0.5 border-l border-border ml-1.5 pl-1">
-              <BarBtn
-                label="Bookmarks"
-                active={open === "bookmarks"}
-                onClick={() =>
-                  setOpen((o) => (o === "bookmarks" ? null : "bookmarks"))
-                }
-              >
-                <BookmarkSimple
-                  size={13}
-                  weight={open === "bookmarks" ? "fill" : "regular"}
-                />
-              </BarBtn>
-              <BarBtn
-                label="History"
-                active={open === "history"}
-                onClick={() =>
-                  setOpen((o) => (o === "history" ? null : "history"))
-                }
-              >
-                <Clock size={13} weight={open === "history" ? "fill" : "regular"} />
-              </BarBtn>
-              <BarBtn
-                label="Machines"
-                active={open === "machines"}
-                onClick={() =>
-                  setOpen((o) => (o === "machines" ? null : "machines"))
-                }
-              >
-                <HardDrives
-                  size={13}
-                  weight={open === "machines" ? "fill" : "regular"}
-                />
-              </BarBtn>
-            </div>
           </div>
 
-          {open ? (
-            <Popover
+          {open && openAnchor === "search" ? (
+            <SearchPopover
               kind={open}
-              connections={filtered}
+              query={query}
+              connections={filteredConns}
               recent={recent}
+              bangs={bangs}
               onConnect={(c) => {
                 actions.openTab(c.id);
                 setOpen(null);
                 setQuery("");
               }}
-              onEdit={openEdit}
-              onNew={openNew}
+              onEditConn={openEditConn}
+              onNewConn={openNewConn}
+              onEditBang={openEditBang}
+              onNewBang={openNewBang}
             />
           ) : null}
         </div>
 
+        {/* Tools group: bookmark, history, machines, bangs, theme */}
+        <div className="flex items-center gap-0.5 px-1 h-8 bg-bg border border-border rounded-md relative">
+          <ToolBtn
+            label="Bookmarks"
+            active={open === "bookmarks" && openAnchor === "tools"}
+            onClick={() => toggleTool("bookmarks")}
+          >
+            <BookmarkSimple
+              size={14}
+              weight={open === "bookmarks" && openAnchor === "tools" ? "fill" : "regular"}
+            />
+          </ToolBtn>
+          <ToolBtn
+            label="History"
+            active={open === "history" && openAnchor === "tools"}
+            onClick={() => toggleTool("history")}
+          >
+            <Clock
+              size={14}
+              weight={open === "history" && openAnchor === "tools" ? "fill" : "regular"}
+            />
+          </ToolBtn>
+          <ToolBtn
+            label="Machines"
+            active={open === "machines" && openAnchor === "tools"}
+            onClick={() => toggleTool("machines")}
+          >
+            <HardDrives
+              size={14}
+              weight={open === "machines" && openAnchor === "tools" ? "fill" : "regular"}
+            />
+          </ToolBtn>
+          <ToolBtn
+            label="Bangs"
+            active={open === "bangs" && openAnchor === "tools"}
+            onClick={() => toggleTool("bangs")}
+          >
+            <span className="font-mono font-bold text-[14px] leading-none">!</span>
+          </ToolBtn>
+          <div className="w-px h-4 bg-border mx-0.5" />
+          <ToolBtn
+            label={theme === "dark" ? "Light theme" : "Dark theme"}
+            onClick={() => actions.toggleTheme()}
+          >
+            {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
+          </ToolBtn>
+
+          {open && openAnchor === "tools" ? (
+            <div className="absolute z-30 right-0 mt-1.5 top-full w-[420px]">
+              <SearchPopover
+                kind={open}
+                query=""
+                connections={connections}
+                recent={recent}
+                bangs={bangs}
+                onConnect={(c) => {
+                  actions.openTab(c.id);
+                  setOpen(null);
+                }}
+                onEditConn={openEditConn}
+                onNewConn={openNewConn}
+                onEditBang={openEditBang}
+                onNewBang={openNewBang}
+              />
+            </div>
+          ) : null}
+        </div>
+
+        {/* Right actions */}
         <div className="flex items-center gap-1">
           <button
-            onClick={openNew}
+            onClick={openNewConn}
             className="h-7 px-2.5 inline-flex items-center gap-1.5 rounded-md bg-accent text-accent-fg text-[12px] font-sans font-medium hover:bg-accent/90"
           >
             <Plus size={12} weight="bold" /> Machine
@@ -202,7 +236,6 @@ export function TopBar() {
         </div>
       </div>
 
-      {/* Row 2: browser-style tabs */}
       <TabsRow />
 
       <ConnectionForm
@@ -210,11 +243,16 @@ export function TopBar() {
         onClose={() => setFormOpen(false)}
         initial={editing}
       />
+      <BangForm
+        open={bangFormOpen}
+        onClose={() => setBangFormOpen(false)}
+        initial={editingBang}
+      />
     </div>
   );
 }
 
-function BarBtn({
+function ToolBtn({
   children,
   active,
   label,
@@ -241,26 +279,164 @@ function BarBtn({
   );
 }
 
-function Popover({
+function SearchPopover({
   kind,
+  query,
   connections,
   recent,
+  bangs,
   onConnect,
-  onEdit,
-  onNew,
+  onEditConn,
+  onNewConn,
+  onEditBang,
+  onNewBang,
 }: {
   kind: NonNullable<Popover>;
+  query: string;
   connections: Connection[];
   recent: Connection[];
+  bangs: Bang[];
   onConnect: (c: Connection) => void;
-  onEdit: (c: Connection) => void;
-  onNew: () => void;
+  onEditConn: (c: Connection) => void;
+  onNewConn: () => void;
+  onEditBang: (b: Bang) => void;
+  onNewBang: () => void;
 }) {
-  const list =
-    kind === "history" ? recent : kind === "bookmarks" ? connections : connections;
+  if (kind === "bangs") {
+    const filter = query.replace(/^!/, "").toLowerCase();
+    const list = filter
+      ? bangs.filter(
+          (b) =>
+            b.trigger.toLowerCase().includes(filter) ||
+            b.command.toLowerCase().includes(filter) ||
+            (b.description ?? "").toLowerCase().includes(filter),
+        )
+      : bangs;
+    return (
+      <PopoverShell heading="Bangs" actionLabel="new bang" onAction={onNewBang}>
+        {list.length === 0 ? (
+          <Empty
+            text="No bangs yet."
+            actionText="+ Create your first"
+            onAction={onNewBang}
+          />
+        ) : (
+          list.map((b) => (
+            <div
+              key={b.id}
+              className="group flex items-start gap-3 px-3 py-2 hover:bg-bg-panel"
+            >
+              <div className="w-7 h-7 shrink-0 rounded-md bg-bg border border-border grid place-items-center text-accent">
+                <Lightning size={13} weight="fill" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-mono text-[13px] font-semibold text-fg">
+                    !{b.trigger}
+                  </span>
+                  {b.description ? (
+                    <span className="text-[11.5px] font-sans text-fg-muted truncate">
+                      {b.description}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="text-[11.5px] font-mono text-fg-dim truncate mt-0.5">
+                  {b.command}
+                </div>
+              </div>
+              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                <IconBtn label="Edit" onClick={() => onEditBang(b)}>
+                  <PencilSimple size={12} />
+                </IconBtn>
+                <IconBtn label="Delete" danger onClick={() => actions.deleteBang(b.id)}>
+                  <Trash size={12} />
+                </IconBtn>
+              </div>
+            </div>
+          ))
+        )}
+      </PopoverShell>
+    );
+  }
+
+  const list = kind === "history" ? recent : connections;
   const heading =
     kind === "machines" ? "Machines" : kind === "bookmarks" ? "Bookmarked" : "Recent";
 
+  return (
+    <PopoverShell heading={heading} actionLabel="new machine" onAction={onNewConn}>
+      {list.length === 0 ? (
+        <Empty
+          text={kind === "history" ? "No recent sessions." : "No machines saved yet."}
+          actionText="+ Add your first"
+          onAction={onNewConn}
+        />
+      ) : (
+        list.map((c) => (
+          <div
+            key={c.id}
+            className="group flex items-center gap-3 px-3 py-2 hover:bg-bg-panel cursor-pointer"
+            onClick={() => onConnect(c)}
+          >
+            <div className="w-7 h-7 rounded-md bg-bg border border-border grid place-items-center text-fg-muted">
+              <HardDrives size={13} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13px] font-sans font-medium text-fg truncate">
+                {c.name}
+              </div>
+              <div className="text-[11px] font-mono text-fg-dim truncate">
+                ssh://{c.username}@{c.host}:{c.port}
+              </div>
+            </div>
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+              <IconBtn
+                label="Connect"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onConnect(c);
+                }}
+              >
+                <Plug size={12} />
+              </IconBtn>
+              <IconBtn
+                label="Edit"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditConn(c);
+                }}
+              >
+                <PencilSimple size={12} />
+              </IconBtn>
+              <IconBtn
+                label="Delete"
+                danger
+                onClick={(e) => {
+                  e.stopPropagation();
+                  actions.deleteConnection(c.id);
+                }}
+              >
+                <Trash size={12} />
+              </IconBtn>
+            </div>
+          </div>
+        ))
+      )}
+    </PopoverShell>
+  );
+}
+
+function PopoverShell({
+  heading,
+  actionLabel,
+  onAction,
+  children,
+}: {
+  heading: string;
+  actionLabel: string;
+  onAction: () => void;
+  children: React.ReactNode;
+}) {
   return (
     <div className="absolute z-30 left-0 right-0 mt-1.5 bg-bg-elev border border-border rounded-lg shadow-2xl overflow-hidden">
       <div className="h-9 px-3 flex items-center justify-between border-b border-border">
@@ -268,82 +444,61 @@ function Popover({
           {heading}
         </span>
         <button
-          onClick={onNew}
+          onClick={onAction}
           className="text-[11.5px] font-mono text-accent hover:underline flex items-center gap-1"
         >
-          <Plus size={11} weight="bold" /> new machine
+          <Plus size={11} weight="bold" /> {actionLabel}
         </button>
       </div>
-      <div className="max-h-[340px] overflow-y-auto py-1">
-        {list.length === 0 ? (
-          <div className="px-4 py-8 text-center">
-            <div className="text-[12.5px] text-fg-muted font-sans">
-              {kind === "history"
-                ? "No recent sessions."
-                : "No machines saved yet."}
-            </div>
-            <button
-              onClick={onNew}
-              className="mt-2 text-[12px] font-mono text-accent hover:underline"
-            >
-              + Add your first
-            </button>
-          </div>
-        ) : (
-          list.map((c) => (
-            <div
-              key={c.id}
-              className="group flex items-center gap-3 px-3 py-2 hover:bg-bg-panel cursor-pointer"
-              onClick={() => onConnect(c)}
-            >
-              <div className="w-7 h-7 rounded-md bg-bg border border-border grid place-items-center text-fg-muted">
-                <HardDrives size={13} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-sans font-medium text-fg truncate">
-                  {c.name}
-                </div>
-                <div className="text-[11px] font-mono text-fg-dim truncate">
-                  ssh://{c.username}@{c.host}:{c.port}
-                </div>
-              </div>
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onConnect(c);
-                  }}
-                  className="w-7 h-7 grid place-items-center rounded text-fg-muted hover:text-fg hover:bg-bg-elev"
-                  aria-label="Connect"
-                >
-                  <Plug size={12} />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(c);
-                  }}
-                  className="w-7 h-7 grid place-items-center rounded text-fg-muted hover:text-fg hover:bg-bg-elev"
-                  aria-label="Edit"
-                >
-                  <PencilSimple size={12} />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    actions.deleteConnection(c.id);
-                  }}
-                  className="w-7 h-7 grid place-items-center rounded text-fg-muted hover:text-danger hover:bg-bg-elev"
-                  aria-label="Delete"
-                >
-                  <Trash size={12} />
-                </button>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+      <div className="max-h-[360px] overflow-y-auto py-1">{children}</div>
     </div>
+  );
+}
+
+function Empty({
+  text,
+  actionText,
+  onAction,
+}: {
+  text: string;
+  actionText: string;
+  onAction: () => void;
+}) {
+  return (
+    <div className="px-4 py-8 text-center">
+      <div className="text-[12.5px] text-fg-muted font-sans">{text}</div>
+      <button
+        onClick={onAction}
+        className="mt-2 text-[12px] font-mono text-accent hover:underline"
+      >
+        {actionText}
+      </button>
+    </div>
+  );
+}
+
+function IconBtn({
+  children,
+  label,
+  danger,
+  onClick,
+}: {
+  children: React.ReactNode;
+  label: string;
+  danger?: boolean;
+  onClick: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className={`w-7 h-7 grid place-items-center rounded text-fg-muted hover:bg-bg-elev ${
+        danger ? "hover:text-danger" : "hover:text-fg"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 
