@@ -86,6 +86,23 @@
   --warning: oklch(0.78 0.16 75);
 }
 
+.light {
+  --bg: oklch(0.99 0.002 270);
+  --bg-elev: oklch(0.97 0.003 270);
+  --bg-panel: oklch(0.965 0.003 270);
+  --fg: oklch(0.18 0.01 270);
+  --fg-muted: oklch(0.42 0.01 270);
+  --fg-dim: oklch(0.62 0.01 270);
+  --border: oklch(0.9 0.005 270);
+  --border-strong: oklch(0.82 0.008 270);
+  --accent: oklch(0.55 0.2 264);
+  --accent-fg: oklch(0.99 0 0);
+  --accent-soft: oklch(0.92 0.04 264);
+  --success: oklch(0.62 0.18 150);
+  --danger: oklch(0.58 0.22 22);
+  --warning: oklch(0.7 0.17 75);
+}
+
 @layer base {
   * {
     border-color: var(--color-border);
