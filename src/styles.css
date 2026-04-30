@@ -3,8 +3,6 @@
 @import "tw-animate-css";
 @import "@xterm/xterm/css/xterm.css";
 
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
-
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -58,50 +56,24 @@
   --color-chart-4: oklch(0.7 0.15 60);
   --color-chart-5: oklch(0.7 0.18 20);
 
-  --radius: 6px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 8px;
-  --radius-xl: 10px;
-  --radius-2xl: 14px;
-  --radius-3xl: 18px;
-  --radius-4xl: 22px;
+  --radius: 10px;
+  --radius-sm: 7px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+  --radius-3xl: 22px;
+  --radius-4xl: 28px;
 }
 
-:root, .dark {
-  /* Dark-first, Vercel/VS Code inspired neutrals */
-  --bg: oklch(0.14 0.005 270);
-  --bg-elev: oklch(0.17 0.006 270);
-  --bg-panel: oklch(0.155 0.005 270);
-  --fg: oklch(0.96 0.005 270);
-  --fg-muted: oklch(0.72 0.01 270);
-  --fg-dim: oklch(0.52 0.01 270);
-  --border: oklch(0.25 0.008 270);
-  --border-strong: oklch(0.32 0.01 270);
-  --accent: oklch(0.62 0.19 264);
-  --accent-fg: oklch(0.99 0 0);
-  --accent-soft: oklch(0.32 0.09 264);
-  --success: oklch(0.72 0.16 150);
-  --danger: oklch(0.66 0.21 22);
-  --warning: oklch(0.78 0.16 75);
-}
-
-.light {
-  --bg: oklch(0.99 0.002 270);
-  --bg-elev: oklch(0.97 0.003 270);
-  --bg-panel: oklch(0.965 0.003 270);
-  --fg: oklch(0.18 0.01 270);
-  --fg-muted: oklch(0.42 0.01 270);
-  --fg-dim: oklch(0.62 0.01 270);
-  --border: oklch(0.9 0.005 270);
-  --border-strong: oklch(0.82 0.008 270);
-  --accent: oklch(0.55 0.2 264);
-  --accent-fg: oklch(0.99 0 0);
-  --accent-soft: oklch(0.92 0.04 264);
-  --success: oklch(0.62 0.18 150);
-  --danger: oklch(0.58 0.22 22);
-  --warning: oklch(0.7 0.17 75);
-}
+/*
+ * Theme variables (--bg, --fg, --accent, etc.) are defined at runtime by the
+ * #theme-vars <style> element rendered in <head> from `app/layout.tsx`.
+ * That tag is rewritten by the synchronous bootstrap script before first
+ * paint, and updated again by `actions.setTheme(...)` at runtime. There is
+ * no hardcoded fallback theme here on purpose — having one would compete
+ * with the saved/active theme and cause the wrong colors to flash through.
+ */
 
 @layer base {
   * {
@@ -130,6 +102,18 @@
   }
   ::-webkit-scrollbar-thumb:hover { background: var(--fg-dim); }
   ::-webkit-scrollbar-track { background: transparent; }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  summary,
+  label[for],
+  a[href] {
+    cursor: pointer;
+  }
+  button:disabled,
+  [role="button"][aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
 @layer utilities {
@@ -138,8 +122,8 @@
   .text-xxs { font-size: 10.5px; line-height: 1.3; letter-spacing: 0.04em; }
   .grid-bg {
     background-image:
-      linear-gradient(to right, var(--border) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--border) 1px, transparent 1px);
+      linear-gradient(to right, color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--border) 55%, transparent) 1px, transparent 1px);
     background-size: 32px 32px;
   }
 }

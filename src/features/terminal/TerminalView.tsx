@@ -1,14 +1,24 @@
 import { useEffect, useRef } from "react";
+import { getThemeById, terminalThemeForTheme } from "@/config/themes";
 import type { Connection, Tab } from "@/lib/types";
-import { actions } from "@/lib/store";
+import { actions, useStore } from "@/lib/store";
 
 interface Props {
   tab: Tab;
   conn: Connection;
 }
 
+function clipLogLine(text: string, max = 160) {
+  const t = text.trim();
+  if (t.length <= max) return t;
+  return `${t.slice(0, Math.max(0, max - 1))}…`;
+}
+
+type HandleOutcome = "ok" | "closed";
+
 export function TerminalView({ tab, conn }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const themeId = useStore((s) => s.theme);
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -30,29 +40,7 @@ export function TerminalView({ tab, conn }: Props) {
         cursorBlink: true,
         cursorStyle: "bar",
         allowProposedApi: true,
-        theme: {
-          background: "#1a1a1d",
-          foreground: "#f0f0f2",
-          cursor: "#7c8cff",
-          cursorAccent: "#1a1a1d",
-          selectionBackground: "#3a3f6b",
-          black: "#1a1a1d",
-          red: "#ff6b6b",
-          green: "#7ee787",
-          yellow: "#f2cc60",
-          blue: "#7c8cff",
-          magenta: "#c792ea",
-          cyan: "#56d4dd",
-          white: "#d0d0d4",
-          brightBlack: "#52525b",
-          brightRed: "#ff8585",
-          brightGreen: "#a3f7b5",
-          brightYellow: "#ffe28a",
-          brightBlue: "#a5b4ff",
-          brightMagenta: "#dcb4ff",
-          brightCyan: "#82e9f0",
-          brightWhite: "#ffffff",
-        },
+        theme: terminalThemeForTheme(getThemeById(themeId)),
       });
       const fit = new FitAddon();
       term.loadAddon(fit);
@@ -75,7 +63,7 @@ export function TerminalView({ tab, conn }: Props) {
         yellow: "\x1b[38;5;221m",
         red: "\x1b[38;5;203m",
       };
-      const prompt = `${C.green}${conn.username}${C.reset}${C.dim}@${C.reset}${C.blue}${conn.host}${C.reset} ${C.dim}~${C.reset} ${C.bold}$${C.reset} `;
+      const prompt = `${C.green}${conn.username}${C.reset}${C.dim}@${C.reset}${C.blue}${conn.host}${C.reset} ${C.dim}~${C.reset} ${C.bold}>${C.reset} `;
 
       term.writeln(`${C.dim}relay/ssh — local session shell${C.reset}`);
       term.writeln(
@@ -86,14 +74,18 @@ export function TerminalView({ tab, conn }: Props) {
       );
       term.writeln(`${C.dim}type ${C.reset}help${C.dim} for available commands.${C.reset}`);
       term.write("\r\n" + prompt);
-      actions.log("info", "session", `Session ${tab.title} ready (offline shell)`);
+      actions.log("info", conn.name, `Session ${tab.title} ready (offline shell)`);
 
       let buffer = "";
       const writePrompt = () => term.write("\r\n" + prompt);
 
-      const handle = (cmd: string) => {
+      /** Counts submissions (non-empty trimmed line). CRLF‑safe; logs commands to activity panel. */
+      const handle = (cmd: string): HandleOutcome => {
         const c = cmd.trim();
-        if (!c) return;
+        if (!c) return "ok";
+        actions.incrementCommandCount(tab.id);
+        const recap = `${tab.title}: ${clipLogLine(cmd)}`;
+
         const [name, ...args] = c.split(/\s+/);
         switch (name) {
           case "help":
@@ -117,23 +109,40 @@ export function TerminalView({ tab, conn }: Props) {
             term.clear();
             break;
           case "exit":
+            actions.log("info", conn.name, `$ exit · ${recap}`);
             term.writeln(`${C.dim}connection closed.${C.reset}`);
             actions.closeTab(tab.id);
-            return;
+            return "closed";
           default:
             term.writeln(`${C.red}command not found:${C.reset} ${name}`);
+            actions.log("warn", conn.name, `$ ${recap}`);
+            return "ok";
         }
+
+        actions.log("info", conn.name, `$ ${recap}`);
+        return "ok";
+      };
+
+      const submitLine = () => {
+        const line = buffer;
+        buffer = "";
+        term.write("\r\n");
+        const outcome = handle(line);
+        if (outcome === "closed" || disposed) return;
+        term.write(prompt);
       };
 
       const dataSub = term.onData((data: string) => {
-        for (const ch of data) {
+        for (let i = 0; i < data.length; i++) {
+          const ch = data[i];
           const code = ch.charCodeAt(0);
-          if (ch === "\r") {
-            term.write("\r\n");
-            handle(buffer);
-            buffer = "";
-            term.write(prompt);
-          } else if (code === 127) {
+          // Enter is often `\r`; some environments send `\n` or `\r\n` together.
+          if (ch === "\r" || ch === "\n") {
+            submitLine();
+            if (ch === "\r" && data[i + 1] === "\n") i += 1;
+            continue;
+          }
+          if (code === 127) {
             if (buffer.length > 0) {
               buffer = buffer.slice(0, -1);
               term.write("\b \b");
@@ -169,10 +178,19 @@ export function TerminalView({ tab, conn }: Props) {
       disposed = true;
       for (const c of cleanups) c();
     };
-  }, [tab.id, conn.id, conn.host, conn.username, conn.port, tab.title]);
+  }, [
+    tab.id,
+    conn.id,
+    conn.name,
+    conn.host,
+    conn.username,
+    conn.port,
+    tab.title,
+    themeId,
+  ]);
 
   return (
-    <div className="h-full w-full bg-[#1a1a1d] p-2">
+    <div className="h-full w-full bg-bg p-2">
       <div ref={hostRef} className="h-full w-full" />
     </div>
   );

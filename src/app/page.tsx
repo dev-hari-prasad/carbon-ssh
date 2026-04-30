@@ -1,17 +1,18 @@
-import { createFileRoute } from "@tanstack/react-router";
+"use client";
+
 import { TopBar } from "@/features/layout/TopBar";
 import { MainArea } from "@/features/layout/MainArea";
 import { BottomPanel } from "@/features/layout/BottomPanel";
+import { SettingsSidebar } from "@/features/layout/SettingsSidebar";
 
-export const Route = createFileRoute("/")({
-  component: App,
-});
-
-function App() {
+export default function Page() {
   return (
     <div className="h-screen w-screen flex flex-col overflow-hidden bg-bg text-fg">
       <TopBar />
-      <MainArea />
+      <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
+        <MainArea />
+        <SettingsSidebar />
+      </div>
       <BottomPanel />
     </div>
   );

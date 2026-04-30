@@ -8,6 +8,11 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+
+# Next.js / build artifacts
+.next
+out
+
 dist
 dist-ssr
 .output

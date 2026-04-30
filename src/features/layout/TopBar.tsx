@@ -1,72 +1,66 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  MagnifyingGlass,
-  BookmarkSimple,
-  Clock,
   HardDrives,
   Plus,
-  DotsThreeVertical,
   Circle,
   PencilSimple,
   Trash,
   Plug,
-  Sun,
-  Moon,
-  Lightning,
+  SidebarSimple,
+  TerminalWindow,
+  SquaresFour,
+  FolderDashed,
+  MagnifyingGlass,
 } from "@phosphor-icons/react";
+import { useMemo } from "react";
 import { actions, useStore } from "@/lib/store";
-import type { Bang, Connection } from "@/lib/types";
+import type { Connection } from "@/lib/types";
 import { ConnectionForm } from "@/features/connections/ConnectionForm";
-import { BangForm } from "@/features/bangs/BangForm";
+import { Tooltip } from "@/components/Tooltip";
+import { HostIcon } from "@/components/HostIcon";
+import { AnimatePresence, motion } from "framer-motion";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-type Popover = "machines" | "bookmarks" | "history" | "bangs" | null;
+type Popover = "machines" | null;
 
 export function TopBar() {
   const tabs = useStore((s) => s.tabs);
   const activeTabId = useStore((s) => s.activeTabId);
   const connections = useStore((s) => s.connections);
-  const bangs = useStore((s) => s.bangs);
-  const theme = useStore((s) => s.theme);
-  const logs = useStore((s) => s.logs);
+  const groups = useStore((s) => s.groups);
+  const settingsOpen = useStore((s) => s.settingsOpen);
+  const [mounted, setMounted] = useState(false);
 
-  const [query, setQuery] = useState("");
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [open, setOpen] = useState<Popover>(null);
-  const [openAnchor, setOpenAnchor] = useState<"search" | "tools">("search");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Connection | null>(null);
-  const [bangFormOpen, setBangFormOpen] = useState(false);
-  const [editingBang, setEditingBang] = useState<Bang | null>(null);
 
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  const activeTab = tabs.find((t) => t.id === activeTabId);
-  const activeConn = activeTab
-    ? connections.find((c) => c.id === activeTab.connectionId)
-    : null;
-  const url = activeConn
-    ? `ssh://${activeConn.username}@${activeConn.host}:${activeConn.port}`
-    : "ssh://— no active session";
+  // Removed mousedown effect for wrapRef since Radix Popover handles outside clicks
 
   useEffect(() => {
-    const onClick = (e: MouseEvent) => {
-      if (!wrapRef.current) return;
-      if (!wrapRef.current.contains(e.target as Node)) setOpen(null);
+    const onNew = () => {
+      setEditing(null);
+      setFormOpen(true);
+      setOpen(null);
     };
-    if (open) document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [open]);
-
-  const q = query.trim().toLowerCase();
-  const filteredConns = connections.filter(
-    (c) =>
-      !q ||
-      c.name.toLowerCase().includes(q) ||
-      c.host.toLowerCase().includes(q) ||
-      c.username.toLowerCase().includes(q),
-  );
-  const recent = [...connections]
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, 8);
+    const onOpenMachines = () => setOpen("machines");
+    window.addEventListener("tm:new-connection", onNew);
+    window.addEventListener("tm:focus-search", onOpenMachines);
+    window.addEventListener("tm:open-history", onOpenMachines);
+    window.addEventListener("tm:check-history", onOpenMachines);
+    return () => {
+      window.removeEventListener("tm:new-connection", onNew);
+      window.removeEventListener("tm:focus-search", onOpenMachines);
+      window.removeEventListener("tm:open-history", onOpenMachines);
+      window.removeEventListener("tm:check-history", onOpenMachines);
+    };
+  }, []);
 
   function openEditConn(c: Connection) {
     setEditing(c);
@@ -78,402 +72,434 @@ export function TopBar() {
     setFormOpen(true);
     setOpen(null);
   }
-  function openEditBang(b: Bang) {
-    setEditingBang(b);
-    setBangFormOpen(true);
-    setOpen(null);
-  }
-  function openNewBang() {
-    setEditingBang(null);
-    setBangFormOpen(true);
-    setOpen(null);
-  }
 
-  function toggleTool(kind: NonNullable<Popover>) {
-    setOpenAnchor("tools");
-    setOpen((o) => (o === kind ? null : kind));
+  const recent = [...connections]
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .slice(0, 8);
+
+  if (!mounted) {
+    return <div className="border-b border-[var(--titlebar-border)] bg-[var(--titlebar-bg)] h-[45px] z-40" />;
   }
 
   return (
-    <div className="border-b border-border bg-bg-panel select-none" ref={wrapRef}>
-      <div className="h-12 px-3 flex items-center gap-3">
-        {/* Brand */}
-        <div className="flex items-center gap-2 pr-3 border-r border-border h-full">
-          <div className="w-6 h-6 rounded-md bg-accent/15 border border-accent/30 flex items-center justify-center">
-            <Circle size={8} weight="fill" className="text-accent" />
-          </div>
-          <div className="font-sans font-bold text-[13px] tracking-tight text-fg">
-            relay<span className="text-fg-dim font-normal">/ssh</span>
-          </div>
+    <div
+      className="border-b border-[var(--titlebar-border)] bg-[var(--titlebar-bg)] select-none relative z-40"
+      ref={wrapRef}
+    >
+      <div className="h-[44px] pl-3 pr-4 flex items-stretch gap-2">
+        <div className="flex items-center pl-2 pr-1 shrink-0">
+          <img
+            src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTi-TGmA1kwrrCDuC7QtX3cojJb27aSXjE0Qw&s"
+            alt="Logo"
+            className="w-6 h-6 rounded-[6px] object-cover"
+          />
         </div>
 
-        {/* URL / search bar */}
-        <div className="flex-1 max-w-2xl mx-auto relative">
-          <div className="h-8 flex items-center bg-bg border border-border rounded-md focus-within:border-accent transition-colors">
-            <div className="pl-2.5 pr-2 text-fg-dim flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-success" />
-              <MagnifyingGlass size={12} weight="bold" />
-            </div>
-            <input
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setOpenAnchor("search");
-                setOpen(e.target.value.startsWith("!") ? "bangs" : "machines");
-              }}
-              onFocus={() => {
-                setOpenAnchor("search");
-                setOpen(query.startsWith("!") ? "bangs" : "machines");
-              }}
-              placeholder={url}
-              className="flex-1 h-full bg-transparent text-[12.5px] font-mono text-fg placeholder:text-fg-dim focus:outline-none pr-2"
-            />
-          </div>
+        <div className="flex-1 min-w-0 flex items-center gap-1.5 overflow-hidden">
+          <FeaturePill
+            icon={<HardDrives size={13} weight="duotone" />}
+            label="Hosts"
+            active={activeTabId === null}
+            onClick={() => actions.goHome()}
+          />
 
-          {open && openAnchor === "search" ? (
-            <SearchPopover
-              kind={open}
-              query={query}
-              connections={filteredConns}
-              recent={recent}
-              bangs={bangs}
-              onConnect={(c) => {
-                actions.openTab(c.id);
-                setOpen(null);
-                setQuery("");
-              }}
-              onEditConn={openEditConn}
-              onNewConn={openNewConn}
-              onEditBang={openEditBang}
-              onNewBang={openNewBang}
-            />
-          ) : null}
-        </div>
-
-        {/* Tools group: bookmark, history, machines, bangs, theme */}
-        <div className="flex items-center gap-0.5 px-1 h-8 bg-bg border border-border rounded-md relative">
-          <ToolBtn
-            label="Bookmarks"
-            active={open === "bookmarks" && openAnchor === "tools"}
-            onClick={() => toggleTool("bookmarks")}
-          >
-            <BookmarkSimple
-              size={14}
-              weight={open === "bookmarks" && openAnchor === "tools" ? "fill" : "regular"}
-            />
-          </ToolBtn>
-          <ToolBtn
-            label="History"
-            active={open === "history" && openAnchor === "tools"}
-            onClick={() => toggleTool("history")}
-          >
-            <Clock
-              size={14}
-              weight={open === "history" && openAnchor === "tools" ? "fill" : "regular"}
-            />
-          </ToolBtn>
-          <ToolBtn
-            label="Machines"
-            active={open === "machines" && openAnchor === "tools"}
-            onClick={() => toggleTool("machines")}
-          >
-            <HardDrives
-              size={14}
-              weight={open === "machines" && openAnchor === "tools" ? "fill" : "regular"}
-            />
-          </ToolBtn>
-          <ToolBtn
-            label="Bangs"
-            active={open === "bangs" && openAnchor === "tools"}
-            onClick={() => toggleTool("bangs")}
-          >
-            <span className="font-mono font-bold text-[14px] leading-none">!</span>
-          </ToolBtn>
-          <div className="w-px h-4 bg-border mx-0.5" />
-          <ToolBtn
-            label={theme === "dark" ? "Light theme" : "Dark theme"}
-            onClick={() => actions.toggleTheme()}
-          >
-            {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
-          </ToolBtn>
-
-          {open && openAnchor === "tools" ? (
-            <div className="absolute z-30 right-0 mt-1.5 top-full w-[420px]">
-              <SearchPopover
-                kind={open}
-                query=""
-                connections={connections}
-                recent={recent}
-                bangs={bangs}
-                onConnect={(c) => {
-                  actions.openTab(c.id);
-                  setOpen(null);
-                }}
-                onEditConn={openEditConn}
-                onNewConn={openNewConn}
-                onEditBang={openEditBang}
-                onNewBang={openNewBang}
+          <AnimatePresence initial={false}>
+            {tabs.length > 0 && (
+              <motion.div
+                key="separator"
+                initial={{ opacity: 0, width: 0, marginLeft: 0, marginRight: 0 }}
+                animate={{ opacity: 1, width: 1, marginLeft: 4, marginRight: 4 }}
+                exit={{ opacity: 0, width: 0, marginLeft: 0, marginRight: 0 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="h-4 bg-border shrink-0"
               />
+            )}
+          </AnimatePresence>
+
+          <div className="flex items-center gap-1 shrink min-w-0">
+            <AnimatePresence initial={false}>
+              {tabs.map((t) => {
+                  const active = t.id === activeTabId;
+                  const c = connections.find(conn => conn.id === t.connectionId);
+                  
+                  return (
+                    <motion.div
+                      layout
+                      initial={{ opacity: 0, scale: 0.8, maxWidth: 0 }}
+                      animate={{ opacity: 1, scale: 1, maxWidth: 200 }}
+                      exit={{ opacity: 0, scale: 0.8, maxWidth: 0 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                      style={{ overflow: "hidden" }}
+                      key={t.id}
+                      className="shrink flex min-w-0 w-[200px]"
+                    >
+                      <Tooltip
+                        delay={500}
+                        side="bottom"
+                        multiline
+                        matchAnchorWidth
+                        className="flex min-w-0 flex-1 h-full overflow-hidden min-h-8"
+                        label={
+                          (() => {
+                            if (!c) return t.title;
+
+                            const group = c.groupId ? groups.find((g) => g.id === c.groupId) : null;
+                            const groupName = group ? group.name : "Uncategorized";
+
+                            const started = t.startedAt
+                              ? new Date(t.startedAt).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                              : "Unknown";
+
+                            return (
+                              <div className="flex flex-col gap-0.5 w-full min-w-0 text-left">
+                                <span className="font-semibold">{c.name}</span>
+                                <span className="text-fg-dim text-[10.5px]">
+                                  ssh://{c.username}@{c.host}:{c.port}
+                                </span>
+                                <div className="h-px bg-border my-1" />
+                                <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
+                                  <span className="text-fg-muted shrink-0">Group</span>
+                                  <span className="text-fg-dim text-right truncate">{groupName}</span>
+                                </div>
+                                <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
+                                  <span className="text-fg-muted shrink-0">Started</span>
+                                  <span className="text-fg-dim tabular-nums">{started}</span>
+                                </div>
+                                <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
+                                  <span className="text-fg-muted shrink-0">Commands</span>
+                                  <span className="text-fg-dim tabular-nums">{t.commandCount || 0}</span>
+                                </div>
+                              </div>
+                            );
+                          })()
+                        }
+                      >
+                        <div
+                          onClick={() => actions.setActiveTab(t.id)}
+                          className={`group w-full h-8 flex items-center gap-1.5 pl-2.5 pr-1 rounded-[8px] cursor-pointer text-[12px] font-sans transition-colors border ${
+                            active
+                              ? "bg-success/10 text-success border-success/30"
+                              : "bg-[var(--command-bg)] text-fg-muted hover:bg-[var(--command-active-bg)] hover:text-fg border-border"
+                          }`}
+                        >
+                          {c ? (
+                            <HostIcon conn={c} size={16} />
+                          ) : (
+                            <TerminalWindow
+                              size={14}
+                              weight={active ? "duotone" : "regular"}
+                              className="shrink-0"
+                            />
+                          )}
+                          <span
+                            className="flex-1 whitespace-nowrap overflow-hidden block min-w-0"
+                            style={{
+                              maskImage:
+                                "linear-gradient(to right, black calc(100% - 12px), transparent 100%)",
+                              WebkitMaskImage:
+                                "linear-gradient(to right, black calc(100% - 12px), transparent 100%)",
+                            }}
+                          >
+                            {t.title}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              actions.closeTab(t.id);
+                            }}
+                            className={`w-5 h-5 ml-1 grid place-items-center rounded shrink-0 ${
+                              active
+                                ? "text-success/70 hover:text-success hover:bg-success/20"
+                                : "text-fg-dim hover:text-fg hover:bg-[var(--bg-elev)]"
+                            }`}
+                            aria-label="Close tab"
+                          >
+                            <span className="text-[16px] leading-none mb-[1.5px]">×</span>
+                          </button>
+                        </div>
+                      </Tooltip>
+                    </motion.div>
+                  );
+              })}
+              </AnimatePresence>
+          </div>
+
+          <div className="h-4 w-px shrink-0 self-center mx-1 bg-border" aria-hidden />
+
+          <Popover open={open === "machines"} onOpenChange={(o) => setOpen(o ? "machines" : null)}>
+            <div className="relative flex items-center shrink-0">
+              <Tooltip label="New session" side="bottom">
+                <PopoverTrigger asChild>
+                  <button
+                    aria-label="New tab"
+                    className={`w-7 h-7 grid place-items-center rounded-[8px] transition-colors ${
+                      open === "machines"
+                        ? "text-fg bg-[var(--command-active-bg)]"
+                        : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
+                    }`}
+                  >
+                    <Plus size={14} weight="bold" />
+                  </button>
+                </PopoverTrigger>
+              </Tooltip>
+              
+              <PopoverContent
+                align="start"
+                sideOffset={6}
+                collisionPadding={16}
+                className="p-0 border-none shadow-none w-auto bg-transparent z-50"
+              >
+                <MachinesPopover
+                  connections={connections}
+                  groups={groups}
+                  onConnect={(c) => {
+                    actions.openTab(c.id);
+                    setOpen(null);
+                  }}
+                  onEditConn={openEditConn}
+                  onNewConn={openNewConn}
+                  onCancel={() => setOpen(null)}
+                />
+              </PopoverContent>
             </div>
-          ) : null}
+          </Popover>
         </div>
 
-        {/* Right actions */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={openNewConn}
-            className="h-7 px-2.5 inline-flex items-center gap-1.5 rounded-md bg-accent text-accent-fg text-[12px] font-sans font-medium hover:bg-accent/90"
-          >
-            <Plus size={12} weight="bold" /> Machine
-          </button>
-          <span className="ml-2 inline-flex items-center gap-1.5 px-2 h-6 rounded border border-border text-xxs font-mono text-fg-muted">
-            <Circle size={6} weight="fill" className="text-warning" />
-            {logs.length}
-          </span>
-          <button className="w-7 h-7 grid place-items-center rounded text-fg-muted hover:text-fg hover:bg-bg-elev">
-            <DotsThreeVertical size={14} weight="bold" />
-          </button>
+        <div className="flex items-center gap-1 shrink-0 relative">
+          <Tooltip label="Settings" side="bottom">
+            <button
+              onClick={() => actions.toggleSettings()}
+              aria-label="Toggle settings"
+              className={`w-8 h-8 grid place-items-center rounded-[8px] transition-colors ${
+                settingsOpen
+                  ? "text-fg bg-[var(--command-active-bg)]"
+                  : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
+              }`}
+            >
+              <SidebarSimple size={15} weight={settingsOpen ? "fill" : "regular"} />
+            </button>
+          </Tooltip>
         </div>
       </div>
-
-      <TabsRow />
 
       <ConnectionForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
         initial={editing}
       />
-      <BangForm
-        open={bangFormOpen}
-        onClose={() => setBangFormOpen(false)}
-        initial={editingBang}
-      />
     </div>
   );
 }
 
-function ToolBtn({
-  children,
-  active,
+function FeaturePill({
+  icon,
   label,
   onClick,
+  active,
 }: {
-  children: React.ReactNode;
-  active?: boolean;
+  icon: React.ReactNode;
   label: string;
-  onClick: () => void;
+  onClick?: () => void;
+  active?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      aria-label={label}
-      title={label}
-      className={`w-7 h-6 grid place-items-center rounded transition-colors ${
+      className={`h-8 px-3 inline-flex items-center gap-1.5 rounded-[8px] border text-[12px] font-sans transition-colors shrink-0 ${
         active
-          ? "text-accent bg-accent/10"
-          : "text-fg-muted hover:text-fg hover:bg-bg-elev"
+          ? "bg-[var(--command-active-bg)] border-accent/40 text-fg"
+          : "bg-[var(--command-bg)] border-border text-fg hover:bg-[var(--command-active-bg)]"
       }`}
     >
-      {children}
+      <span className={active ? "text-fg" : "text-fg-muted"}>{icon}</span>
+      <span>{label}</span>
     </button>
   );
 }
 
-function SearchPopover({
-  kind,
-  query,
+function MachinesPopover({
   connections,
-  recent,
-  bangs,
+  groups,
   onConnect,
   onEditConn,
   onNewConn,
-  onEditBang,
-  onNewBang,
+  onCancel,
 }: {
-  kind: NonNullable<Popover>;
-  query: string;
   connections: Connection[];
-  recent: Connection[];
-  bangs: Bang[];
+  groups: any[];
   onConnect: (c: Connection) => void;
   onEditConn: (c: Connection) => void;
   onNewConn: () => void;
-  onEditBang: (b: Bang) => void;
-  onNewBang: () => void;
+  onCancel: () => void;
 }) {
-  if (kind === "bangs") {
-    const filter = query.replace(/^!/, "").toLowerCase();
-    const list = filter
-      ? bangs.filter(
-          (b) =>
-            b.trigger.toLowerCase().includes(filter) ||
-            b.command.toLowerCase().includes(filter) ||
-            (b.description ?? "").toLowerCase().includes(filter),
-        )
-      : bangs;
-    return (
-      <PopoverShell heading="Bangs" actionLabel="new bang" onAction={onNewBang}>
-        {list.length === 0 ? (
-          <Empty
-            text="No bangs yet."
-            actionText="+ Create your first"
-            onAction={onNewBang}
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  const filteredHosts = search.trim()
+    ? connections.filter((c) =>
+        c.name.toLowerCase().includes(search.trim().toLowerCase()) ||
+        c.username.toLowerCase().includes(search.trim().toLowerCase()) ||
+        c.host.toLowerCase().includes(search.trim().toLowerCase())
+      )
+    : selectedGroupId === null
+    ? connections
+    : selectedGroupId === "__uncategorized__"
+    ? connections.filter((c) => !c.groupId)
+    : connections.filter((c) => c.groupId === selectedGroupId);
+
+  const groupCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const c of connections) {
+      if (c.groupId) m[c.groupId] = (m[c.groupId] ?? 0) + 1;
+    }
+    return m;
+  }, [connections]);
+  
+  const uncategorizedCount = connections.filter(c => !c.groupId).length;
+
+  return (
+    <div className="bg-[var(--menu-bg)] border border-border rounded-[12px] shadow-2xl overflow-hidden flex w-[550px] h-[360px]">
+      {/* Left side: Groups */}
+      <div className="w-[200px] border-r border-border flex flex-col min-h-0 bg-[var(--bg-panel)]/50">
+        <div className="h-9 px-3 flex items-center justify-between border-b border-border shrink-0">
+          <span className="text-[10px] uppercase font-sans font-semibold text-fg-muted tracking-wider">
+            Groups
+          </span>
+        </div>
+        <div className="flex-1 overflow-y-auto min-h-0 p-1.5 flex flex-col gap-0.5">
+          <GroupItem
+            active={selectedGroupId === null}
+            onClick={() => setSelectedGroupId(null)}
+            icon={<SquaresFour size={14} weight="fill" className="text-fg" />}
+            label="All"
+            count={connections.length}
           />
-        ) : (
-          list.map((b) => (
-            <div
-              key={b.id}
-              className="group flex items-start gap-3 px-3 py-2 hover:bg-bg-panel"
+          <GroupItem
+            active={selectedGroupId === "__uncategorized__"}
+            onClick={() => setSelectedGroupId("__uncategorized__")}
+            icon={<FolderDashed size={14} weight="regular" className="text-fg-muted" />}
+            label="Uncategorized"
+            count={uncategorizedCount}
+          />
+          {groups.length > 0 && (
+            <>
+              <div className="h-px bg-border my-1 mx-2" />
+              {groups.map(g => (
+                <GroupItem
+                  key={g.id}
+                  active={selectedGroupId === g.id}
+                  onClick={() => setSelectedGroupId(g.id)}
+                  icon={<HardDrives size={13} weight="fill" className="text-white" />}
+                  iconContainerClass="bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8] shadow-inner"
+                  label={g.name}
+                  count={groupCounts[g.id] ?? 0}
+                />
+              ))}
+            </>
+          )}
+        </div>
+        <div className="shrink-0 border-t border-border p-1.5">
+          <div className="grid grid-cols-2 gap-1.5 w-full">
+            <button
+              type="button"
+              onClick={onNewConn}
+              className="min-w-0 h-8 px-2 inline-flex items-center justify-center gap-1 rounded-[8px] bg-accent text-accent-fg text-[11px] font-sans font-semibold hover:opacity-90 transition-colors"
             >
-              <div className="w-7 h-7 shrink-0 rounded-md bg-bg border border-border grid place-items-center text-accent">
-                <Lightning size={13} weight="fill" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-mono text-[13px] font-semibold text-fg">
-                    !{b.trigger}
-                  </span>
-                  {b.description ? (
-                    <span className="text-[11.5px] font-sans text-fg-muted truncate">
-                      {b.description}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="text-[11.5px] font-mono text-fg-dim truncate mt-0.5">
-                  {b.command}
-                </div>
-              </div>
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
-                <IconBtn label="Edit" onClick={() => onEditBang(b)}>
-                  <PencilSimple size={12} />
-                </IconBtn>
-                <IconBtn label="Delete" danger onClick={() => actions.deleteBang(b.id)}>
-                  <Trash size={12} />
-                </IconBtn>
-              </div>
-            </div>
-          ))
-        )}
-      </PopoverShell>
-    );
-  }
-
-  const list = kind === "history" ? recent : connections;
-  const heading =
-    kind === "machines" ? "Machines" : kind === "bookmarks" ? "Bookmarked" : "Recent";
-
-  return (
-    <PopoverShell heading={heading} actionLabel="new machine" onAction={onNewConn}>
-      {list.length === 0 ? (
-        <Empty
-          text={kind === "history" ? "No recent sessions." : "No machines saved yet."}
-          actionText="+ Add your first"
-          onAction={onNewConn}
-        />
-      ) : (
-        list.map((c) => (
-          <div
-            key={c.id}
-            className="group flex items-center gap-3 px-3 py-2 hover:bg-bg-panel cursor-pointer"
-            onClick={() => onConnect(c)}
-          >
-            <div className="w-7 h-7 rounded-md bg-bg border border-border grid place-items-center text-fg-muted">
-              <HardDrives size={13} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-[13px] font-sans font-medium text-fg truncate">
-                {c.name}
-              </div>
-              <div className="text-[11px] font-mono text-fg-dim truncate">
-                ssh://{c.username}@{c.host}:{c.port}
-              </div>
-            </div>
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
-              <IconBtn
-                label="Connect"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onConnect(c);
-                }}
-              >
-                <Plug size={12} />
-              </IconBtn>
-              <IconBtn
-                label="Edit"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditConn(c);
-                }}
-              >
-                <PencilSimple size={12} />
-              </IconBtn>
-              <IconBtn
-                label="Delete"
-                danger
-                onClick={(e) => {
-                  e.stopPropagation();
-                  actions.deleteConnection(c.id);
-                }}
-              >
-                <Trash size={12} />
-              </IconBtn>
-            </div>
+              <Plus size={12} weight="bold" className="shrink-0" />
+              <span className="truncate">New host</span>
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="min-w-0 h-8 px-2 rounded-[8px] border border-border text-[11px] font-sans font-medium text-fg-muted hover:text-fg hover:bg-[var(--bg-panel)] transition-colors truncate"
+            >
+              Cancel
+            </button>
           </div>
-        ))
-      )}
-    </PopoverShell>
-  );
-}
-
-function PopoverShell({
-  heading,
-  actionLabel,
-  onAction,
-  children,
-}: {
-  heading: string;
-  actionLabel: string;
-  onAction: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="absolute z-30 left-0 right-0 mt-1.5 bg-bg-elev border border-border rounded-lg shadow-2xl overflow-hidden">
-      <div className="h-9 px-3 flex items-center justify-between border-b border-border">
-        <span className="text-xxs uppercase font-sans font-semibold text-fg-muted tracking-wider">
-          {heading}
-        </span>
-        <button
-          onClick={onAction}
-          className="text-[11.5px] font-mono text-accent hover:underline flex items-center gap-1"
-        >
-          <Plus size={11} weight="bold" /> {actionLabel}
-        </button>
+        </div>
       </div>
-      <div className="max-h-[360px] overflow-y-auto py-1">{children}</div>
+
+      {/* Right side: Hosts */}
+      <div className="flex-1 flex flex-col min-h-0 bg-bg">
+        <div className="h-9 px-2 flex items-center border-b border-border bg-[var(--bg-panel)]/50 shrink-0 gap-2">
+          <div className="flex items-center flex-1 gap-1.5 px-1">
+            <MagnifyingGlass size={13} className="text-fg-muted shrink-0" weight="bold" />
+            <input
+              autoFocus
+              type="text"
+              placeholder="Search hosts..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-transparent outline-none text-[11.5px] font-sans text-fg placeholder:text-fg-muted"
+            />
+          </div>
+        </div>
+        <div className="flex-1 flex flex-col min-h-0 p-1.5">
+          <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-0.5">
+            {filteredHosts.length === 0 ? (
+              <div className="flex-1 flex flex-col justify-center px-4 py-8">
+                <div className="text-[12.5px] text-fg-muted font-sans text-center">No hosts found.</div>
+              </div>
+            ) : (
+              filteredHosts.map((c) => (
+                <div
+                  key={c.id}
+                  className="group flex items-center gap-2.5 px-2.5 py-1.5 rounded-[8px] hover:bg-[var(--bg-panel)] cursor-pointer transition-colors"
+                  onClick={() => onConnect(c)}
+                >
+                  <div className="shrink-0">
+                    <HostIcon conn={c} size={24} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12.5px] font-sans font-medium text-fg truncate">{c.name}</div>
+                    <div className="text-[10.5px] font-mono text-fg-dim truncate leading-none mt-0.5">
+                      ssh://{c.username}@{c.host}:{c.port}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-function Empty({
-  text,
-  actionText,
-  onAction,
+function GroupItem({
+  active,
+  onClick,
+  icon,
+  iconContainerClass,
+  label,
+  count,
 }: {
-  text: string;
-  actionText: string;
-  onAction: () => void;
+  active: boolean;
+  onClick: () => void;
+  icon: React.ReactNode;
+  iconContainerClass?: string;
+  label: string;
+  count: number;
 }) {
   return (
-    <div className="px-4 py-8 text-center">
-      <div className="text-[12.5px] text-fg-muted font-sans">{text}</div>
-      <button
-        onClick={onAction}
-        className="mt-2 text-[12px] font-mono text-accent hover:underline"
-      >
-        {actionText}
-      </button>
-    </div>
+    <button
+      onClick={onClick}
+      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] text-left transition-colors ${
+        active ? "bg-[var(--command-active-bg)] text-fg" : "hover:bg-[var(--bg-panel)] text-fg-muted"
+      }`}
+    >
+      <div className={`w-5 h-5 rounded-[4px] grid place-items-center shrink-0 ${iconContainerClass || (active ? "bg-[var(--bg-panel)]/50" : "bg-bg/50")}`}>
+        {icon}
+      </div>
+      <span className="flex-1 truncate text-[12px] font-sans font-medium">{label}</span>
+      <span className={`text-[10.5px] font-mono ${active ? "text-fg-muted" : "text-fg-dim"}`}>
+        {count}
+      </span>
+    </button>
   );
 }
 
@@ -489,62 +515,16 @@ function IconBtn({
   onClick: (e: React.MouseEvent) => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-      className={`w-7 h-7 grid place-items-center rounded text-fg-muted hover:bg-bg-elev ${
-        danger ? "hover:text-danger" : "hover:text-fg"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-function TabsRow() {
-  const tabs = useStore((s) => s.tabs);
-  const activeTabId = useStore((s) => s.activeTabId);
-
-  return (
-    <div className="h-9 pl-2 pr-2 flex items-end gap-0.5 border-t border-border bg-bg overflow-x-auto">
-      {tabs.length === 0 ? (
-        <div className="h-full flex items-center px-2 text-xxs font-mono text-fg-dim">
-          no active sessions — open one from the search bar above
-        </div>
-      ) : (
-        tabs.map((t) => {
-          const active = t.id === activeTabId;
-          return (
-            <div
-              key={t.id}
-              onClick={() => actions.setActiveTab(t.id)}
-              className={`group h-8 flex items-center gap-2 pl-3 pr-2 rounded-t-md cursor-pointer border-x border-t transition-colors min-w-[140px] max-w-[240px] ${
-                active
-                  ? "bg-bg-panel border-border text-fg"
-                  : "bg-transparent border-transparent text-fg-muted hover:bg-bg-elev hover:text-fg"
-              }`}
-            >
-              <Circle
-                size={8}
-                weight="fill"
-                className={active ? "text-success" : "text-fg-dim"}
-              />
-              <span className="text-[12px] font-mono truncate flex-1">{t.title}</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  actions.closeTab(t.id);
-                }}
-                className="w-4 h-4 grid place-items-center rounded text-fg-dim hover:text-fg hover:bg-bg"
-                aria-label="Close tab"
-              >
-                <span className="text-[14px] leading-none">×</span>
-              </button>
-            </div>
-          );
-        })
-      )}
-    </div>
+    <Tooltip label={label} side="top">
+      <button
+        onClick={onClick}
+        aria-label={label}
+        className={`w-7 h-7 grid place-items-center rounded text-fg-muted hover:bg-bg-elev ${
+          danger ? "hover:text-danger" : "hover:text-fg"
+        }`}
+      >
+        {children}
+      </button>
+    </Tooltip>
   );
 }

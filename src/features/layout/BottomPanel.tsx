@@ -1,5 +1,72 @@
-import { CaretDown, CaretUp, Trash } from "@phosphor-icons/react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  CaretDown,
+  CaretUp,
+  Check,
+  Folders,
+  MagnifyingGlass,
+  PlugsConnected,
+  SquaresFour,
+  TerminalWindow,
+  Trash,
+  WarningCircle,
+  X,
+} from "@phosphor-icons/react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { HostIcon } from "@/components/HostIcon";
+import { Tooltip } from "@/components/Tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { actions, useStore } from "@/lib/store";
+import type { Connection } from "@/lib/types";
+
+const LOGS_HEIGHT_STORAGE_KEY = "terminal-muse.logs-panel-height.v1";
+const DEFAULT_LOGS_BODY_PX = 160;
+/** Area above logs used as drag resize target (excluding bottom strip). */
+const LOGS_RESIZE_HANDLE_PX = 6;
+const LOGS_BODY_MIN_PX = 200;
+/** Max height of log body (excluding resize handle/bottom strip) vs viewport */
+const LOGS_BODY_MAX_SCREEN_FRACTION = 0.45;
+
+/** Toolbar search UI and text filtering; keep false until we ship it visibly. Component stays mounted below. */
+const SHOW_LOGS_TOOLBAR_SEARCH = false;
+
+/** SSR / pre-hydration fallback before real innerHeight exists */
+function logsBodyFallbackMaxPx(): number {
+  return 520;
+}
+
+function computeLogsBodyMaxPx(innerHeight: number): number {
+  const cap = Math.floor(innerHeight * LOGS_BODY_MAX_SCREEN_FRACTION);
+  return Math.max(LOGS_BODY_MIN_PX, cap);
+}
+
+function clampLogsBody(px: number, maxPx: number): number {
+  if (!Number.isFinite(px)) return DEFAULT_LOGS_BODY_PX;
+  const mx = Math.max(LOGS_BODY_MIN_PX, maxPx);
+  return Math.round(Math.min(mx, Math.max(LOGS_BODY_MIN_PX, px)));
+}
+
+function loadLogsBodyPx(maxPx: number): number {
+  if (typeof window === "undefined") return DEFAULT_LOGS_BODY_PX;
+  try {
+    const raw = window.localStorage.getItem(LOGS_HEIGHT_STORAGE_KEY);
+    if (!raw) return DEFAULT_LOGS_BODY_PX;
+    return clampLogsBody(Number.parseInt(raw, 10), maxPx);
+  } catch {
+    return DEFAULT_LOGS_BODY_PX;
+  }
+}
+
+function saveLogsBodyPx(px: number, maxPx: number) {
+  try {
+    window.localStorage.setItem(
+      LOGS_HEIGHT_STORAGE_KEY,
+      String(clampLogsBody(px, maxPx)),
+    );
+  } catch {
+    /* ignore */
+  }
+}
 
 const levelColor = {
   info: "text-fg-muted",
@@ -7,53 +74,669 @@ const levelColor = {
   error: "text-danger",
 } as const;
 
-export function BottomPanel() {
-  const open = useStore((s) => s.bottomOpen);
-  const logs = useStore((s) => s.logs);
+/** Columns: time · level · saved host · kind · session / target · command or message */
+const LOG_ROW_GRID_TEMPLATE =
+  "minmax(4.875rem,5.375rem) minmax(2.625rem,3.25rem) minmax(6.75rem,9.25rem) minmax(4.25rem,5.75rem) minmax(9rem,12.5rem) minmax(0,1fr)";
+const LOG_ROW_CELL =
+  "min-w-0 border-r border-dotted border-border/55 pr-2.5 sm:pr-3 last:border-r-0 last:pr-0";
+
+function logMatchesSearch(log: { source: string; level: string; message: string }, raw: string) {
+  const tokens = raw
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!tokens.length) return true;
+  const { kind, target, detail } = parseLogCells(log.message);
+  const haystack = [
+    log.source,
+    log.level,
+    log.message,
+    kind,
+    target,
+    detail,
+  ]
+    .join(" ")
+    .toLowerCase();
+  return tokens.every((t) => haystack.includes(t));
+}
+
+function parseLogCells(message: string): { kind: string; target: string; detail: string } {
+  const t = message.trim();
+  if (!t) return { kind: "—", target: "", detail: "" };
+
+  const dollar = /^\$\s*(.+)$/s.exec(t);
+  if (dollar) {
+    let body = dollar[1].trim();
+    if (/^exit\s*[·⋅]\s*/i.test(body)) {
+      body = body.replace(/^exit\s*[·⋅]\s*/i, "").trim();
+      const colon = body.indexOf(": ");
+      if (colon > 0) {
+        return {
+          kind: "Exit",
+          target: body.slice(0, colon).trim(),
+          detail: body.slice(colon + 2).trim() || body,
+        };
+      }
+      return { kind: "Exit", target: "", detail: body };
+    }
+    const colon = body.indexOf(": ");
+    if (colon > 0) {
+      const target = body.slice(0, colon).trim();
+      let detail = body.slice(colon + 2).trim();
+      const kind =
+        detail && /\bnot found\b|command not found/i.test(detail) ? "Unknown" : "Command";
+      return { kind, target, detail: detail || body };
+    }
+    return { kind: "Command", target: "", detail: body };
+  }
+
+  const low = t.toLowerCase();
+  if (low.startsWith("opening session"))
+    return {
+      kind: "Open",
+      target: "",
+      detail: t.replace(/^opening\s+session\s+/i, "").trim() || t,
+    };
+  if (/\breplay\/ssh\b|offline shell\b|session .* ready/i.test(t))
+    return { kind: "Ready", target: "", detail: t };
+
+  if (/\bnot found\b|command not found/i.test(low))
+    return { kind: "Unknown", target: "", detail: t };
+
+  if (/deleted|removed|warn:/i.test(t)) return { kind: "Change", target: "", detail: t };
+  return { kind: "Info", target: "", detail: t };
+}
+
+function connectionForSource(connections: Connection[], source: string) {
+  return connections.find((c) => c.name === source) ?? null;
+}
+
+function LogSourceGlyph({
+  source,
+  conn,
+}: {
+  source: string;
+  conn: Connection | null;
+}) {
+  if (source === "__all__") {
+    return (
+      <span className="shrink-0 w-3.5 h-3.5 grid place-items-center text-fg-muted">
+        <SquaresFour size={12} weight="bold" />
+      </span>
+    );
+  }
+  if (conn) {
+    return <HostIcon conn={conn} size={14} />;
+  }
+  if (source === "connections") {
+    return (
+      <span className="shrink-0 w-3.5 h-3.5 grid place-items-center text-fg-muted">
+        <PlugsConnected size={12} weight="bold" />
+      </span>
+    );
+  }
+  if (source === "groups") {
+    return (
+      <span className="shrink-0 w-3.5 h-3.5 grid place-items-center text-fg-muted">
+        <Folders size={12} weight="bold" />
+      </span>
+    );
+  }
+  if (source === "session") {
+    return (
+      <span className="shrink-0 w-3.5 h-3.5 grid place-items-center text-fg-muted">
+        <TerminalWindow size={12} weight="bold" />
+      </span>
+    );
+  }
+  return (
+    <span className="shrink-0 w-3.5 h-3.5 grid place-items-center text-fg-muted">
+      <TerminalWindow size={12} weight="regular" />
+    </span>
+  );
+}
+
+function LogsSourcePicker({
+  connections,
+  sources,
+  value,
+  onChange,
+}: {
+  connections: Connection[];
+  sources: string[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const label =
+    value === "__all__" ? "All sources" : value;
+  const activeConn = value === "__all__" ? null : connectionForSource(connections, value);
 
   return (
-    <div className="border-t border-border bg-bg-panel flex flex-col">
-      <div className="h-8 px-3 flex items-center justify-between">
+    <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+      <PopoverTrigger asChild>
         <button
-          onClick={() => actions.toggleBottom()}
-          className="flex items-center gap-1.5 text-xxs uppercase font-sans font-semibold text-fg-muted hover:text-fg tracking-wider"
+          type="button"
+          aria-haspopup="dialog"
+          aria-expanded={menuOpen}
+          aria-labelledby="logs-source-label"
+          title={value === "__all__" ? "Show all logs" : `Source: ${value}`}
+          className="inline-flex items-center gap-1.5 h-6 max-w-[10.5rem] pl-1.5 pr-1 rounded-[8px] border border-border bg-bg text-[10px] font-mono text-fg-muted hover:text-fg hover:border-[var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-border transition-colors"
         >
-          {open ? <CaretDown size={11} weight="bold" /> : <CaretUp size={11} weight="bold" />}
-          Logs
-          <span className="text-fg-dim font-mono normal-case tracking-normal">
-            ({logs.length})
-          </span>
+          <LogSourceGlyph source={value} conn={activeConn} />
+          <span className="truncate flex-1 min-w-0 text-left">{label}</span>
+          <CaretDown size={10} weight="bold" className="shrink-0 opacity-70" />
         </button>
-        {open ? (
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        side="top"
+        sideOffset={6}
+        className="p-1 min-w-[11rem] max-w-[16rem] max-h-60 overflow-y-auto rounded-[10px] border border-border bg-[var(--menu-bg)] shadow-2xl"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <div role="listbox" aria-label="Log source">
           <button
-            onClick={() => actions.clearLogs()}
-            className="text-fg-dim hover:text-fg p-1 rounded"
+            type="button"
+            role="option"
+            aria-selected={value === "__all__"}
+            onClick={() => {
+              onChange("__all__");
+              setMenuOpen(false);
+            }}
+            className={`w-full flex items-center gap-2 px-2 h-7 rounded-[7px] text-left transition-colors ${
+              value === "__all__"
+                ? "bg-[var(--command-active-bg)] text-fg"
+                : "text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg"
+            }`}
+          >
+            <LogSourceGlyph source="__all__" conn={null} />
+            <span className="flex-1 min-w-0 truncate text-[11px] font-mono">All sources</span>
+            {value === "__all__" ? (
+              <Check size={11} weight="bold" className="text-accent shrink-0" />
+            ) : null}
+          </button>
+          {sources.map((s) => {
+            const conn = connectionForSource(connections, s);
+            const active = value === s;
+            return (
+              <button
+                key={s}
+                type="button"
+                role="option"
+                aria-selected={active}
+                onClick={() => {
+                  onChange(s);
+                  setMenuOpen(false);
+                }}
+                className={`w-full flex items-center gap-2 px-2 h-7 rounded-[7px] text-left transition-colors ${
+                  active
+                    ? "bg-[var(--command-active-bg)] text-fg"
+                    : "text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg"
+                }`}
+              >
+                <LogSourceGlyph source={s} conn={conn} />
+                <span className="flex-1 min-w-0 truncate text-[11px] font-mono">{s}</span>
+                {active ? (
+                  <Check size={11} weight="bold" className="text-accent shrink-0" />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function LogsSearchBar({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const inputId = useId();
+  return (
+    <div
+      role="search"
+      className="inline-flex items-center gap-0.5 h-6 w-full pl-1.5 pr-1 rounded-md border border-border bg-bg text-[10px] font-mono text-fg-muted hover:text-fg hover:border-[var(--border-strong)] focus-within:outline-none focus-within:ring-1 focus-within:ring-border transition-colors"
+    >
+      <label htmlFor={inputId} className="flex flex-1 min-w-0 items-center gap-1.5 cursor-text">
+        <MagnifyingGlass size={11} weight="bold" className="shrink-0 opacity-70 pointer-events-none" aria-hidden />
+        <input
+          id={inputId}
+          type="text"
+          inputMode="search"
+          enterKeyHint="search"
+          autoComplete="off"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Search logs"
+          aria-label="Search logs"
+          className="flex-1 min-w-0 bg-transparent border-none outline-none text-fg-muted placeholder:text-fg-muted/45 placeholder:normal-case placeholder:tracking-normal h-full py-0 text-[10px] font-mono"
+        />
+      </label>
+      {value.length > 0 ? (
+        <button
+          type="button"
+          aria-label="Clear search"
+          onClick={() => onChange("")}
+          className="shrink-0 grid place-items-center w-6 h-[22px] rounded hover:bg-[var(--menu-hover-bg)] text-fg-dim hover:text-fg focus:outline-none focus-visible:ring-1 focus-visible:ring-border transition-colors"
+        >
+          <X size={11} weight="bold" aria-hidden />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function ClearLogsButton() {
+  const [warnOpen, setWarnOpen] = useState(false);
+
+  return (
+    <Tooltip
+      side="top"
+      delay={350}
+      multiline
+      disabled={warnOpen}
+      label={
+        <span>
+          <span className="font-semibold block mb-0.5">Clear logs</span>
+          Deletes every saved log entry on this browser. Sessions and tabs are unaffected; this cannot be undone.
+        </span>
+      }
+    >
+      <Popover open={warnOpen} onOpenChange={setWarnOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
             aria-label="Clear logs"
+            aria-expanded={warnOpen}
+            className="text-fg-dim hover:text-danger p-1 rounded shrink-0 hover:bg-danger/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-border transition-colors data-[state=open]:text-danger data-[state=open]:bg-danger/10"
           >
             <Trash size={12} />
           </button>
-        ) : null}
-      </div>
-      {open ? (
-        <div className="h-40 overflow-y-auto px-3 pb-2 font-mono text-[12px] leading-relaxed">
-          {logs.length === 0 ? (
-            <div className="text-fg-dim py-2">no log entries yet.</div>
-          ) : (
-            logs.map((l) => (
-              <div key={l.id} className="flex gap-3 py-0.5">
-                <span className="text-fg-dim shrink-0">
-                  {new Date(l.ts).toLocaleTimeString([], { hour12: false })}
-                </span>
-                <span className={`shrink-0 uppercase text-xxs ${levelColor[l.level]}`}>
-                  {l.level}
-                </span>
-                <span className="text-fg-dim shrink-0">{l.source}</span>
-                <span className="text-fg break-all">{l.message}</span>
+        </PopoverTrigger>
+        <PopoverContent
+          align="end"
+          side="top"
+          sideOffset={6}
+          className="z-[60] w-[min(calc(100vw-2rem),18rem)] p-0 rounded-[10px] border border-border bg-[var(--menu-bg)] shadow-2xl"
+          onCloseAutoFocus={(e) => e.preventDefault()}
+        >
+          <div className="p-3 pb-2">
+            <div className="flex items-start gap-2">
+              <WarningCircle size={22} weight="fill" className="text-warning shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-[13px] font-semibold font-sans text-fg leading-tight">
+                  Clear all logs?
+                </p>
+                <p className="mt-1 text-[11.5px] font-sans text-fg-muted leading-snug">
+                  This removes activity from the log buffer immediately. This action cannot be undone.
+                </p>
               </div>
-            ))
-          )}
-        </div>
-      ) : null}
+            </div>
+          </div>
+          <div className="p-3 pl-10 flex gap-2 items-center w-full min-w-0">
+            <button
+              type="button"
+              className="h-8 px-2.5 rounded-[8px] bg-danger text-white text-[12px] font-sans font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5 shrink-0"
+              onClick={() => {
+                actions.clearLogs();
+                setWarnOpen(false);
+              }}
+            >
+              <Trash size={12} weight="bold" aria-hidden />
+              Clear all
+            </button>
+            <button
+              type="button"
+              className="h-8 px-2.5 rounded-[8px] text-[11.5px] font-sans font-medium text-fg-muted hover:bg-[var(--menu-hover-bg)] bg-[var(--menu-hover-bg)]/50 hover:text-fg inline-flex items-center gap-1 shrink-0"
+              onClick={() => setWarnOpen(false)}
+            >
+              <X size={12} weight="bold" aria-hidden />
+              Cancel
+            </button>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </Tooltip>
+  );
+}
+
+export function BottomPanel() {
+  const reduceMotion = useReducedMotion();
+  const open = useStore((s) => s.bottomOpen);
+  const logs = useStore((s) => s.logs);
+  const connections = useStore((s) => s.connections);
+  const [sourceFilter, setSourceFilter] = useState<string>("__all__");
+  const [logSearchQuery, setLogSearchQuery] = useState("");
+  const [logsBodyPx, setLogsBodyPx] = useState(DEFAULT_LOGS_BODY_PX);
+  const [viewportMaxLogs, setViewportMaxLogs] = useState(() =>
+    typeof window !== "undefined"
+      ? computeLogsBodyMaxPx(window.innerHeight)
+      : logsBodyFallbackMaxPx(),
+  );
+  const [resizeActive, setResizeActive] = useState(false);
+  const resizeStartRef = useRef({ clientY: 0, height: DEFAULT_LOGS_BODY_PX });
+  const captureResizeRef = useRef<{ node: HTMLElement; pointerId: number } | null>(null);
+  const skipHeightPersist = useRef(true);
+
+  useEffect(() => {
+    skipHeightPersist.current = true;
+    const m = computeLogsBodyMaxPx(window.innerHeight);
+    setViewportMaxLogs(m);
+    setLogsBodyPx(loadLogsBodyPx(m));
+    queueMicrotask(() => {
+      skipHeightPersist.current = false;
+    });
+
+    function onViewportResize() {
+      const next = computeLogsBodyMaxPx(window.innerHeight);
+      setViewportMaxLogs(next);
+      setLogsBodyPx((prev) => clampLogsBody(prev, next));
+    }
+    window.addEventListener("resize", onViewportResize);
+    return () => window.removeEventListener("resize", onViewportResize);
+  }, []);
+
+  useEffect(() => {
+    if (skipHeightPersist.current) return;
+    saveLogsBodyPx(logsBodyPx, viewportMaxLogs);
+  }, [logsBodyPx, viewportMaxLogs]);
+
+  const toggleMs = reduceMotion ? 0 : 0.22;
+
+  const onResizeMove = useCallback((e: PointerEvent) => {
+    const dy = resizeStartRef.current.clientY - e.clientY;
+    setLogsBodyPx(clampLogsBody(resizeStartRef.current.height + dy, viewportMaxLogs));
+  }, [viewportMaxLogs]);
+
+  const onResizeEnd = useCallback(
+    (_e: PointerEvent) => {
+      window.removeEventListener("pointermove", onResizeMove);
+      window.removeEventListener("pointerup", onResizeEnd);
+      window.removeEventListener("pointercancel", onResizeEnd);
+      const c = captureResizeRef.current;
+      if (c) {
+        try {
+          c.node.releasePointerCapture(c.pointerId);
+        } catch {
+          /* noop */
+        }
+        captureResizeRef.current = null;
+      }
+      setResizeActive(false);
+    },
+    [onResizeMove],
+  );
+
+  const onResizePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      e.stopPropagation();
+      resizeStartRef.current = { clientY: e.clientY, height: logsBodyPx };
+      captureResizeRef.current = { node: e.currentTarget, pointerId: e.pointerId };
+      setResizeActive(true);
+      e.currentTarget.setPointerCapture(e.pointerId);
+      window.addEventListener("pointermove", onResizeMove);
+      window.addEventListener("pointerup", onResizeEnd);
+      window.addEventListener("pointercancel", onResizeEnd);
+    },
+    [logsBodyPx, onResizeMove, onResizeEnd],
+  );
+
+  useEffect(() => {
+    return () => {
+      window.removeEventListener("pointermove", onResizeMove);
+      window.removeEventListener("pointerup", onResizeEnd);
+      window.removeEventListener("pointercancel", onResizeEnd);
+    };
+  }, [onResizeMove, onResizeEnd]);
+
+  const sources = useMemo(() => {
+    const uniq = [...new Set(logs.map((l) => l.source))];
+    uniq.sort((a, b) => a.localeCompare(b));
+    return uniq;
+  }, [logs]);
+
+  const resolvedFilter =
+    sourceFilter === "__all__" || sources.includes(sourceFilter)
+      ? sourceFilter
+      : "__all__";
+
+  const sourceFilteredLogs = useMemo(
+    () =>
+      resolvedFilter === "__all__"
+        ? logs
+        : logs.filter((l) => l.source === resolvedFilter),
+    [logs, resolvedFilter],
+  );
+
+  const filteredLogs = useMemo(
+    () =>
+      SHOW_LOGS_TOOLBAR_SEARCH
+        ? sourceFilteredLogs.filter((l) => logMatchesSearch(l, logSearchQuery))
+        : sourceFilteredLogs,
+    [sourceFilteredLogs, logSearchQuery],
+  );
+
+  const showTotalInHeader =
+    resolvedFilter !== "__all__" ||
+    (SHOW_LOGS_TOOLBAR_SEARCH && logSearchQuery.trim().length > 0);
+
+  return (
+    <div className="border-t border-border bg-bg-panel flex flex-col">
+      <div
+        className={`min-h-7 h-7 bg-bg-panel ${
+          open
+            ? `grid grid-rows-1 gap-x-2 pr-1 items-stretch relative isolate ${
+                SHOW_LOGS_TOOLBAR_SEARCH
+                  ? "grid-cols-[1fr_minmax(14rem,22rem)_auto]"
+                  : "grid-cols-[1fr_auto]"
+              }`
+            : "flex items-stretch"
+        }`}
+      >
+        {!open ? (
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-controls="logs-scroll-region"
+            onClick={() => actions.toggleBottom()}
+            className="flex-1 min-w-0 pl-3 pr-3 flex items-center gap-1.5 text-xxs uppercase font-sans font-semibold text-fg-muted hover:text-fg hover:bg-[var(--menu-hover-bg)]/50 tracking-wider transition-colors rounded-none text-left"
+          >
+            <CaretUp size={11} weight="bold" />
+            Logs
+            <span className="text-fg-dim font-mono normal-case tracking-normal">
+              ({filteredLogs.length}
+              {showTotalInHeader ? `/${logs.length}` : null})
+            </span>
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              aria-expanded={open}
+              aria-controls="logs-scroll-region"
+              aria-label={`Collapse logs panel. ${filteredLogs.length} entr${
+                filteredLogs.length === 1 ? "y" : "ies"
+              } visible${showTotalInHeader ? ` of ${logs.length} total.` : "."}`}
+              onClick={() => actions.toggleBottom()}
+              className="col-span-full row-start-1 z-[1] -m-px min-h-7 h-full rounded-none bg-transparent hover:bg-[var(--menu-hover-bg)]/50 transition-colors border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-inset"
+            />
+
+            <div
+              className="col-start-1 row-start-1 z-[2] flex items-center gap-1.5 min-w-0 text-xxs uppercase font-sans font-semibold text-fg-muted tracking-wider pointer-events-none justify-self-start h-full max-w-fit pl-3"
+              aria-hidden={true}
+            >
+              <CaretDown size={11} weight="bold" className="shrink-0" aria-hidden />
+              <span>Logs</span>
+              <span className="text-fg-dim font-mono normal-case tracking-normal">
+                ({filteredLogs.length}
+                {showTotalInHeader ? `/${logs.length}` : null})
+              </span>
+            </div>
+
+            <div
+              className={`col-start-2 row-start-1 z-[2] flex justify-center items-center min-w-0 w-full px-0.5 h-full pointer-events-none ${
+                SHOW_LOGS_TOOLBAR_SEARCH ? "" : "hidden"
+              }`}
+              aria-hidden={!SHOW_LOGS_TOOLBAR_SEARCH}
+            >
+              <div className="pointer-events-auto w-full min-h-0">
+                <LogsSearchBar value={logSearchQuery} onChange={setLogSearchQuery} />
+              </div>
+            </div>
+
+            <div
+              className={`${
+                SHOW_LOGS_TOOLBAR_SEARCH ? "col-start-3" : "col-start-2"
+              } row-start-1 z-[2] flex items-center gap-1.5 shrink-0 justify-end border-l border-border/60 pl-2 bg-bg-panel h-full`}
+            >
+              <span className="sr-only" id="logs-source-label">
+                Log source
+              </span>
+              <LogsSourcePicker
+                connections={connections}
+                sources={sources}
+                value={resolvedFilter}
+                onChange={setSourceFilter}
+              />
+              <ClearLogsButton />
+            </div>
+          </>
+        )}
+      </div>
+      <AnimatePresence initial={false}>
+        {open ? (
+          <motion.div
+            key="logs-body"
+            role="presentation"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{
+              height: logsBodyPx + LOGS_RESIZE_HANDLE_PX,
+              opacity: 1,
+            }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{
+              duration: resizeActive ? 0 : toggleMs,
+              ease: [0.32, 0.72, 0, 1],
+            }}
+            className="overflow-hidden bg-bg border-t border-border/40 flex flex-col"
+          >
+            <Tooltip
+              label={
+                <>
+                  <span className="font-semibold">Resize log panel</span>
+                  <span className="block mt-1 text-[10px] text-fg-muted font-normal opacity-95">
+                    Drag up or down to resize.
+                  </span>
+                </>
+              }
+              side="top"
+              delay={200}
+              multiline
+              disabled={resizeActive}
+              className="block w-full shrink-0"
+            >
+              <div
+                role="separator"
+                aria-orientation="horizontal"
+                aria-valuemin={LOGS_BODY_MIN_PX}
+                aria-valuemax={viewportMaxLogs}
+                aria-valuenow={logsBodyPx}
+                aria-label="Resize logs height"
+                className={`shrink-0 w-full select-none touch-none bg-border/50 hover:bg-accent/35 active:bg-accent/55 transition-colors outline-none cursor-row-resize ${
+                  resizeActive ? "bg-accent/50" : ""
+                }`}
+                style={{ height: LOGS_RESIZE_HANDLE_PX }}
+                tabIndex={0}
+                onPointerDown={(e) => {
+                  if (e.button !== 0) return;
+                  onResizePointerDown(e);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                    e.preventDefault();
+                    const delta = e.key === "ArrowUp" ? 24 : -24;
+                    setLogsBodyPx(clampLogsBody(logsBodyPx + delta, viewportMaxLogs));
+                  }
+                }}
+              />
+            </Tooltip>
+            <div
+              id="logs-scroll-region"
+              role="region"
+              aria-label="Application logs"
+              className="min-h-0 flex-1 flex flex-col overflow-y-auto px-3 pb-2 font-mono text-[12px] leading-relaxed bg-bg box-border"
+            >
+              {logs.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center min-h-[10rem] w-full px-4 py-8 text-center">
+                  <p className="text-fg-dim text-[12.5px] font-mono leading-relaxed">
+                    No log entries yet.
+                  </p>
+                </div>
+              ) : sourceFilteredLogs.length === 0 ? (
+                <div className="text-fg-dim py-2">no entries for this source.</div>
+              ) : filteredLogs.length === 0 ? (
+                <div className="flex-1 flex flex-col items-center justify-center gap-3 min-h-[10rem] w-full px-4 py-8 text-center">
+                  <MagnifyingGlass
+                    size={36}
+                    weight="duotone"
+                    className="text-fg-dim shrink-0 opacity-[0.88]"
+                    aria-hidden={true}
+                  />
+                  <p className="text-fg-dim text-[12.5px] font-mono leading-relaxed">
+                    no logs match your search.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex flex-col min-h-0">
+                  {filteredLogs.map((l) => {
+                    const rowConn = connectionForSource(connections, l.source);
+                    const timeStr = new Date(l.ts).toLocaleTimeString([], { hour12: false });
+                    const { kind: actionKind, target: sessionAddr, detail: cmdDetail } =
+                      parseLogCells(l.message);
+                    return (
+                      <div
+                        key={l.id}
+                        className="grid items-start gap-x-0 py-1 border-b border-border/40 text-[11.75px] sm:text-[12px] leading-snug last:border-b-0"
+                        style={{ gridTemplateColumns: LOG_ROW_GRID_TEMPLATE }}
+                      >
+                        <div className={`${LOG_ROW_CELL} text-fg-dim whitespace-nowrap font-mono tabular-nums`}>
+                          {timeStr}
+                        </div>
+                        <div
+                          className={`${LOG_ROW_CELL} uppercase text-xxs font-sans tracking-wide ${levelColor[l.level]}`}
+                        >
+                          {l.level}
+                        </div>
+                        <div className={`${LOG_ROW_CELL} text-fg-dim inline-flex items-center gap-1.5`}>
+                          <span className="shrink-0">
+                            <LogSourceGlyph source={l.source} conn={rowConn} />
+                          </span>
+                          <span className="truncate font-mono">{l.source}</span>
+                        </div>
+                        <div className={`${LOG_ROW_CELL} text-fg-muted uppercase text-xxs font-sans tracking-wide truncate font-semibold`}>
+                          {actionKind}
+                        </div>
+                        <div className={`${LOG_ROW_CELL} text-fg-dim font-mono truncate`} title={sessionAddr || undefined}>
+                          {sessionAddr || (
+                            <span className="text-fg-muted/55 select-none" aria-hidden="true">
+                              —
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0 text-fg font-mono text-[11.5px] sm:text-[12px] break-words">
+                          {cmdDetail}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

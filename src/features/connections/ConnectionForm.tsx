@@ -47,6 +47,7 @@ export function ConnectionForm({
       password: authType === "password" ? password : undefined,
       privateKey: authType === "key" ? privateKey : undefined,
       passphrase: authType === "key" ? passphrase : undefined,
+      aiFeaturesEnabled: initial?.aiFeaturesEnabled,
     });
     onClose();
   }

@@ -27,12 +27,12 @@ export function Modal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/55"
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative w-full max-w-md bg-bg-elev border border-border rounded-lg shadow-xl">
-        <div className="flex items-center justify-between px-4 h-11 border-b border-border">
+      <div className="relative w-full max-w-md bg-bg-elev border border-border rounded-[14px] shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-4 h-10 border-b border-border bg-bg-panel">
           <h2 className="font-sans font-semibold text-[13px] text-fg">{title}</h2>
           <button
             onClick={onClose}
@@ -44,7 +44,7 @@ export function Modal({
         </div>
         <div className="px-4 py-4 max-h-[70vh] overflow-y-auto">{children}</div>
         {footer ? (
-          <div className="px-4 h-12 border-t border-border flex items-center justify-end gap-2">
+          <div className="px-4 h-12 border-t border-border bg-bg-panel flex items-center justify-end gap-2">
             {footer}
           </div>
         ) : null}

@@ -1,33 +1,61 @@
 import { useSyncExternalStore } from "react";
-import type { Bang, Connection, LogEntry, Tab, ThemeMode } from "./types";
+import { getThemeById, THEMES } from "@/config/themes";
+import { getFontById, DEFAULT_FONT_ID } from "@/config/fonts";
+import { applyThemeToDocument } from "@/lib/theme-document";
+import { DEFAULT_AI_SETTINGS, type AISettings } from "./ai";
 import {
+  DEFAULT_LOG_RETENTION,
+  pruneLogsToRetention,
+  retentionCutoffMs,
+  type LogRetention,
+} from "./log-retention";
+import type { Bang, Connection, HostGroup, LogEntry, Tab, ThemeId } from "./types";
+import {
+  loadAISettings,
   loadBangs,
   loadConnections,
+  loadFont,
+  loadGroups,
+  loadLogRetention,
   loadTheme,
+  saveAISettings,
   saveBangs,
   saveConnections,
+  saveFont,
+  saveGroups,
+  saveLogRetention,
   saveTheme,
   uid,
 } from "./storage";
 
 interface State {
   connections: Connection[];
+  groups: HostGroup[];
   tabs: Tab[];
   activeTabId: string | null;
   logs: LogEntry[];
   bottomOpen: boolean;
   bangs: Bang[];
-  theme: ThemeMode;
+  theme: ThemeId;
+  font: string;
+  settingsOpen: boolean;
+  ai: AISettings;
+  logRetention: LogRetention;
 }
 
 let state: State = {
   connections: [],
+  groups: [],
   tabs: [],
   activeTabId: null,
   logs: [],
-  bottomOpen: true,
+  bottomOpen: false,
   bangs: [],
-  theme: "dark",
+  theme: "onedark-pro-darker",
+  font: DEFAULT_FONT_ID,
+  settingsOpen: false,
+  ai: { ...DEFAULT_AI_SETTINGS },
+  logRetention: DEFAULT_LOG_RETENTION,
 };
 
 let initialized = false;
@@ -43,22 +71,33 @@ function setState(patch: Partial<State> | ((s: State) => Partial<State>)) {
   emit();
 }
 
-function applyTheme(t: ThemeMode) {
+function applyTheme(t: ThemeId) {
+  applyThemeToDocument(t);
+}
+
+function applyFont(id: string) {
   if (typeof document === "undefined") return;
-  document.documentElement.classList.toggle("light", t === "light");
+  const font = getFontById(id);
+  document.documentElement.style.setProperty("--font-sans", font.stack);
 }
 
 function ensureInit() {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
   const theme = loadTheme();
+  const font = loadFont();
   state = {
     ...state,
     connections: loadConnections(),
+    groups: loadGroups(),
     bangs: loadBangs(),
     theme,
+    font,
+    ai: loadAISettings(),
   };
   applyTheme(theme);
+  applyFont(font);
+  emit();
 }
 
 export function useStore<T>(selector: (s: State) => T): T {
@@ -95,6 +134,70 @@ export const actions = {
     );
   },
 
+  addGroup(input: { name: string }) {
+    ensureInit();
+    const name = input.name.trim();
+    if (!name) return;
+    const group: HostGroup = { id: uid(), name };
+    const next = [...state.groups, group];
+    setState({ groups: next });
+    saveGroups(next);
+    actions.log("info", "groups", `Created group "${name}"`);
+  },
+
+  updateGroup(id: string, name: string) {
+    ensureInit();
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const next = state.groups.map((g) =>
+      g.id === id ? { ...g, name: trimmed } : g,
+    );
+    setState({ groups: next });
+    saveGroups(next);
+    actions.log("info", "groups", `Renamed group to "${trimmed}"`);
+  },
+
+  /** Drop the group and unassign its hosts (hosts remain). */
+  removeGroupOnly(groupId: string) {
+    ensureInit();
+    const g = state.groups.find((x) => x.id === groupId);
+    if (!g) return;
+    const nextGroups = state.groups.filter((x) => x.id !== groupId);
+    const nextConnections = state.connections.map((c) =>
+      c.groupId === groupId ? { ...c, groupId: undefined } : c,
+    );
+    setState({ groups: nextGroups, connections: nextConnections });
+    saveGroups(nextGroups);
+    saveConnections(nextConnections);
+    actions.log("warn", "groups", `Removed group "${g.name}" (hosts kept)`);
+  },
+
+  /** Delete the group and every host that belonged to it. */
+  removeGroupAndDeleteHosts(groupId: string) {
+    ensureInit();
+    const g = state.groups.find((x) => x.id === groupId);
+    if (!g) return;
+    const toRemove = new Set(
+      state.connections.filter((c) => c.groupId === groupId).map((c) => c.id),
+    );
+    let connections = state.connections.filter((c) => !toRemove.has(c.id));
+    let tabs = state.tabs.filter((t) => !toRemove.has(t.connectionId));
+    let activeTabId = state.activeTabId;
+    if (activeTabId && !tabs.find((t) => t.id === activeTabId)) {
+      activeTabId = tabs[tabs.length - 1]?.id ?? null;
+    }
+    const nextGroups = state.groups.filter((x) => x.id !== groupId);
+    setState({
+      groups: nextGroups,
+      connections,
+      tabs,
+      activeTabId,
+    });
+    saveGroups(nextGroups);
+    saveConnections(connections);
+    actions.log("warn", "groups", `Removed group "${g.name}" and deleted its hosts`);
+  },
+
   deleteConnection(id: string) {
     ensureInit();
     const conn = state.connections.find((c) => c.id === id);
@@ -117,9 +220,11 @@ export const actions = {
       id: uid(),
       connectionId,
       title: `${conn.username}@${conn.host}`,
+      startedAt: Date.now(),
+      commandCount: 0,
     };
-    setState({ tabs: [...state.tabs, tab], activeTabId: tab.id });
-    actions.log("info", "session", `Opening session ${tab.title}`);
+    setState({ tabs: [...state.tabs, tab], activeTabId: tab.id, settingsOpen: false });
+    actions.log("info", conn.name, `Opening session ${tab.title}`);
   },
 
   closeTab(id: string) {
@@ -133,21 +238,58 @@ export const actions = {
     setState({ tabs, activeTabId });
   },
 
+  incrementCommandCount(tabId: string) {
+    setState((s) => ({
+      tabs: s.tabs.map((t) =>
+        t.id === tabId ? { ...t, commandCount: (t.commandCount || 0) + 1 } : t
+      ),
+    }));
+  },
+
   setActiveTab(id: string) {
     setState({ activeTabId: id });
+  },
+
+  goHome() {
+    setState({ activeTabId: null, settingsOpen: false });
   },
 
   toggleBottom() {
     setState((s) => ({ bottomOpen: !s.bottomOpen }));
   },
 
+  toggleSettings() {
+    setState((s) => ({ settingsOpen: !s.settingsOpen }));
+  },
+
+  setSettingsOpen(open: boolean) {
+    setState({ settingsOpen: open });
+  },
+
   log(level: LogEntry["level"], source: string, message: string) {
-    const entry: LogEntry = { id: uid(), ts: Date.now(), level, source, message };
-    setState((s) => ({ logs: [...s.logs.slice(-499), entry] }));
+    ensureInit();
+    if (state.logRetention === "off") return;
+    const now = Date.now();
+    const min = retentionCutoffMs(state.logRetention, now);
+    if (min == null) return;
+    const entry: LogEntry = { id: uid(), ts: now, level, source, message };
+    setState((s) => {
+      const merged = [...s.logs, entry].filter((l) => l.ts >= min);
+      return { logs: merged.slice(-499) };
+    });
   },
 
   clearLogs() {
     setState({ logs: [] });
+  },
+
+  setLogRetention(r: LogRetention) {
+    ensureInit();
+    saveLogRetention(r);
+    setState((s) => ({
+      logRetention: r,
+      logs: pruneLogsToRetention(s.logs, r),
+    }));
   },
 
   upsertBang(input: Omit<Bang, "id" | "createdAt"> & { id?: string }) {
@@ -184,13 +326,29 @@ export const actions = {
     saveBangs(next);
   },
 
-  setTheme(t: ThemeMode) {
+  setTheme(t: ThemeId) {
     setState({ theme: t });
     saveTheme(t);
     applyTheme(t);
   },
 
   toggleTheme() {
-    actions.setTheme(state.theme === "dark" ? "light" : "dark");
+    const current = getThemeById(state.theme);
+    const next =
+      THEMES.find((theme) => theme.type !== current.type)?.id ?? state.theme;
+    actions.setTheme(next);
+  },
+
+  setFont(id: string) {
+    setState({ font: id });
+    saveFont(id);
+    applyFont(id);
+  },
+
+  updateAI(patch: Partial<AISettings>) {
+    ensureInit();
+    const next = { ...state.ai, ...patch };
+    setState({ ai: next });
+    saveAISettings(next);
   },
 };
