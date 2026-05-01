@@ -478,7 +478,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
     return m;
   }, [connections]);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedId = useStore((s) => s.selectedHostId);
   const [groupFilter, setGroupFilter] = useState<string | null>(null);
 
   const uncategorizedCount = useMemo(
@@ -496,8 +496,9 @@ function HostsView({ connections }: { connections: Connection[] }) {
   const selected = connections.find((c) => c.id === selectedId) ?? null;
   const sidePanelOpen = settingsOpen || selected !== null;
 
-  const dismissSettings = () => {
-    if (settingsOpen) actions.setSettingsOpen(false);
+  const dismissSidebars = () => {
+    actions.setSettingsOpen(false);
+    actions.setSelectedHostId(null);
   };
 
   return (
@@ -513,7 +514,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
       >
         <div className="flex items-center justify-between mb-2.5 gap-2">
           <h2 className="text-[15px] font-sans font-semibold text-fg">Groups</h2>
-          <AddGroupPopover onBeforeOpen={dismissSettings} />
+          <AddGroupPopover onBeforeOpen={dismissSidebars} />
         </div>
         <div
           className={`grid gap-2.5 mb-6 ${
@@ -525,7 +526,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
               type="button"
               onClick={() => {
                 setGroupFilter(null);
-                dismissSettings();
+                dismissSidebars();
               }}
               className={`flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2.5 rounded-[10px] border transition-colors text-left ${
                 groupFilter === null
@@ -551,7 +552,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
                 setGroupFilter((current) =>
                   current === "__uncategorized__" ? null : "__uncategorized__",
                 );
-                dismissSettings();
+                dismissSidebars();
               }}
               className={`flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2.5 rounded-[10px] border transition-colors text-left ${
                 groupFilter === "__uncategorized__"
@@ -597,7 +598,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
                       setGroupFilter((current) =>
                         current === g.id ? null : g.id,
                       );
-                      dismissSettings();
+                      dismissSidebars();
                     }}
                     className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-left"
                   >
@@ -614,7 +615,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
                   <EditGroupPopover
                     group={g}
                     hostCount={count}
-                    onBeforeOpen={dismissSettings}
+                    onBeforeOpen={dismissSidebars}
                     onRemoved={() => {
                       if (groupFilter === g.id) setGroupFilter(null);
                     }}
@@ -633,7 +634,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
               <button
                 onClick={() => {
                   setGroupFilter(null);
-                  dismissSettings();
+                  dismissSidebars();
                 }}
                 className="text-[11px] font-sans text-fg-muted hover:text-fg flex items-center gap-1"
               >
@@ -643,7 +644,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
             <button
               type="button"
               onClick={() => {
-                dismissSettings();
+                dismissSidebars();
                 if (typeof window !== "undefined") {
                   window.dispatchEvent(new CustomEvent("tm:new-connection"));
                 }
@@ -670,11 +671,10 @@ function HostsView({ connections }: { connections: Connection[] }) {
                 conn={c}
                 active={selectedId === c.id}
                 onShowDetails={() => {
-                  setSelectedId(c.id);
-                  dismissSettings();
+                  actions.setSelectedHostId(c.id);
                 }}
                 onConnect={() => {
-                  actions.setSettingsOpen(false);
+                  dismissSidebars();
                   actions.openTab(c.id);
                 }}
               />
@@ -691,7 +691,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
           <div className="flex-1 min-h-0 overflow-y-auto">
             <HostDetails
               conn={selected}
-              onClose={() => setSelectedId(null)}
+              onClose={() => actions.setSelectedHostId(null)}
             />
           </div>
         </aside>

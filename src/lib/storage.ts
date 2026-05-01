@@ -15,6 +15,7 @@ const GROUPS_KEY = "ssh.groups.v1";
 const BANGS_KEY = "ssh.bangs.v1";
 const THEME_KEY = "ssh.theme.v1";
 const FONT_KEY = "ssh.font.v1";
+const TERMINAL_FONT_KEY = "ssh.terminalFont.v1";
 const AI_KEY = "ssh.ai.v1";
 const LOG_RETENTION_KEY = "ssh.logRetention.v1";
 
@@ -272,6 +273,16 @@ export function loadFont(): string {
 export function saveFont(id: string) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(FONT_KEY, id);
+}
+
+export function loadTerminalFont(): string {
+  if (typeof window === "undefined") return "jetbrains-mono";
+  return window.localStorage.getItem(TERMINAL_FONT_KEY) ?? "jetbrains-mono";
+}
+
+export function saveTerminalFont(id: string) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(TERMINAL_FONT_KEY, id);
 }
 
 export function loadAISettings(): AISettings {

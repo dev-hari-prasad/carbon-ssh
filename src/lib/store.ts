@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { getThemeById, THEMES } from "@/config/themes";
-import { getFontById, DEFAULT_FONT_ID } from "@/config/fonts";
+import { getFontById, getTerminalFontById, DEFAULT_FONT_ID, DEFAULT_TERMINAL_FONT_ID } from "@/config/fonts";
 import { applyThemeToDocument } from "@/lib/theme-document";
 import { DEFAULT_AI_SETTINGS, type AISettings } from "./ai";
 import {
@@ -15,6 +15,7 @@ import {
   loadBangs,
   loadConnections,
   loadFont,
+  loadTerminalFont,
   loadGroups,
   loadLogRetention,
   loadTheme,
@@ -22,6 +23,7 @@ import {
   saveBangs,
   saveConnections,
   saveFont,
+  saveTerminalFont,
   saveGroups,
   saveLogRetention,
   saveTheme,
@@ -38,9 +40,12 @@ interface State {
   bangs: Bang[];
   theme: ThemeId;
   font: string;
+  terminalFont: string;
   settingsOpen: boolean;
   ai: AISettings;
   logRetention: LogRetention;
+  settingsTab: "general" | "shortcuts" | "logs" | "bangs" | "display" | "ai";
+  selectedHostId: string | null;
 }
 
 let state: State = {
@@ -53,9 +58,12 @@ let state: State = {
   bangs: [],
   theme: "onedark-pro-darker",
   font: DEFAULT_FONT_ID,
+  terminalFont: DEFAULT_TERMINAL_FONT_ID,
   settingsOpen: false,
   ai: { ...DEFAULT_AI_SETTINGS },
   logRetention: DEFAULT_LOG_RETENTION,
+  settingsTab: "display",
+  selectedHostId: null,
 };
 
 let initialized = false;
@@ -81,11 +89,18 @@ function applyFont(id: string) {
   document.documentElement.style.setProperty("--font-sans", font.stack);
 }
 
+function applyTerminalFont(id: string) {
+  if (typeof document === "undefined") return;
+  const font = getTerminalFontById(id);
+  document.documentElement.style.setProperty("--font-mono", font.stack);
+}
+
 function ensureInit() {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
   const theme = loadTheme();
   const font = loadFont();
+  const terminalFont = loadTerminalFont();
   state = {
     ...state,
     connections: loadConnections(),
@@ -93,10 +108,12 @@ function ensureInit() {
     bangs: loadBangs(),
     theme,
     font,
+    terminalFont,
     ai: loadAISettings(),
   };
   applyTheme(theme);
   applyFont(font);
+  applyTerminalFont(terminalFont);
   emit();
 }
 
@@ -259,11 +276,22 @@ export const actions = {
   },
 
   toggleSettings() {
-    setState((s) => ({ settingsOpen: !s.settingsOpen }));
+    setState((s) => ({ settingsOpen: !s.settingsOpen, selectedHostId: null }));
   },
 
   setSettingsOpen(open: boolean) {
-    setState({ settingsOpen: open });
+    setState((s) => ({ settingsOpen: open, selectedHostId: open ? null : s.selectedHostId }));
+  },
+
+  openSettingsTab(tab: State["settingsTab"]) {
+    setState({ settingsOpen: true, settingsTab: tab });
+  },
+
+  setSelectedHostId(id: string | null) {
+    setState((s) => ({ 
+      selectedHostId: id, 
+      settingsOpen: id ? false : s.settingsOpen
+    }));
   },
 
   log(level: LogEntry["level"], source: string, message: string) {
@@ -343,6 +371,12 @@ export const actions = {
     setState({ font: id });
     saveFont(id);
     applyFont(id);
+  },
+
+  setTerminalFont(id: string) {
+    setState({ terminalFont: id });
+    saveTerminalFont(id);
+    applyTerminalFont(id);
   },
 
   updateAI(patch: Partial<AISettings>) {

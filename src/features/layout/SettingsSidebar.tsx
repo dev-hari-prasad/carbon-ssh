@@ -36,7 +36,7 @@ import {
   THEMES,
   type AppTheme,
 } from "@/config/themes";
-import { FONTS, type AppFont } from "@/config/fonts";
+import { FONTS, TERMINAL_FONTS, type AppFont } from "@/config/fonts";
 import { actions, useStore } from "@/lib/store";
 import {
   DEFAULT_LOG_RETENTION,
@@ -53,86 +53,90 @@ import type { Bang } from "@/lib/types";
 import { BangForm } from "@/features/bangs/BangForm";
 import { ProviderIcon } from "@/features/ai/providerIcons";
 
-type Tab = "general" | "shortcuts" | "logs" | "bangs" | "display" | "ai";
+type Tab = "general" | "shortcuts" | "bangs" | "display" | "ai";
 
 export function SettingsSidebar() {
   const open = useStore((s) => s.settingsOpen);
-  const [tab, setTab] = useState<Tab>("display");
+  const tab = useStore((s) => s.settingsTab);
+  const setTab = (t: any) => actions.openSettingsTab(t);
   const [bangFormOpen, setBangFormOpen] = useState(false);
   const [editingBang, setEditingBang] = useState<Bang | null>(null);
 
-  if (!open) return null;
-
   return (
-    <>
-      <aside
-        className="absolute z-30 top-4 right-4 bottom-4 w-[340px] max-w-[min(340px,calc(100%-2rem))] flex flex-col rounded-[14px] border border-[var(--border-strong)] shadow-2xl overflow-hidden"
-        style={{ background: "var(--sidebar-bg)" }}
-      >
-        <div className="px-3 pt-3 pb-2 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1 p-1 rounded-[10px] bg-[var(--command-bg)] border border-border flex-wrap">
-            <SidebarTabBtn active={tab === "general"} onClick={() => setTab("general")} label="General">
-              <Gear size={14} weight={tab === "general" ? "fill" : "regular"} />
-            </SidebarTabBtn>
-            <SidebarTabBtn active={tab === "ai"} onClick={() => setTab("ai")} label="AI">
-              <Sparkle size={14} weight={tab === "ai" ? "fill" : "regular"} />
-            </SidebarTabBtn>
-            <SidebarTabBtn active={tab === "shortcuts"} onClick={() => setTab("shortcuts")} label="Shortcuts">
-              <Keyboard size={14} weight={tab === "shortcuts" ? "fill" : "regular"} />
-            </SidebarTabBtn>
-            <SidebarTabBtn active={tab === "bangs"} onClick={() => setTab("bangs")} label="Bangs">
-              <span className="font-mono font-bold text-[13px] leading-none">!</span>
-            </SidebarTabBtn>
-            <SidebarTabBtn active={tab === "logs"} onClick={() => setTab("logs")} label="Logs">
-              <Notepad size={14} weight={tab === "logs" ? "fill" : "regular"} />
-            </SidebarTabBtn>
-            <SidebarTabBtn active={tab === "display"} onClick={() => setTab("display")} label="Customize">
-              <Palette size={14} weight={tab === "display" ? "fill" : "regular"} />
-            </SidebarTabBtn>
-          </div>
-          <Tooltip label="Close" side="bottom">
-            <button
-              onClick={() => actions.setSettingsOpen(false)}
-              aria-label="Close settings"
-              className="w-7 h-7 shrink-0 grid place-items-center rounded-[8px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
-            >
-              <X size={13} weight="bold" />
-            </button>
-          </Tooltip>
-        </div>
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.aside
+            initial={{ x: "100%", opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: "100%", opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="absolute z-30 top-4 right-4 bottom-4 w-[340px] max-w-[min(340px,calc(100%-2rem))] flex flex-col rounded-[14px] border border-[var(--border-strong)] shadow-2xl overflow-hidden"
+            style={{ background: "var(--sidebar-bg)" }}
+          >
+            <div className="px-3 pt-3 pb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1 p-1 rounded-[10px] bg-[var(--command-bg)] border border-border flex-wrap">
+                <SidebarTabBtn active={tab === "general"} onClick={() => setTab("general")} label="General">
+                  <Gear size={14} weight={tab === "general" ? "fill" : "regular"} />
+                </SidebarTabBtn>
+                <SidebarTabBtn active={tab === "ai"} onClick={() => setTab("ai")} label="AI">
+                  <Sparkle size={14} weight={tab === "ai" ? "fill" : "regular"} />
+                </SidebarTabBtn>
+                <SidebarTabBtn active={tab === "shortcuts"} onClick={() => setTab("shortcuts")} label="Shortcuts">
+                  <Keyboard size={14} weight={tab === "shortcuts" ? "fill" : "regular"} />
+                </SidebarTabBtn>
+                <SidebarTabBtn active={tab === "bangs"} onClick={() => setTab("bangs")} label="Bangs">
+                  <span className="font-mono font-bold text-[13px] leading-none">!</span>
+                </SidebarTabBtn>
+                <SidebarTabBtn active={tab === "display"} onClick={() => setTab("display")} label="Customize">
+                  <Palette size={14} weight={tab === "display" ? "fill" : "regular"} />
+                </SidebarTabBtn>
+              </div>
+              <Tooltip label="Close" side="bottom">
+                <button
+                  onClick={() => actions.setSettingsOpen(false)}
+                  aria-label="Close settings"
+                  className="w-7 h-7 shrink-0 grid place-items-center rounded-[8px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
+                >
+                  <X size={13} weight="bold" />
+                </button>
+              </Tooltip>
+            </div>
 
-        <div className="flex-1 overflow-y-auto min-h-0">
-          {tab === "display" ? (
-            <DisplayPanel />
-          ) : tab === "general" ? (
-            <GeneralPanel />
-          ) : tab === "ai" ? (
-            <AIPanel />
-          ) : tab === "shortcuts" ? (
-            <ShortcutsPanel />
-          ) : tab === "bangs" ? (
-            <BangsPanel
-              onEdit={(b) => {
-                setEditingBang(b);
-                setBangFormOpen(true);
-              }}
-              onNew={() => {
-                setEditingBang(null);
-                setBangFormOpen(true);
-              }}
-            />
-          ) : (
-            <LogsPanel />
-          )}
-        </div>
-      </aside>
+            <div className="flex-1 overflow-y-auto min-h-0">
+              {tab === "display" ? (
+                <DisplayPanel />
+              ) : tab === "general" ? (
+                <GeneralPanel />
+              ) : tab === "ai" ? (
+                <AIPanel />
+              ) : tab === "shortcuts" ? (
+                <ShortcutsPanel />
+              ) : tab === "bangs" ? (
+                <BangsPanel
+                  onEdit={(b) => {
+                    setEditingBang(b);
+                    setBangFormOpen(true);
+                  }}
+                  onNew={() => {
+                    setEditingBang(null);
+                    setBangFormOpen(true);
+                  }}
+                />
+              ) : (
+                <AIPanel />
+              )}
+            </div>
+          </motion.aside>
 
-      <BangForm
-        open={bangFormOpen}
-        onClose={() => setBangFormOpen(false)}
-        initial={editingBang}
-      />
-    </>
+          <BangForm
+            open={bangFormOpen}
+            onClose={() => setBangFormOpen(false)}
+            initial={editingBang}
+          />
+        </>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -152,11 +156,10 @@ function SidebarTabBtn({
       <button
         onClick={onClick}
         aria-label={label}
-        className={`w-7 h-7 grid place-items-center rounded-[7px] transition-colors ${
-          active
+        className={`w-7 h-7 grid place-items-center rounded-[7px] transition-colors ${active
             ? "bg-[var(--command-active-bg)] text-fg"
             : "text-fg-muted hover:text-fg"
-        }`}
+          }`}
       >
         {children}
       </button>
@@ -325,7 +328,7 @@ function GeneralPanel() {
           value={confirmClose}
           onChange={setConfirmClose}
         />
-        
+
       </SettingsGroup>
 
       <SettingsGroup
@@ -405,11 +408,10 @@ function LogRetentionSelect({
                   onChange(opt.id);
                   setOpen(false);
                 }}
-                className={`w-full flex items-center gap-2.5 px-2 min-h-9 rounded-[7px] text-left transition-colors ${
-                  active
+                className={`w-full flex items-center gap-2.5 px-2 min-h-9 rounded-[7px] text-left transition-colors ${active
                     ? "bg-[var(--command-active-bg)] text-fg"
                     : "text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg"
-                }`}
+                  }`}
               >
                 <span className="flex-1 min-w-0 truncate text-[13px] font-sans">
                   {opt.label}
@@ -430,7 +432,7 @@ function LogSettingsGroup() {
   const logRetention = useStore((s) => s.logRetention);
   return (
     <SettingsGroup
-      label="Logs"
+      label="Activity Logs"
       icon={<Notepad size={13} weight="duotone" className="text-fg-dim" aria-hidden />}
     >
       <div className="px-2 py-1.5 flex flex-col gap-2">
@@ -491,9 +493,8 @@ function ToggleRow({
       type="button"
       onClick={() => !disabled && onChange(!value)}
       disabled={disabled}
-      className={`flex items-start justify-between gap-3 px-2 py-2.5 rounded-[8px] text-left ${
-        disabled ? "opacity-55 cursor-not-allowed" : "hover:bg-[var(--menu-hover-bg)]"
-      }`}
+      className={`flex items-start justify-between gap-3 px-2 py-2.5 rounded-[8px] text-left ${disabled ? "opacity-55 cursor-not-allowed" : "hover:bg-[var(--menu-hover-bg)]"
+        }`}
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 min-w-0 flex-wrap">
@@ -512,14 +513,12 @@ function ToggleRow({
       </div>
       <span
         aria-hidden
-        className={`shrink-0 mt-0.5 w-[28px] h-[16px] rounded-full transition-colors relative ${
-          value ? "bg-accent" : "bg-[var(--border-strong)]"
-        }`}
+        className={`shrink-0 mt-0.5 w-[28px] h-[16px] rounded-full transition-colors relative ${value ? "bg-accent" : "bg-[var(--border-strong)]"
+          }`}
       >
         <span
-          className={`absolute top-0.5 left-0.5 w-[12px] h-[12px] rounded-full bg-white shadow-sm transition-transform ${
-            value ? "translate-x-[12px]" : "translate-x-0"
-          }`}
+          className={`absolute top-0.5 left-0.5 w-[12px] h-[12px] rounded-full bg-white shadow-sm transition-transform ${value ? "translate-x-[12px]" : "translate-x-0"
+            }`}
         />
       </span>
     </button>
@@ -531,48 +530,49 @@ const SHORTCUTS: Array<{
   icon: ReactNode;
   items: Array<{ keys: string[]; label: string }>;
 }> = [
-  {
-    group: "Sessions",
-    icon: <SquaresFour size={13} weight="duotone" className="text-fg-dim shrink-0" aria-hidden />,
-    items: [
-      { keys: ["Ctrl", "T"], label: "New Session" },
-      { keys: ["Ctrl", "W"], label: "Close active session" },
-      { keys: ["Ctrl", "Tab"], label: "Next session" },
-      { keys: ["Ctrl", "Shift", "Tab"], label: "Previous session" },
-    ],
-  },
-  {
-    group: "Search & navigation",
-    icon: (
-      <MagnifyingGlass size={13} weight="duotone" className="text-fg-dim shrink-0" aria-hidden />
-    ),
-    items: [
-      { keys: ["Ctrl", "K"], label: "Open command palette" },
-      { keys: ["Ctrl", "P"], label: "Quick-switch machines" },
-      { keys: ["Ctrl", "/"], label: "Toggle sidebar" },
-    ],
-  },
-  {
-    group: "Terminal",
-    icon: (
-      <TerminalWindow size={13} weight="duotone" className="text-fg-dim shrink-0" aria-hidden />
-    ),
-    items: [
-      { keys: ["Ctrl", "Shift", "C"], label: "Copy selection" },
-      { keys: ["Ctrl", "Shift", "V"], label: "Paste" },
-      { keys: ["Ctrl", "Shift", "F"], label: "Find in terminal" },
-      { keys: ["Ctrl", "L"], label: "Clear terminal" },
-    ],
-  },
-  {
-    group: "Bangs",
-    icon: <Lightning size={13} weight="duotone" className="text-fg-dim shrink-0" aria-hidden />,
-    items: [
-      { keys: ["!", "name"], label: "Run a saved bang" },
-      { keys: ["Ctrl", "Shift", "B"], label: "New bang" },
-    ],
-  },
-];
+    {
+      group: "Sessions",
+      icon: <SquaresFour size={13} weight="duotone" className="text-fg-dim shrink-0" aria-hidden />,
+      items: [
+        { keys: ["Mod", "Shift", "H"], label: "View Hosts" },
+        { keys: ["Mod", "T"], label: "New Session" },
+        { keys: ["Mod", "W"], label: "Close active session" },
+        { keys: ["Mod", "Tab"], label: "Next session" },
+        { keys: ["Mod", "Shift", "Tab"], label: "Previous session" },
+      ],
+    },
+    {
+      group: "Search & navigation",
+      icon: (
+        <MagnifyingGlass size={13} weight="duotone" className="text-fg-dim shrink-0" aria-hidden />
+      ),
+      items: [
+        { keys: ["Mod", "K"], label: "Open machines picker" },
+        { keys: ["Mod", "P"], label: "Quick-switch machines" },
+        { keys: ["Mod", "/"], label: "Toggle sidebar" },
+      ],
+    },
+    {
+      group: "Terminal",
+      icon: (
+        <TerminalWindow size={13} weight="duotone" className="text-fg-dim shrink-0" aria-hidden />
+      ),
+      items: [
+        { keys: ["Mod", "Shift", "C"], label: "Copy selection" },
+        { keys: ["Mod", "Shift", "V"], label: "Paste" },
+        { keys: ["Mod", "Shift", "F"], label: "Find in terminal" },
+        { keys: ["Mod", "L"], label: "Clear terminal" },
+      ],
+    },
+    {
+      group: "Bangs",
+      icon: <Lightning size={13} weight="duotone" className="text-fg-dim shrink-0" aria-hidden />,
+      items: [
+        { keys: ["!", "name"], label: "Run a saved bang" },
+        { keys: ["Mod", "Shift", "B"], label: "New bang" },
+      ],
+    },
+  ];
 
 function ShortcutsPanel() {
   return (
@@ -591,16 +591,23 @@ function ShortcutsPanel() {
               >
                 <span className="text-[12.5px] font-sans text-fg">{s.label}</span>
                 <span className="flex items-center gap-1 shrink-0">
-                  {s.keys.map((k, i) => (
-                    <span key={i} className="flex items-center gap-1">
-                      {i > 0 ? (
-                        <span className="text-[10px] text-fg-dim">+</span>
-                      ) : null}
-                      <kbd className="px-1.5 h-[20px] inline-flex items-center rounded-[5px] border border-border bg-[var(--command-bg)] text-[10.5px] font-mono text-fg-muted">
-                        {k}
-                      </kbd>
-                    </span>
-                  ))}
+                  {s.keys.map((k, i) => {
+                    const isMac = typeof window !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+                    let label = k;
+                    if (k === "Mod") label = isMac ? "⌘" : "Ctrl";
+                    if (k === "Shift") label = isMac ? "⇧" : "Shift";
+
+                    return (
+                      <span key={i} className="flex items-center gap-1">
+                        {i > 0 ? (
+                          <span className="text-[10px] text-fg-dim">+</span>
+                        ) : null}
+                        <kbd className="px-1.5 h-[20px] min-w-[20px] inline-flex items-center justify-center rounded-[5px] border border-border bg-[var(--command-bg)] text-[10.5px] font-mono text-fg-muted">
+                          {label}
+                        </kbd>
+                      </span>
+                    );
+                  })}
                 </span>
               </div>
             ))}
@@ -611,65 +618,6 @@ function ShortcutsPanel() {
   );
 }
 
-function LogsPanel() {
-  const logs = useStore((s) => s.logs);
-  return (
-    <div className="px-3 py-2 flex flex-col">
-      <div className="flex items-center justify-between px-1 pt-2 pb-1.5">
-        <span className="text-[10.5px] uppercase tracking-wider font-sans font-semibold text-fg-dim">
-          Recent activity
-        </span>
-        {logs.length > 0 ? (
-          <button
-            onClick={() => actions.clearLogs()}
-            className="text-[11px] font-sans text-fg-muted hover:text-fg"
-          >
-            Clear
-          </button>
-        ) : null}
-      </div>
-      {logs.length === 0 ? (
-        <div className="px-2 py-8 text-center text-[12px] font-sans text-fg-muted">
-          No activity yet.
-        </div>
-      ) : (
-        <div className="flex flex-col">
-          {[...logs].reverse().map((log) => {
-            const dotColor =
-              log.level === "error"
-                ? "text-danger"
-                : log.level === "warn"
-                  ? "text-warning"
-                  : "text-success";
-            return (
-              <div
-                key={log.id}
-                className="flex items-start gap-2 px-2 py-1.5 rounded-[8px] hover:bg-[var(--menu-hover-bg)]"
-              >
-                <span className={`mt-1.5 ${dotColor}`}>
-                  <span className="block w-1.5 h-1.5 rounded-full bg-current" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[12px] font-sans text-fg truncate">
-                    {log.message}
-                  </div>
-                  <div className="text-[10.5px] font-mono text-fg-dim mt-0.5">
-                    {log.source} ·{" "}
-                    {new Date(log.ts).toLocaleTimeString(undefined, {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    })}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 function DisplayPanel() {
   const [fontOpen, setFontOpen] = useState(true);
@@ -682,7 +630,7 @@ function DisplayPanel() {
         open={fontOpen}
         onToggle={() => setFontOpen((v) => !v)}
       >
-        <FontList />
+        <FontSection />
       </Section>
 
       <Section
@@ -725,6 +673,49 @@ function Section({
   );
 }
 
+function FontSection() {
+  const [tab, setTab] = useState<"app" | "terminal">("app");
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="mx-2 p-1 flex items-center gap-1 rounded-[10px] bg-[var(--command-bg)] border border-border">
+        <SubTabBtn active={tab === "app"} onClick={() => setTab("app")} className="flex-1">
+          App font
+        </SubTabBtn>
+        <SubTabBtn active={tab === "terminal"} onClick={() => setTab("terminal")} className="flex-1">
+          Terminal font
+        </SubTabBtn>
+      </div>
+      <div className="flex flex-col gap-1">
+        {tab === "app" ? <FontList /> : <TerminalFontList />}
+      </div>
+    </div>
+  );
+}
+
+function SubTabBtn({
+  active,
+  onClick,
+  className = "",
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`h-7 px-2.5 rounded-[7px] text-[11.5px] font-sans transition-colors flex items-center justify-center ${active
+          ? "bg-[var(--command-active-bg)] text-fg"
+          : "text-fg-muted hover:text-fg"
+        } ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function FontList() {
   const activeFontId = useStore((s) => s.font);
   return (
@@ -735,6 +726,22 @@ function FontList() {
           font={font}
           active={font.id === activeFontId}
           onSelect={() => actions.setFont(font.id)}
+        />
+      ))}
+    </>
+  );
+}
+
+function TerminalFontList() {
+  const activeFontId = useStore((s) => s.terminalFont);
+  return (
+    <>
+      {TERMINAL_FONTS.map((font) => (
+        <FontRow
+          key={font.id}
+          font={font}
+          active={font.id === activeFontId}
+          onSelect={() => actions.setTerminalFont(font.id)}
         />
       ))}
     </>
@@ -753,17 +760,15 @@ function FontRow({
   return (
     <button
       onClick={onSelect}
-      className={`w-full flex items-center gap-3 px-2 py-2 rounded-[10px] text-left transition-colors ${
-        active
+      className={`w-full flex items-center gap-3 px-2 py-2 rounded-[10px] text-left transition-colors ${active
           ? "bg-[var(--command-active-bg)] ring-1 ring-accent/40"
           : "hover:bg-[var(--menu-hover-bg)]"
-      }`}
+        }`}
     >
       <FontPreview font={font} />
       <span
-        className={`min-w-0 flex-1 text-[13px] truncate ${
-          active ? "text-fg font-semibold" : "text-fg"
-        }`}
+        className={`min-w-0 flex-1 text-[13px] truncate ${active ? "text-fg font-semibold" : "text-fg"
+          }`}
         style={{ fontFamily: font.stack }}
       >
         {font.name}
@@ -832,17 +837,15 @@ function ThemeRow({
   return (
     <button
       onClick={onSelect}
-      className={`w-full flex items-center gap-3 px-2 py-2 rounded-[10px] text-left transition-colors ${
-        active
+      className={`w-full flex items-center gap-3 px-2 py-2 rounded-[10px] text-left transition-colors ${active
           ? "bg-[var(--command-active-bg)] ring-1 ring-accent/40"
           : "hover:bg-[var(--menu-hover-bg)]"
-      }`}
+        }`}
     >
       <ThemePreview theme={theme} />
       <span
-        className={`min-w-0 flex-1 text-[13px] font-sans truncate ${
-          active ? "text-fg font-semibold" : "text-fg"
-        }`}
+        className={`min-w-0 flex-1 text-[13px] font-sans truncate ${active ? "text-fg font-semibold" : "text-fg"
+          }`}
       >
         {theme.name}
       </span>
@@ -963,9 +966,8 @@ function AIPanelFaq() {
                 className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-[var(--menu-hover-bg)] transition-colors"
               >
                 <span
-                  className={`text-[12px] font-sans leading-snug ${
-                    isOpen ? "text-fg font-medium" : "text-fg-muted"
-                  }`}
+                  className={`text-[12px] font-sans leading-snug ${isOpen ? "text-fg font-medium" : "text-fg-muted"
+                    }`}
                 >
                   {item.q}
                 </span>
@@ -1288,11 +1290,10 @@ function ProviderSelect({
                   onChange(p.id);
                   setOpen(false);
                 }}
-                className={`w-full flex items-center gap-2.5 px-2 h-9 rounded-[7px] text-left transition-colors ${
-                  active
+                className={`w-full flex items-center gap-2.5 px-2 h-9 rounded-[7px] text-left transition-colors ${active
                     ? "bg-[var(--command-active-bg)] text-fg"
                     : "text-fg hover:bg-[var(--menu-hover-bg)]"
-                }`}
+                  }`}
               >
                 <span className="w-4 h-4 grid place-items-center shrink-0">
                   <ProviderIcon id={p.id} size={14} />

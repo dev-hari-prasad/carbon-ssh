@@ -6,7 +6,9 @@ import {
   PencilSimple,
   Trash,
   Plug,
-  SidebarSimple,
+  Gear,
+  ClockCounterClockwise,
+  Lightning,
   TerminalWindow,
   SquaresFour,
   FolderDashed,
@@ -54,11 +56,35 @@ export function TopBar() {
     window.addEventListener("tm:focus-search", onOpenMachines);
     window.addEventListener("tm:open-history", onOpenMachines);
     window.addEventListener("tm:check-history", onOpenMachines);
+
+    const onGlobalKeyDown = (e: KeyboardEvent) => {
+      const isMac = typeof window !== "undefined" && /Mac|iPhone|iPod|iPad/.test(navigator.platform);
+      const mod = isMac ? e.metaKey : e.ctrlKey;
+      const key = e.key.toLowerCase();
+      
+      // Mod + H (or Mod + Shift + H) -> Go to Hosts
+      if (mod && key === "h") {
+        e.preventDefault();
+        e.stopPropagation();
+        actions.goHome();
+        setOpen(null);
+      }
+      
+      // Mod + K -> Open Machines Popover
+      if (mod && key === "k") {
+        e.preventDefault();
+        e.stopPropagation();
+        setOpen("machines");
+      }
+    };
+    window.addEventListener("keydown", onGlobalKeyDown, { capture: true });
+
     return () => {
       window.removeEventListener("tm:new-connection", onNew);
       window.removeEventListener("tm:focus-search", onOpenMachines);
       window.removeEventListener("tm:open-history", onOpenMachines);
       window.removeEventListener("tm:check-history", onOpenMachines);
+      window.removeEventListener("keydown", onGlobalKeyDown, { capture: true });
     };
   }, []);
 
@@ -86,8 +112,8 @@ export function TopBar() {
       className="border-b border-[var(--titlebar-border)] bg-[var(--titlebar-bg)] select-none relative z-40"
       ref={wrapRef}
     >
-      <div className="h-[44px] pl-3 pr-4 flex items-stretch gap-2">
-        <div className="flex items-center pl-2 pr-1 shrink-0">
+      <div className="h-[44px] pl-3 pr-2 flex items-stretch gap-2">
+        <div className="flex items-center pl-0.5 pr-1 shrink-0">
           <img
             src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTi-TGmA1kwrrCDuC7QtX3cojJb27aSXjE0Qw&s"
             alt="Logo"
@@ -269,18 +295,37 @@ export function TopBar() {
           </Popover>
         </div>
 
-        <div className="flex items-center gap-1 shrink-0 relative">
+        <div className="flex items-center gap-0 shrink-0 relative h-8 self-center">
+          <div className="w-px h-4 bg-border ml-1.5 mr-1 opacity-60" />
+          <Tooltip label="Bangs" side="bottom">
+            <button
+              onClick={() => actions.openSettingsTab("bangs")}
+              aria-label="Bangs"
+              className="w-7 h-7 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+            >
+              <Lightning size={14} weight="duotone" />
+            </button>
+          </Tooltip>
+          <Tooltip label="Activity Logs" side="bottom">
+            <button
+              onClick={() => actions.toggleBottom()}
+              aria-label="Activity logs"
+              className="w-7 h-7 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+            >
+              <ClockCounterClockwise size={14} weight="duotone" />
+            </button>
+          </Tooltip>
           <Tooltip label="Settings" side="bottom">
             <button
               onClick={() => actions.toggleSettings()}
               aria-label="Toggle settings"
-              className={`w-8 h-8 grid place-items-center rounded-[8px] transition-colors ${
+              className={`w-7 h-7 grid place-items-center rounded-[7px] transition-colors ${
                 settingsOpen
                   ? "text-fg bg-[var(--command-active-bg)]"
                   : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
               }`}
             >
-              <SidebarSimple size={15} weight={settingsOpen ? "fill" : "regular"} />
+              <Gear size={14} weight={settingsOpen ? "fill" : "regular"} />
             </button>
           </Tooltip>
         </div>
@@ -338,6 +383,10 @@ function MachinesPopover({
 }) {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [activeArea, setActiveArea] = useState<"groups" | "hosts">("hosts");
+  const [selectedGroupIndex, setSelectedGroupIndex] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const filteredHosts = search.trim()
     ? connections.filter((c) =>
@@ -351,6 +400,8 @@ function MachinesPopover({
     ? connections.filter((c) => !c.groupId)
     : connections.filter((c) => c.groupId === selectedGroupId);
 
+  const uncategorizedCount = connections.filter(c => !c.groupId).length;
+
   const groupCounts = useMemo(() => {
     const m: Record<string, number> = {};
     for (const c of connections) {
@@ -358,8 +409,72 @@ function MachinesPopover({
     }
     return m;
   }, [connections]);
-  
-  const uncategorizedCount = connections.filter(c => !c.groupId).length;
+
+  const allGroups = useMemo(() => [
+    { id: null, name: "All", count: connections.length },
+    { id: "__uncategorized__", name: "Uncategorized", count: uncategorizedCount },
+    ...groups.map(g => ({ id: g.id, name: g.name, count: groupCounts[g.id] ?? 0 }))
+  ], [connections.length, uncategorizedCount, groups, groupCounts]);
+
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [search, selectedGroupId]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // If we're typing and not in the input, focus it
+      if (
+        inputRef.current &&
+        document.activeElement !== inputRef.current &&
+        e.key.length === 1 &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
+        inputRef.current.focus();
+      }
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (activeArea === "hosts") {
+          setSelectedIndex((i) => Math.min(i + 1, filteredHosts.length - 1));
+        } else {
+          setSelectedGroupIndex((i) => Math.min(i + 1, allGroups.length - 1));
+          setSelectedGroupId(allGroups[Math.min(selectedGroupIndex + 1, allGroups.length - 1)].id);
+        }
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (activeArea === "hosts") {
+          setSelectedIndex((i) => Math.max(i - 1, 0));
+        } else {
+          setSelectedGroupIndex((i) => Math.max(i - 1, 0));
+          setSelectedGroupId(allGroups[Math.max(selectedGroupIndex - 1, 0)].id);
+        }
+      } else if (e.key === "ArrowRight") {
+        if (activeArea === "groups") {
+          e.preventDefault();
+          setActiveArea("hosts");
+          inputRef.current?.focus();
+        }
+      } else if (e.key === "ArrowLeft") {
+        if (activeArea === "hosts") {
+          e.preventDefault();
+          setActiveArea("groups");
+        }
+      } else if (e.key === "Enter") {
+        if (activeArea === "hosts") {
+          const selected = filteredHosts[selectedIndex];
+          if (selected) {
+            e.preventDefault();
+            onConnect(selected);
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [filteredHosts, selectedIndex, onConnect, activeArea, selectedGroupIndex, allGroups]);
 
   return (
     <div className="bg-[var(--menu-bg)] border border-border rounded-[12px] shadow-2xl overflow-hidden flex w-[550px] h-[360px]">
@@ -371,36 +486,34 @@ function MachinesPopover({
           </span>
         </div>
         <div className="flex-1 overflow-y-auto min-h-0 p-1.5 flex flex-col gap-0.5">
-          <GroupItem
-            active={selectedGroupId === null}
-            onClick={() => setSelectedGroupId(null)}
-            icon={<SquaresFour size={14} weight="fill" className="text-fg" />}
-            label="All"
-            count={connections.length}
-          />
-          <GroupItem
-            active={selectedGroupId === "__uncategorized__"}
-            onClick={() => setSelectedGroupId("__uncategorized__")}
-            icon={<FolderDashed size={14} weight="regular" className="text-fg-muted" />}
-            label="Uncategorized"
-            count={uncategorizedCount}
-          />
-          {groups.length > 0 && (
-            <>
-              <div className="h-px bg-border my-1 mx-2" />
-              {groups.map(g => (
-                <GroupItem
-                  key={g.id}
-                  active={selectedGroupId === g.id}
-                  onClick={() => setSelectedGroupId(g.id)}
-                  icon={<HardDrives size={13} weight="fill" className="text-white" />}
-                  iconContainerClass="bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8] shadow-inner"
-                  label={g.name}
-                  count={groupCounts[g.id] ?? 0}
-                />
-              ))}
-            </>
-          )}
+          {allGroups.map((g, i) => (
+            <GroupItem
+              key={String(g.id)}
+              active={selectedGroupId === g.id}
+              focused={activeArea === "groups" && selectedGroupIndex === i}
+              onClick={() => {
+                setSelectedGroupId(g.id);
+                setSelectedGroupIndex(i);
+                setActiveArea("groups");
+              }}
+              icon={
+                g.id === null ? (
+                  <SquaresFour size={14} weight="fill" className="text-fg" />
+                ) : g.id === "__uncategorized__" ? (
+                  <FolderDashed size={14} weight="regular" className="text-fg-muted" />
+                ) : (
+                  <HardDrives size={13} weight="fill" className="text-white" />
+                )
+              }
+              iconContainerClass={
+                g.id !== null && g.id !== "__uncategorized__"
+                  ? "bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8] shadow-inner"
+                  : undefined
+              }
+              label={g.name}
+              count={g.count}
+            />
+          ))}
         </div>
         <div className="shrink-0 border-t border-border p-1.5">
           <div className="grid grid-cols-2 gap-1.5 w-full">
@@ -429,6 +542,7 @@ function MachinesPopover({
           <div className="flex items-center flex-1 gap-1.5 px-1">
             <MagnifyingGlass size={13} className="text-fg-muted shrink-0" weight="bold" />
             <input
+              ref={inputRef}
               autoFocus
               type="text"
               placeholder="Search hosts..."
@@ -445,11 +559,16 @@ function MachinesPopover({
                 <div className="text-[12.5px] text-fg-muted font-sans text-center">No hosts found.</div>
               </div>
             ) : (
-              filteredHosts.map((c) => (
+              filteredHosts.map((c, i) => (
                 <div
                   key={c.id}
-                  className="group flex items-center gap-2.5 px-2.5 py-1.5 rounded-[8px] hover:bg-[var(--bg-panel)] cursor-pointer transition-colors"
+                  className={`group flex items-center gap-2.5 px-2.5 py-1.5 rounded-[8px] cursor-pointer transition-colors ${
+                    i === selectedIndex
+                      ? "bg-[var(--bg-panel)] shadow-sm"
+                      : "hover:bg-[var(--bg-panel)]"
+                  }`}
                   onClick={() => onConnect(c)}
+                  onMouseEnter={() => setSelectedIndex(i)}
                 >
                   <div className="shrink-0">
                     <HostIcon conn={c} size={24} />
@@ -472,6 +591,7 @@ function MachinesPopover({
 
 function GroupItem({
   active,
+  focused,
   onClick,
   icon,
   iconContainerClass,
@@ -479,6 +599,7 @@ function GroupItem({
   count,
 }: {
   active: boolean;
+  focused?: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   iconContainerClass?: string;
@@ -489,7 +610,11 @@ function GroupItem({
     <button
       onClick={onClick}
       className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] text-left transition-colors ${
-        active ? "bg-[var(--command-active-bg)] text-fg" : "hover:bg-[var(--bg-panel)] text-fg-muted"
+        focused
+          ? "bg-[var(--command-active-bg)] ring-1 ring-accent/30 text-fg"
+          : active
+          ? "bg-[var(--bg-panel)]/80 text-fg"
+          : "hover:bg-[var(--bg-panel)] text-fg-muted"
       }`}
     >
       <div className={`w-5 h-5 rounded-[4px] grid place-items-center shrink-0 ${iconContainerClass || (active ? "bg-[var(--bg-panel)]/50" : "bg-bg/50")}`}>

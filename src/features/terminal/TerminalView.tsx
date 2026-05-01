@@ -49,6 +49,7 @@ function parseServerMessage(data: string): ServerMessage | null {
 export function TerminalView({ tab, conn }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const themeId = useStore((s) => s.theme);
+  const terminalFontId = useStore((s) => s.terminalFont);
   const connectionSnapshot = useMemo(
     () => ({
       id: conn.id,
@@ -78,7 +79,7 @@ export function TerminalView({ tab, conn }: Props) {
 
       const term = new Terminal({
         fontFamily:
-          '"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace',
+          'var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace',
         fontSize: 13,
         lineHeight: 1.35,
         cursorBlink: true,
@@ -221,6 +222,7 @@ export function TerminalView({ tab, conn }: Props) {
     tab.title,
     connectionSnapshot,
     themeId,
+    terminalFontId,
   ]);
 
   return (

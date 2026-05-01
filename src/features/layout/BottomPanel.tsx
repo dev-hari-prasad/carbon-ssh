@@ -10,6 +10,7 @@ import {
   TerminalWindow,
   Trash,
   WarningCircle,
+  ClockCounterClockwise,
   X,
 } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -23,7 +24,7 @@ const LOGS_HEIGHT_STORAGE_KEY = "terminal-muse.logs-panel-height.v1";
 const DEFAULT_LOGS_BODY_PX = 160;
 /** Area above logs used as drag resize target (excluding bottom strip). */
 const LOGS_RESIZE_HANDLE_PX = 6;
-const LOGS_BODY_MIN_PX = 200;
+const LOGS_BODY_MIN_PX = 300;
 /** Max height of log body (excluding resize handle/bottom strip) vs viewport */
 const LOGS_BODY_MAX_SCREEN_FRACTION = 0.45;
 
@@ -246,11 +247,10 @@ function LogsSourcePicker({
               onChange("__all__");
               setMenuOpen(false);
             }}
-            className={`w-full flex items-center gap-2 px-2 h-7 rounded-[7px] text-left transition-colors ${
-              value === "__all__"
+            className={`w-full flex items-center gap-2 px-2 h-7 rounded-[7px] text-left transition-colors ${value === "__all__"
                 ? "bg-[var(--command-active-bg)] text-fg"
                 : "text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg"
-            }`}
+              }`}
           >
             <LogSourceGlyph source="__all__" conn={null} />
             <span className="flex-1 min-w-0 truncate text-[11px] font-mono">All sources</span>
@@ -271,11 +271,10 @@ function LogsSourcePicker({
                   onChange(s);
                   setMenuOpen(false);
                 }}
-                className={`w-full flex items-center gap-2 px-2 h-7 rounded-[7px] text-left transition-colors ${
-                  active
+                className={`w-full flex items-center gap-2 px-2 h-7 rounded-[7px] text-left transition-colors ${active
                     ? "bg-[var(--command-active-bg)] text-fg"
                     : "text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg"
-                }`}
+                  }`}
               >
                 <LogSourceGlyph source={s} conn={conn} />
                 <span className="flex-1 min-w-0 truncate text-[11px] font-mono">{s}</span>
@@ -525,15 +524,13 @@ export function BottomPanel() {
   return (
     <div className="border-t border-border bg-bg-panel flex flex-col">
       <div
-        className={`min-h-7 h-7 bg-bg-panel ${
-          open
-            ? `grid grid-rows-1 gap-x-2 pr-1 items-stretch relative isolate ${
-                SHOW_LOGS_TOOLBAR_SEARCH
-                  ? "grid-cols-[1fr_minmax(14rem,22rem)_auto]"
-                  : "grid-cols-[1fr_auto]"
-              }`
+        className={`min-h-7 h-7 bg-bg-panel ${open
+            ? `grid grid-rows-1 gap-x-2 pr-1 items-stretch relative isolate ${SHOW_LOGS_TOOLBAR_SEARCH
+              ? "grid-cols-[1fr_minmax(14rem,22rem)_auto]"
+              : "grid-cols-[1fr_auto]"
+            }`
             : "flex items-stretch"
-        }`}
+          }`}
       >
         {!open ? (
           <button
@@ -544,7 +541,7 @@ export function BottomPanel() {
             className="flex-1 min-w-0 pl-3 pr-3 flex items-center gap-1.5 text-xxs uppercase font-sans font-semibold text-fg-muted hover:text-fg hover:bg-[var(--menu-hover-bg)]/50 tracking-wider transition-colors rounded-none text-left"
           >
             <CaretUp size={11} weight="bold" />
-            Logs
+            Activity Logs
             <span className="text-fg-dim font-mono normal-case tracking-normal">
               ({filteredLogs.length}
               {showTotalInHeader ? `/${logs.length}` : null})
@@ -556,9 +553,8 @@ export function BottomPanel() {
               type="button"
               aria-expanded={open}
               aria-controls="logs-scroll-region"
-              aria-label={`Collapse logs panel. ${filteredLogs.length} entr${
-                filteredLogs.length === 1 ? "y" : "ies"
-              } visible${showTotalInHeader ? ` of ${logs.length} total.` : "."}`}
+              aria-label={`Collapse logs panel. ${filteredLogs.length} entr${filteredLogs.length === 1 ? "y" : "ies"
+                } visible${showTotalInHeader ? ` of ${logs.length} total.` : "."}`}
               onClick={() => actions.toggleBottom()}
               className="col-span-full row-start-1 z-[1] -m-px min-h-7 h-full rounded-none bg-transparent hover:bg-[var(--menu-hover-bg)]/50 transition-colors border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-inset"
             />
@@ -568,7 +564,7 @@ export function BottomPanel() {
               aria-hidden={true}
             >
               <CaretDown size={11} weight="bold" className="shrink-0" aria-hidden />
-              <span>Logs</span>
+              <span>Activity Logs</span>
               <span className="text-fg-dim font-mono normal-case tracking-normal">
                 ({filteredLogs.length}
                 {showTotalInHeader ? `/${logs.length}` : null})
@@ -576,9 +572,8 @@ export function BottomPanel() {
             </div>
 
             <div
-              className={`col-start-2 row-start-1 z-[2] flex justify-center items-center min-w-0 w-full px-0.5 h-full pointer-events-none ${
-                SHOW_LOGS_TOOLBAR_SEARCH ? "" : "hidden"
-              }`}
+              className={`col-start-2 row-start-1 z-[2] flex justify-center items-center min-w-0 w-full px-0.5 h-full pointer-events-none ${SHOW_LOGS_TOOLBAR_SEARCH ? "" : "hidden"
+                }`}
               aria-hidden={!SHOW_LOGS_TOOLBAR_SEARCH}
             >
               <div className="pointer-events-auto w-full min-h-0">
@@ -587,9 +582,8 @@ export function BottomPanel() {
             </div>
 
             <div
-              className={`${
-                SHOW_LOGS_TOOLBAR_SEARCH ? "col-start-3" : "col-start-2"
-              } row-start-1 z-[2] flex items-center gap-1.5 shrink-0 justify-end border-l border-border/60 pl-2 bg-bg-panel h-full`}
+              className={`${SHOW_LOGS_TOOLBAR_SEARCH ? "col-start-3" : "col-start-2"
+                } row-start-1 z-[2] flex items-center gap-1.5 shrink-0 justify-end border-l border-border/60 pl-2 bg-bg-panel h-full`}
             >
               <span className="sr-only" id="logs-source-label">
                 Log source
@@ -644,9 +638,8 @@ export function BottomPanel() {
                 aria-valuemax={viewportMaxLogs}
                 aria-valuenow={logsBodyPx}
                 aria-label="Resize logs height"
-                className={`shrink-0 w-full select-none touch-none bg-border/50 hover:bg-accent/35 active:bg-accent/55 transition-colors outline-none cursor-row-resize ${
-                  resizeActive ? "bg-accent/50" : ""
-                }`}
+                className={`shrink-0 w-full select-none touch-none bg-border/50 hover:bg-accent/35 active:bg-accent/55 transition-colors outline-none cursor-row-resize ${resizeActive ? "bg-accent/50" : ""
+                  }`}
                 style={{ height: LOGS_RESIZE_HANDLE_PX }}
                 tabIndex={0}
                 onPointerDown={(e) => {
@@ -669,9 +662,10 @@ export function BottomPanel() {
               className="min-h-0 flex-1 flex flex-col overflow-y-auto px-3 pb-2 font-mono text-[12px] leading-relaxed bg-bg box-border"
             >
               {logs.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center min-h-[10rem] w-full px-4 py-8 text-center">
+                <div className="flex-1 flex flex-col items-center justify-center min-h-[10rem] w-full px-4 py-8 text-center gap-3">
+                  <ClockCounterClockwise size={32} weight="duotone" className="text-fg-dim opacity-60" />
                   <p className="text-fg-dim text-[12.5px] font-mono leading-relaxed">
-                    No log entries yet.
+                    No log entries yet. <br /> Actions, connections, and commands <br /> will appear here.
                   </p>
                 </div>
               ) : sourceFilteredLogs.length === 0 ? (
