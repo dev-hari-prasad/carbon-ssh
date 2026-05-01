@@ -19,9 +19,7 @@ export function ConnectionItem({
       >
         <span className="w-1.5 h-1.5 rounded-full bg-fg-dim group-hover:bg-accent transition-colors" />
         <div className="min-w-0 flex-1">
-          <div className="text-[13px] font-sans font-medium text-fg truncate">
-            {conn.name}
-          </div>
+          <div className="text-[13px] font-sans font-medium text-fg truncate">{conn.name}</div>
           <div className="text-[11px] font-mono text-fg-dim truncate">
             {conn.username}@{conn.host}:{conn.port}
           </div>
@@ -39,11 +37,7 @@ export function ConnectionItem({
       </button>
       {menu ? (
         <>
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setMenu(false)}
-            aria-hidden
-          />
+          <div className="fixed inset-0 z-10" onClick={() => setMenu(false)} aria-hidden />
           <div className="absolute right-3 top-10 z-20 w-40 bg-bg-elev border border-border rounded-md shadow-lg py-1 text-[12px] font-sans">
             <button
               className="w-full px-2.5 py-1.5 text-left text-fg hover:bg-bg-panel flex items-center gap-2"

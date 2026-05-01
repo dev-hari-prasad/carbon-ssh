@@ -36,16 +36,39 @@ export function connectSsh(
     const handleClose = () => {
       if (closed) return;
       closed = true;
-      handlers.onClose();
+      if (!settled) {
+        settled = true;
+        reject(
+          new Error(
+            "Connection closed abruptly before session was established. (Check credentials or server config)",
+          ),
+        );
+      } else {
+        handlers.onClose();
+      }
     };
 
     const handleError = (error: Error) => {
-      handlers.onError(error);
       if (!settled) {
         settled = true;
         reject(error);
+      } else {
+        handlers.onError(error);
       }
     };
+
+    client.on("keyboard-interactive", (name, instructions, instructionsLang, prompts, finish) => {
+      // Automatic handling or fail if we don't have interactive response
+      if (
+        prompts.length > 0 &&
+        prompts[0].prompt.toLowerCase().includes("password") &&
+        options.password
+      ) {
+        finish([options.password]);
+      } else {
+        finish([]);
+      }
+    });
 
     client.on("ready", () => {
       const cols = options.cols ?? 80;
@@ -91,6 +114,7 @@ export function connectSsh(
       username: options.username,
       readyTimeout: 20_000,
       keepaliveInterval: 10_000,
+      tryKeyboard: true,
     };
 
     if (options.password) {

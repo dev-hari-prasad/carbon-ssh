@@ -28,7 +28,7 @@ const themeBootstrap = `
 (function (THEME_VARS, LIGHT_IDS, DEFAULT_ID) {
   try {
     var saved = localStorage.getItem("ssh.theme.v1");
-    if (saved === "light") saved = "light_modern";
+    if (saved === "light") saved = "2026-light";
     if (saved === "dark") saved = DEFAULT_ID;
     var id = saved && THEME_VARS[saved] ? saved : DEFAULT_ID;
     var vars = THEME_VARS[id];
@@ -59,11 +59,7 @@ const themeBootstrap = `
 })(${themeMapJson}, ${lightIdsJson}, ${defaultIdJson});
 `;
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   const isDefaultLight = LIGHT_THEME_IDS.includes(DEFAULT_THEME_ID);
 
   return (
@@ -74,10 +70,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <style
-          id="theme-vars"
-          dangerouslySetInnerHTML={{ __html: DEFAULT_RULE }}
-        />
+        <style id="theme-vars" dangerouslySetInnerHTML={{ __html: DEFAULT_RULE }} />
         <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
       </head>
       <body suppressHydrationWarning>{children}</body>

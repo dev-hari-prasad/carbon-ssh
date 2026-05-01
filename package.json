@@ -1,12 +1,15 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "relay-ssh",
   "private": true,
   "sideEffects": false,
   "type": "module",
+  "main": "electron/main.cjs",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "dev": "next dev --turbo",
+    "dev": "tsx server.ts",
+    "dev:electron": "concurrently -k -n server,electron -c cyan,green \"tsx server.ts\" \"wait-on -t 60000 -i 3000 http://localhost:3000 && electron .\"",
     "build": "next build",
+    "build:electron": "next build && electron-builder --config electron-builder.yml",
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write ."
@@ -49,6 +52,7 @@
     "@tailwindcss/postcss": "^4.2.4",
     "@tanstack/react-query": "^5.83.0",
     "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-search": "0.16.0",
     "@xterm/xterm": "^6.0.0",
     "ai": "^6.0.170",
     "class-variance-authority": "^0.7.1",
@@ -83,6 +87,9 @@
     "@types/react-dom": "^19.2.0",
     "@types/ssh2": "1.15.5",
     "@types/ws": "8.18.1",
+    "concurrently": "^9.2.1",
+    "electron": "^41.4.0",
+    "electron-builder": "^26.8.1",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",
@@ -90,7 +97,9 @@
     "eslint-plugin-react-refresh": "^0.4.20",
     "globals": "^15.15.0",
     "prettier": "^3.7.3",
+    "tsx": "^4.21.0",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.56.1"
+    "typescript-eslint": "^8.56.1",
+    "wait-on": "^9.0.5"
   }
 }

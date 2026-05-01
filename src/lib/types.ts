@@ -14,7 +14,16 @@ export interface Connection {
   tags?: string[];
   groupId?: string;
   iconColor?: string;
-  iconKind?: "linux" | "ubuntu" | "debian" | "centos" | "alpine" | "arch" | "macos" | "windows" | "generic";
+  iconKind?:
+    | "linux"
+    | "ubuntu"
+    | "debian"
+    | "centos"
+    | "alpine"
+    | "arch"
+    | "macos"
+    | "windows"
+    | "generic";
   iconBrand?: string;
   /** When false, AI autocomplete and assistant are disabled for this host's sessions (default allows AI). */
   aiFeaturesEnabled?: boolean;

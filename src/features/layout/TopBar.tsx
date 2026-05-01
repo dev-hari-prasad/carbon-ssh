@@ -57,34 +57,11 @@ export function TopBar() {
     window.addEventListener("tm:open-history", onOpenMachines);
     window.addEventListener("tm:check-history", onOpenMachines);
 
-    const onGlobalKeyDown = (e: KeyboardEvent) => {
-      const isMac = typeof window !== "undefined" && /Mac|iPhone|iPod|iPad/.test(navigator.platform);
-      const mod = isMac ? e.metaKey : e.ctrlKey;
-      const key = e.key.toLowerCase();
-      
-      // Mod + H (or Mod + Shift + H) -> Go to Hosts
-      if (mod && key === "h") {
-        e.preventDefault();
-        e.stopPropagation();
-        actions.goHome();
-        setOpen(null);
-      }
-      
-      // Mod + K -> Open Machines Popover
-      if (mod && key === "k") {
-        e.preventDefault();
-        e.stopPropagation();
-        setOpen("machines");
-      }
-    };
-    window.addEventListener("keydown", onGlobalKeyDown, { capture: true });
-
     return () => {
       window.removeEventListener("tm:new-connection", onNew);
       window.removeEventListener("tm:focus-search", onOpenMachines);
       window.removeEventListener("tm:open-history", onOpenMachines);
       window.removeEventListener("tm:check-history", onOpenMachines);
-      window.removeEventListener("keydown", onGlobalKeyDown, { capture: true });
     };
   }, []);
 
@@ -99,12 +76,12 @@ export function TopBar() {
     setOpen(null);
   }
 
-  const recent = [...connections]
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, 8);
+  const recent = [...connections].sort((a, b) => b.createdAt - a.createdAt).slice(0, 8);
 
   if (!mounted) {
-    return <div className="border-b border-[var(--titlebar-border)] bg-[var(--titlebar-bg)] h-[45px] z-40" />;
+    return (
+      <div className="border-b border-[var(--titlebar-border)] bg-[var(--titlebar-bg)] h-[45px] z-40" />
+    );
   }
 
   return (
@@ -145,113 +122,114 @@ export function TopBar() {
           <div className="flex items-center gap-1 shrink min-w-0">
             <AnimatePresence initial={false}>
               {tabs.map((t) => {
-                  const active = t.id === activeTabId;
-                  const c = connections.find(conn => conn.id === t.connectionId);
-                  
-                  return (
-                    <motion.div
-                      layout
-                      initial={{ opacity: 0, scale: 0.8, maxWidth: 0 }}
-                      animate={{ opacity: 1, scale: 1, maxWidth: 200 }}
-                      exit={{ opacity: 0, scale: 0.8, maxWidth: 0 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
-                      style={{ overflow: "hidden" }}
-                      key={t.id}
-                      className="shrink flex min-w-0 w-[200px]"
+                const active = t.id === activeTabId;
+                const c = connections.find((conn) => conn.id === t.connectionId);
+
+                return (
+                  <motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.8, maxWidth: 0 }}
+                    animate={{ opacity: 1, scale: 1, maxWidth: 200 }}
+                    exit={{ opacity: 0, scale: 0.8, maxWidth: 0 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    style={{ overflow: "hidden" }}
+                    key={t.id}
+                    className="shrink flex min-w-[48px] w-[200px]"
+                  >
+                    <Tooltip
+                      delay={500}
+                      side="bottom"
+                      multiline
+                      matchAnchorWidth
+                      minWidth={180}
+                      className="flex min-w-0 flex-1 h-full overflow-hidden min-h-8"
+                      label={(() => {
+                        if (!c) return t.title;
+
+                        const group = c.groupId ? groups.find((g) => g.id === c.groupId) : null;
+                        const groupName = group ? group.name : "Uncategorized";
+
+                        const started = t.startedAt
+                          ? new Date(t.startedAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "Unknown";
+
+                        return (
+                          <div className="flex flex-col gap-0.5 w-full min-w-0 text-left">
+                            <span className="font-semibold">{c.name}</span>
+                            <span className="text-fg-dim text-[10.5px]">
+                              ssh://{c.username}@{c.host}:{c.port}
+                            </span>
+                            <div className="h-px bg-border my-1" />
+                            <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
+                              <span className="text-fg-muted shrink-0">Group</span>
+                              <span className="text-fg-dim text-right truncate">{groupName}</span>
+                            </div>
+                            <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
+                              <span className="text-fg-muted shrink-0">Started</span>
+                              <span className="text-fg-dim tabular-nums">{started}</span>
+                            </div>
+                            <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
+                              <span className="text-fg-muted shrink-0">Commands</span>
+                              <span className="text-fg-dim tabular-nums">
+                                {t.commandCount || 0}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     >
-                      <Tooltip
-                        delay={500}
-                        side="bottom"
-                        multiline
-                        matchAnchorWidth
-                        className="flex min-w-0 flex-1 h-full overflow-hidden min-h-8"
-                        label={
-                          (() => {
-                            if (!c) return t.title;
-
-                            const group = c.groupId ? groups.find((g) => g.id === c.groupId) : null;
-                            const groupName = group ? group.name : "Uncategorized";
-
-                            const started = t.startedAt
-                              ? new Date(t.startedAt).toLocaleTimeString([], {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })
-                              : "Unknown";
-
-                            return (
-                              <div className="flex flex-col gap-0.5 w-full min-w-0 text-left">
-                                <span className="font-semibold">{c.name}</span>
-                                <span className="text-fg-dim text-[10.5px]">
-                                  ssh://{c.username}@{c.host}:{c.port}
-                                </span>
-                                <div className="h-px bg-border my-1" />
-                                <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
-                                  <span className="text-fg-muted shrink-0">Group</span>
-                                  <span className="text-fg-dim text-right truncate">{groupName}</span>
-                                </div>
-                                <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
-                                  <span className="text-fg-muted shrink-0">Started</span>
-                                  <span className="text-fg-dim tabular-nums">{started}</span>
-                                </div>
-                                <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
-                                  <span className="text-fg-muted shrink-0">Commands</span>
-                                  <span className="text-fg-dim tabular-nums">{t.commandCount || 0}</span>
-                                </div>
-                              </div>
-                            );
-                          })()
-                        }
+                      <div
+                        onClick={() => actions.setActiveTab(t.id)}
+                        className={`group relative w-full h-8 flex items-center gap-1.5 pl-2.5 pr-2 rounded-[8px] cursor-pointer text-[12px] font-sans transition-colors border ${
+                          active
+                            ? "bg-success/10 text-success border-success/30"
+                            : "bg-[var(--command-bg)] text-fg-muted hover:bg-[var(--command-active-bg)] hover:text-fg border-border"
+                        }`}
                       >
-                        <div
-                          onClick={() => actions.setActiveTab(t.id)}
-                          className={`group w-full h-8 flex items-center gap-1.5 pl-2.5 pr-1 rounded-[8px] cursor-pointer text-[12px] font-sans transition-colors border ${
-                            active
-                              ? "bg-success/10 text-success border-success/30"
-                              : "bg-[var(--command-bg)] text-fg-muted hover:bg-[var(--command-active-bg)] hover:text-fg border-border"
-                          }`}
+                        {c ? (
+                          <HostIcon conn={c} size={16} />
+                        ) : (
+                          <TerminalWindow
+                            size={14}
+                            weight={active ? "duotone" : "regular"}
+                            className="shrink-0"
+                          />
+                        )}
+                        <span
+                          className="flex-1 whitespace-nowrap overflow-hidden block min-w-0 pr-4"
+                          style={{
+                            maskImage:
+                               "linear-gradient(to right, black calc(100% - 16px), transparent 100%)",
+                            WebkitMaskImage:
+                               "linear-gradient(to right, black calc(100% - 16px), transparent 100%)",
+                          }}
                         >
-                          {c ? (
-                            <HostIcon conn={c} size={16} />
-                          ) : (
-                            <TerminalWindow
-                              size={14}
-                              weight={active ? "duotone" : "regular"}
-                              className="shrink-0"
-                            />
-                          )}
-                          <span
-                            className="flex-1 whitespace-nowrap overflow-hidden block min-w-0"
-                            style={{
-                              maskImage:
-                                "linear-gradient(to right, black calc(100% - 12px), transparent 100%)",
-                              WebkitMaskImage:
-                                "linear-gradient(to right, black calc(100% - 12px), transparent 100%)",
-                            }}
-                          >
-                            {t.title}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              actions.closeTab(t.id);
-                            }}
-                            className={`w-5 h-5 ml-1 grid place-items-center rounded shrink-0 ${
-                              active
-                                ? "text-success/70 hover:text-success hover:bg-success/20"
-                                : "text-fg-dim hover:text-fg hover:bg-[var(--bg-elev)]"
-                            }`}
-                            aria-label="Close tab"
-                          >
-                            <span className="text-[16px] leading-none mb-[1.5px]">×</span>
-                          </button>
-                        </div>
-                      </Tooltip>
-                    </motion.div>
-                  );
+                          {t.title}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            actions.closeTab(t.id);
+                          }}
+                          className={`absolute right-1 w-5 h-5 flex items-center justify-center rounded transition-all opacity-0 group-hover:opacity-100 ${
+                            active
+                              ? "text-success/70 hover:text-success hover:bg-success/20"
+                              : "text-fg-dim hover:text-fg hover:bg-[var(--bg-elev)]"
+                          }`}
+                          aria-label="Close tab"
+                        >
+                          <span className="text-[16px] leading-none mb-[1.5px]">×</span>
+                        </button>
+                      </div>
+                    </Tooltip>
+                  </motion.div>
+                );
               })}
-              </AnimatePresence>
+            </AnimatePresence>
           </div>
 
           <div className="h-4 w-px shrink-0 self-center mx-1 bg-border" aria-hidden />
@@ -272,7 +250,7 @@ export function TopBar() {
                   </button>
                 </PopoverTrigger>
               </Tooltip>
-              
+
               <PopoverContent
                 align="start"
                 sideOffset={6}
@@ -295,47 +273,43 @@ export function TopBar() {
           </Popover>
         </div>
 
-        <div className="flex items-center gap-0 shrink-0 relative h-8 self-center">
+        <div className="flex items-center gap-0.5 shrink-0 relative h-8 self-center">
           <div className="w-px h-4 bg-border ml-1.5 mr-1 opacity-60" />
           <Tooltip label="Bangs" side="bottom">
             <button
               onClick={() => actions.openSettingsTab("bangs")}
               aria-label="Bangs"
-              className="w-7 h-7 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+              className="w-8 h-8 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
             >
-              <Lightning size={14} weight="duotone" />
+              <Lightning size={17} weight="duotone" />
             </button>
           </Tooltip>
           <Tooltip label="Activity Logs" side="bottom">
             <button
               onClick={() => actions.toggleBottom()}
               aria-label="Activity logs"
-              className="w-7 h-7 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+              className="w-8 h-8 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
             >
-              <ClockCounterClockwise size={14} weight="duotone" />
+              <ClockCounterClockwise size={17} weight="duotone" />
             </button>
           </Tooltip>
           <Tooltip label="Settings" side="bottom">
             <button
               onClick={() => actions.toggleSettings()}
               aria-label="Toggle settings"
-              className={`w-7 h-7 grid place-items-center rounded-[7px] transition-colors ${
+              className={`w-8 h-8 grid place-items-center rounded-[7px] transition-colors ${
                 settingsOpen
                   ? "text-fg bg-[var(--command-active-bg)]"
                   : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
               }`}
             >
-              <Gear size={14} weight={settingsOpen ? "fill" : "regular"} />
+              <Gear size={17} weight={settingsOpen ? "fill" : "regular"} />
             </button>
           </Tooltip>
         </div>
       </div>
 
-      <ConnectionForm
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        initial={editing}
-      />
+      <ConnectionForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} />
     </div>
   );
 }
@@ -389,18 +363,19 @@ function MachinesPopover({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const filteredHosts = search.trim()
-    ? connections.filter((c) =>
-        c.name.toLowerCase().includes(search.trim().toLowerCase()) ||
-        c.username.toLowerCase().includes(search.trim().toLowerCase()) ||
-        c.host.toLowerCase().includes(search.trim().toLowerCase())
+    ? connections.filter(
+        (c) =>
+          c.name.toLowerCase().includes(search.trim().toLowerCase()) ||
+          c.username.toLowerCase().includes(search.trim().toLowerCase()) ||
+          c.host.toLowerCase().includes(search.trim().toLowerCase()),
       )
     : selectedGroupId === null
-    ? connections
-    : selectedGroupId === "__uncategorized__"
-    ? connections.filter((c) => !c.groupId)
-    : connections.filter((c) => c.groupId === selectedGroupId);
+      ? connections
+      : selectedGroupId === "__uncategorized__"
+        ? connections.filter((c) => !c.groupId)
+        : connections.filter((c) => c.groupId === selectedGroupId);
 
-  const uncategorizedCount = connections.filter(c => !c.groupId).length;
+  const uncategorizedCount = connections.filter((c) => !c.groupId).length;
 
   const groupCounts = useMemo(() => {
     const m: Record<string, number> = {};
@@ -410,11 +385,14 @@ function MachinesPopover({
     return m;
   }, [connections]);
 
-  const allGroups = useMemo(() => [
-    { id: null, name: "All", count: connections.length },
-    { id: "__uncategorized__", name: "Uncategorized", count: uncategorizedCount },
-    ...groups.map(g => ({ id: g.id, name: g.name, count: groupCounts[g.id] ?? 0 }))
-  ], [connections.length, uncategorizedCount, groups, groupCounts]);
+  const allGroups = useMemo(
+    () => [
+      { id: null, name: "All", count: connections.length },
+      { id: "__uncategorized__", name: "Uncategorized", count: uncategorizedCount },
+      ...groups.map((g) => ({ id: g.id, name: g.name, count: groupCounts[g.id] ?? 0 })),
+    ],
+    [connections.length, uncategorizedCount, groups, groupCounts],
+  );
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -556,7 +534,9 @@ function MachinesPopover({
           <div className="flex-1 overflow-y-auto min-h-0 flex flex-col gap-0.5">
             {filteredHosts.length === 0 ? (
               <div className="flex-1 flex flex-col justify-center px-4 py-8">
-                <div className="text-[12.5px] text-fg-muted font-sans text-center">No hosts found.</div>
+                <div className="text-[12.5px] text-fg-muted font-sans text-center">
+                  No hosts found.
+                </div>
               </div>
             ) : (
               filteredHosts.map((c, i) => (
@@ -574,7 +554,9 @@ function MachinesPopover({
                     <HostIcon conn={c} size={24} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="text-[12.5px] font-sans font-medium text-fg truncate">{c.name}</div>
+                    <div className="text-[12.5px] font-sans font-medium text-fg truncate">
+                      {c.name}
+                    </div>
                     <div className="text-[10.5px] font-mono text-fg-dim truncate leading-none mt-0.5">
                       ssh://{c.username}@{c.host}:{c.port}
                     </div>
@@ -613,11 +595,13 @@ function GroupItem({
         focused
           ? "bg-[var(--command-active-bg)] ring-1 ring-accent/30 text-fg"
           : active
-          ? "bg-[var(--bg-panel)]/80 text-fg"
-          : "hover:bg-[var(--bg-panel)] text-fg-muted"
+            ? "bg-[var(--bg-panel)]/80 text-fg"
+            : "hover:bg-[var(--bg-panel)] text-fg-muted"
       }`}
     >
-      <div className={`w-5 h-5 rounded-[4px] grid place-items-center shrink-0 ${iconContainerClass || (active ? "bg-[var(--bg-panel)]/50" : "bg-bg/50")}`}>
+      <div
+        className={`w-5 h-5 rounded-[4px] grid place-items-center shrink-0 ${iconContainerClass || (active ? "bg-[var(--bg-panel)]/50" : "bg-bg/50")}`}
+      >
         {icon}
       </div>
       <span className="flex-1 truncate text-[12px] font-sans font-medium">{label}</span>

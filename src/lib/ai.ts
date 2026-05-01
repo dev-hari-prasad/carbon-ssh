@@ -6,13 +6,7 @@ import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type { LanguageModel } from "ai";
 import type { Connection } from "./types";
 
-export type AIProviderId =
-  | "openai"
-  | "anthropic"
-  | "gateway"
-  | "openrouter"
-  | "bedrock"
-  | "custom";
+export type AIProviderId = "openai" | "anthropic" | "gateway" | "openrouter" | "bedrock" | "custom";
 
 export type AIModelRole = "chat" | "autocomplete";
 
@@ -92,10 +86,8 @@ export const AI_PROVIDERS: AIProviderMeta[] = [
     },
     apiKeyHint: "Bedrock API key — or IAM via env",
     apiKeyRequired: false,
-    modelHint:
-      "anthropic.claude-sonnet-4-20250514-v1:0, us.amazon.nova-pro-v1:0",
-    autocompleteModelHint:
-      "anthropic.claude-haiku-4-5-20251001-v1:0, us.amazon.nova-lite-v1:0",
+    modelHint: "anthropic.claude-sonnet-4-20250514-v1:0, us.amazon.nova-pro-v1:0",
+    autocompleteModelHint: "anthropic.claude-haiku-4-5-20251001-v1:0, us.amazon.nova-lite-v1:0",
   },
   {
     id: "custom",
@@ -145,21 +137,14 @@ function resolvedModelId(s: AISettings, role: AIModelRole): string {
   if (role === "chat") {
     return s.chatModel.trim() || meta.defaultModel;
   }
-  return (
-    s.autocompleteModel.trim() ||
-    meta.defaultAutocompleteModel ||
-    meta.defaultModel
-  );
+  return s.autocompleteModel.trim() || meta.defaultAutocompleteModel || meta.defaultModel;
 }
 
 /**
  * Build a Vercel AI SDK v6 LanguageModel for chat or autocomplete.
  * Returns null if the configuration is incomplete.
  */
-export function createLanguageModel(
-  s: AISettings,
-  role: AIModelRole,
-): LanguageModel | null {
+export function createLanguageModel(s: AISettings, role: AIModelRole): LanguageModel | null {
   const meta = getProviderMeta(s.provider);
   const model = resolvedModelId(s, role);
   if (!model) return null;
@@ -199,10 +184,7 @@ export function createLanguageModel(
 }
 
 export function isAIConfigured(s: AISettings): boolean {
-  return (
-    createLanguageModel(s, "chat") !== null &&
-    createLanguageModel(s, "autocomplete") !== null
-  );
+  return createLanguageModel(s, "chat") !== null && createLanguageModel(s, "autocomplete") !== null;
 }
 
 /** When unset or true, this host honors global AI settings; when false, AI is off for its sessions. */

@@ -7,9 +7,11 @@ Here is a comprehensive plan on how to achieve Passkey/Biometric protection in t
 ---
 
 ## 1. Goal: Local Vault Encryption (Protecting SSH Keys)
+
 If your primary goal is to securely lock the app and encrypt local SSH configurations using the user's device biometrics (Touch ID, Windows Hello, Face ID), **you do not need full WebAuthn Passkeys**. Instead, use Native OS Biometrics to wrap a local AES encryption key.
 
 ### Implementation: Native Biometrics wrapping a Master Key
+
 1. **Master Key Generation**: When the user first opens the app, generate a strong AES-GCM Master Key.
 2. **Secure Enclave Storage**:
    - Use the system's native keychain (macOS Keychain, Windows Credential Vault, Linux Secret Service).
@@ -24,9 +26,11 @@ If your primary goal is to securely lock the app and encrypt local SSH configura
 ---
 
 ## 2. Goal: Cloud Sync & True Passkey Authentication
+
 If your goal is to authenticate the user to a remote backend (to sync SSH connections, workspaces, etc.) using true cross-device Passkeys, you must work around the `localhost` / `app://` limitation.
 
 ### Approach A: Hosted Auth Server + PKCE Flow (Recommended)
+
 Because Electron cannot act as a Relying Party, you offload the WebAuthn ceremony to a real web domain.
 
 1. **Set up an Auth Domain**: Deploy a small web server to `https://auth.terminalmuse.com`.
@@ -39,13 +43,17 @@ Because Electron cannot act as a Relying Party, you offload the WebAuthn ceremon
    - Electron extracts the token, verifies it, and logs the user in.
 
 ### Approach B: Localhost Loopback Server
+
 Technically, WebAuthn allows `http://localhost` as a valid Relying Party.
+
 1. **Spin up Local Server**: Electron spins up an Express server on a random port (e.g., `http://localhost:59231`).
 2. **WebAuthn Execution**: The Electron UI `iframe` or `BrowserWindow` navigates to that localhost address.
 3. **Caveat**: This can feel hacky, is prone to local firewall blocks, and Apple's Passkey sync often behaves poorly with `localhost` across ecosystem boundaries. **Approach A is highly preferred over this.**
 
 ### Approach C: Third-Party Identity Providers
+
 If you don't want to build the WebAuthn backend yourself, services like **Clerk**, **Auth0**, or **Corbado** provide Passkey-first authentication.
+
 - You still use the OAuth PKCE flow (Approach A), but point the user to `your-tenant.clerk.accounts.dev`.
 - They handle the complex WebAuthn attestation, verification, and cross-device syncing.
 
@@ -54,10 +62,12 @@ If you don't want to build the WebAuthn backend yourself, services like **Clerk*
 ## Summary of Action Plan
 
 **Phase 1: Local Lock (Quickest win, highest UX)**
-* Instead of building a complex WebAuthn RP, leverage Electron's `safeStorage` combined with `systemPreferences.promptTouchID()` / Windows Hello APIs.
-* **Why:** This achieves the "Passkey feel" (biometric unlock) instantly without needing a cloud backend or domain.
+
+- Instead of building a complex WebAuthn RP, leverage Electron's `safeStorage` combined with `systemPreferences.promptTouchID()` / Windows Hello APIs.
+- **Why:** This achieves the "Passkey feel" (biometric unlock) instantly without needing a cloud backend or domain.
 
 **Phase 2: Cloud Sync (If applicable)**
-* If you plan to sync environments across machines, implement **Approach A**.
-* Build a lightweight web frontend hosted on Vercel/Next.js strictly for the WebAuthn flow.
-* Configure Electron to intercept deep links (`terminalmuse://`) to securely pass the session token back to the desktop app.
+
+- If you plan to sync environments across machines, implement **Approach A**.
+- Build a lightweight web frontend hosted on Vercel/Next.js strictly for the WebAuthn flow.
+- Configure Electron to intercept deep links (`terminalmuse://`) to securely pass the session token back to the desktop app.

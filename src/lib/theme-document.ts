@@ -22,15 +22,15 @@ export function applyThemeToDocument(t: ThemeId) {
   // guarantees the latest theme always wins via cascade order, regardless of
   // anything React 19 / Next 16 might do to the SSR-managed <style> on
   // hydration or fast refresh.
-  let runtimeEl = document.getElementById(
-    RUNTIME_STYLE_ID,
-  ) as HTMLStyleElement | null;
+  let runtimeEl = document.getElementById(RUNTIME_STYLE_ID) as HTMLStyleElement | null;
   if (!runtimeEl) {
     runtimeEl = document.createElement("style");
     runtimeEl.id = RUNTIME_STYLE_ID;
     document.head.appendChild(runtimeEl);
-  } else if (runtimeEl.parentNode !== document.head ||
-    runtimeEl !== document.head.lastElementChild) {
+  } else if (
+    runtimeEl.parentNode !== document.head ||
+    runtimeEl !== document.head.lastElementChild
+  ) {
     // Re-append to keep it last so later-inserted stylesheets can't shadow it.
     document.head.appendChild(runtimeEl);
   }

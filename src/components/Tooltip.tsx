@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 type Side = "top" | "bottom" | "left" | "right";
@@ -23,6 +16,7 @@ export function Tooltip({
   disabled = false,
   /** Size and left-align tooltip to trigger width (e.g. tab chip hover details). Requires multiline for layout. */
   matchAnchorWidth = false,
+  minWidth,
 }: {
   label: ReactNode;
   side?: Side;
@@ -33,6 +27,7 @@ export function Tooltip({
   multiline?: boolean;
   disabled?: boolean;
   matchAnchorWidth?: boolean;
+  minWidth?: number;
 }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -92,7 +87,7 @@ export function Tooltip({
 
     const el = tipRef.current;
     if (matchAnchorWidth) {
-      el.style.width = `${Math.round(r.width)}px`;
+      el.style.width = `${Math.max(minWidth || 0, Math.round(r.width))}px`;
     } else {
       el.style.width = "";
     }
@@ -104,17 +99,11 @@ export function Tooltip({
     switch (side) {
       case "top":
         top = r.top - t.height - gap;
-        left =
-          matchAnchorWidth
-            ? r.left
-            : r.left + r.width / 2 - t.width / 2;
+        left = matchAnchorWidth ? r.left : r.left + r.width / 2 - t.width / 2;
         break;
       case "bottom":
         top = r.bottom + gap;
-        left =
-          matchAnchorWidth
-            ? r.left
-            : r.left + r.width / 2 - t.width / 2;
+        left = matchAnchorWidth ? r.left : r.left + r.width / 2 - t.width / 2;
         break;
       case "left":
         top = r.top + r.height / 2 - t.height / 2;
@@ -130,7 +119,7 @@ export function Tooltip({
     top = Math.max(pad, Math.min(top, window.innerHeight - t.height - pad));
     setPos({ top, left });
     setReady(true);
-  }, [open, side, label, multiline, matchAnchorWidth]);
+  }, [open, side, label, multiline, matchAnchorWidth, minWidth]);
 
   return (
     <>
@@ -158,9 +147,7 @@ export function Tooltip({
                 color: "var(--fg)",
                 borderColor: "var(--border-strong)",
                 opacity: ready ? 1 : 0,
-                transition: ready
-                  ? "opacity 90ms ease-out, transform 90ms ease-out"
-                  : "none",
+                transition: ready ? "opacity 90ms ease-out, transform 90ms ease-out" : "none",
                 transform: ready ? "scale(1)" : "scale(0.96)",
               }}
               className={`pointer-events-none px-2 py-[6px] rounded-[6px] text-[11px] font-sans border shadow-lg ${

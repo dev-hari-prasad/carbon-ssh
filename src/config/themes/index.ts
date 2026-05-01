@@ -13,20 +13,19 @@ import dimmedMonokai from "./dimmed-monokai-color-theme.json";
 import kimbieDark from "./kimbie-dark-color-theme.json";
 import monokai from "./monokai-color-theme.json";
 import quietLight from "./quietlight-color-theme.json";
-import red from "./Red-color-theme.json";
-import solarizedDark from "./solarized-dark-color-theme.json";
 import solarizedLight from "./solarized-light-color-theme.json";
-import tomorrowNightBlue from "./tomorrow-night-blue-color-theme.json";
 import oneDarkPro from "./OneDark-Pro.json";
 import oneDarkProDarker from "./OneDark-Pro-darker.json";
 import oneDarkProFlat from "./OneDark-Pro-flat.json";
 import oneDarkProMix from "./OneDark-Pro-mix.json";
 import oneDarkProNightFlat from "./OneDark-Pro-night-flat.json";
 
-export const DEFAULT_THEME_ID = "onedark-pro-darker";
+export const DEFAULT_THEME_ID = "dark_modern";
 export const RECOMMENDED_THEME_IDS = [
-  "2026-dark",
+  "dark_modern",
   "2026-light",
+  "light_modern",
+  "2026-dark",
   "dark_vs",
   "light_vs",
   "onedark-pro",
@@ -78,20 +77,15 @@ const entries: Array<{ id: string; file: string; raw: RawTheme }> = [
     raw: oneDarkProNightFlat,
   },
   { id: "quietlight", file: "quietlight-color-theme.json", raw: quietLight },
-  { id: "red", file: "Red-color-theme.json", raw: red },
-  { id: "solarized-dark", file: "solarized-dark-color-theme.json", raw: solarizedDark },
   { id: "solarized-light", file: "solarized-light-color-theme.json", raw: solarizedLight },
-  {
-    id: "tomorrow-night-blue",
-    file: "tomorrow-night-blue-color-theme.json",
-    raw: tomorrowNightBlue,
-  },
 ];
 
 const byFile = new Map(entries.map((entry) => [entry.file.toLowerCase(), entry]));
 const nameOverrides: Record<string, string> = {
+  dark_modern: "Dark Modern (default)",
+  "2026-light": "2026 Light (default)",
   "onedark-pro": "One Dark Pro",
-  "onedark-pro-darker": "One Dark Pro Darker (default)",
+  "onedark-pro-darker": "One Dark Pro Darker",
   "onedark-pro-flat": "One Dark Pro Flat",
   "onedark-pro-mix": "One Dark Pro Mix",
   "onedark-pro-night-flat": "One Dark Pro Night Flat",
@@ -110,7 +104,10 @@ function inferType(raw: RawTheme, colors: Record<string, string>): "dark" | "lig
     : "dark";
 }
 
-function resolveTheme(entry: { id: string; file: string; raw: RawTheme }, seen = new Set<string>()): AppTheme {
+function resolveTheme(
+  entry: { id: string; file: string; raw: RawTheme },
+  seen = new Set<string>(),
+): AppTheme {
   if (seen.has(entry.file)) {
     return {
       id: entry.id,
@@ -138,7 +135,11 @@ export const THEMES: AppTheme[] = entries
   .sort((a, b) => a.name.localeCompare(b.name));
 
 export function getThemeById(id: string): AppTheme {
-  return THEMES.find((theme) => theme.id === id) ?? THEMES.find((theme) => theme.id === DEFAULT_THEME_ID) ?? THEMES[0];
+  return (
+    THEMES.find((theme) => theme.id === id) ??
+    THEMES.find((theme) => theme.id === DEFAULT_THEME_ID) ??
+    THEMES[0]
+  );
 }
 
 function color(colors: Record<string, string>, keys: string[], fallback: string) {
@@ -223,45 +224,149 @@ export function cssVariablesForTheme(theme: AppTheme): Record<string, string> {
   const c = theme.colors;
   const dark = theme.type === "dark";
   const editorBg = opaque(color(c, ["editor.background"], dark ? "#1e1e1e" : "#ffffff"));
-  const editorFg = opaque(color(c, ["editor.foreground", "foreground"], dark ? "#cccccc" : "#1f1f1f"));
-  const panelBg = opaque(color(c, ["panel.background", "sideBar.background", "editorGroupHeader.tabsBackground"], dark ? "#181818" : "#f3f3f3"));
-  const titleBg = opaque(color(c, ["titleBar.activeBackground", "commandCenter.background", "sideBar.background"], dark ? "#181818" : "#dddddd"));
+  const editorFg = opaque(
+    color(c, ["editor.foreground", "foreground"], dark ? "#cccccc" : "#1f1f1f"),
+  );
+  const panelBg = opaque(
+    color(
+      c,
+      ["panel.background", "sideBar.background", "editorGroupHeader.tabsBackground"],
+      dark ? "#181818" : "#f3f3f3",
+    ),
+  );
+  const titleBg = opaque(
+    color(
+      c,
+      ["titleBar.activeBackground", "commandCenter.background", "sideBar.background"],
+      dark ? "#181818" : "#dddddd",
+    ),
+  );
   const accent = visibleColor(
     c,
-    ["focusBorder", "button.background", "activityBarBadge.background", "progressBar.background", "statusBarItem.remoteBackground"],
+    [
+      "focusBorder",
+      "button.background",
+      "activityBarBadge.background",
+      "progressBar.background",
+      "statusBarItem.remoteBackground",
+    ],
     editorBg,
     "#007acc",
   );
 
   return {
     "--bg": editorBg,
-    "--bg-elev": color(c, ["quickInput.background", "editorWidget.background", "menu.background", "sideBar.background"], dark ? "#252526" : "#f3f3f3"),
+    "--bg-elev": color(
+      c,
+      ["quickInput.background", "editorWidget.background", "menu.background", "sideBar.background"],
+      dark ? "#252526" : "#f3f3f3",
+    ),
     "--bg-panel": panelBg,
     "--fg": editorFg,
-    "--fg-muted": color(c, ["descriptionForeground", "sideBar.foreground", "input.placeholderForeground", "titleBar.inactiveForeground"], dark ? "#a7a7a7" : "#616161"),
-    "--fg-dim": color(c, ["disabledForeground", "editorLineNumber.foreground"], dark ? "#6f6f6f" : "#767676"),
+    "--fg-muted": color(
+      c,
+      [
+        "descriptionForeground",
+        "sideBar.foreground",
+        "input.placeholderForeground",
+        "titleBar.inactiveForeground",
+      ],
+      dark ? "#a7a7a7" : "#616161",
+    ),
+    "--fg-dim": color(
+      c,
+      ["disabledForeground", "editorLineNumber.foreground"],
+      dark ? "#6f6f6f" : "#767676",
+    ),
     "--border": `color-mix(in oklab, ${color(c, ["panel.border", "sideBar.border", "editorGroupHeader.tabsBorder", "tab.border", "widget.border"], dark ? "#2d2d30" : "#d4d4d4")} 45%, ${editorBg})`,
     "--border-strong": `color-mix(in oklab, ${visibleColor(c, ["input.border", "focusBorder", "editorGroup.border"], editorBg, dark ? "#3c3c3c" : "#919191")} 65%, ${editorBg})`,
     "--accent": accent,
     "--accent-fg": color(c, ["button.foreground", "activityBarBadge.foreground"], "#ffffff"),
-    "--accent-soft": color(c, ["quickInputList.focusBackground", "list.activeSelectionBackground", "list.focusBackground", "editor.selectionBackground"], dark ? "#094771" : "#cce8ff"),
-    "--success": color(c, ["gitDecoration.addedResourceForeground", "terminal.ansiGreen"], "#89d185"),
-    "--danger": color(c, ["errorForeground", "gitDecoration.deletedResourceForeground", "terminal.ansiRed"], "#f48771"),
-    "--warning": color(c, ["list.warningForeground", "gitDecoration.modifiedResourceForeground", "terminal.ansiYellow"], "#cca700"),
+    "--accent-soft": color(
+      c,
+      [
+        "quickInputList.focusBackground",
+        "list.activeSelectionBackground",
+        "list.focusBackground",
+        "editor.selectionBackground",
+      ],
+      dark ? "#094771" : "#cce8ff",
+    ),
+    "--success": color(
+      c,
+      ["gitDecoration.addedResourceForeground", "terminal.ansiGreen"],
+      "#89d185",
+    ),
+    "--danger": color(
+      c,
+      ["errorForeground", "gitDecoration.deletedResourceForeground", "terminal.ansiRed"],
+      "#f48771",
+    ),
+    "--warning": color(
+      c,
+      ["list.warningForeground", "gitDecoration.modifiedResourceForeground", "terminal.ansiYellow"],
+      "#cca700",
+    ),
     "--titlebar-bg": titleBg,
-    "--titlebar-fg": color(c, ["titleBar.activeForeground", "commandCenter.foreground", "foreground", "editor.foreground"], editorFg),
+    "--titlebar-fg": color(
+      c,
+      ["titleBar.activeForeground", "commandCenter.foreground", "foreground", "editor.foreground"],
+      editorFg,
+    ),
     "--titlebar-border": `color-mix(in oklab, ${color(c, ["titleBar.border", "sideBar.border", "panel.border"], dark ? "#2b2b2b" : "#d4d4d4")} 45%, ${titleBg})`,
-    "--command-bg": color(c, ["commandCenter.background", "quickInput.background", "input.background", "dropdown.background"], dark ? "#3c3c3c" : "#ffffff"),
-    "--command-active-bg": color(c, ["commandCenter.activeBackground", "quickInputList.focusBackground", "list.hoverBackground", "input.background"], dark ? "#505050" : "#f3f3f3"),
+    "--command-bg": color(
+      c,
+      [
+        "commandCenter.background",
+        "quickInput.background",
+        "input.background",
+        "dropdown.background",
+      ],
+      dark ? "#3c3c3c" : "#ffffff",
+    ),
+    "--command-active-bg": color(
+      c,
+      [
+        "commandCenter.activeBackground",
+        "quickInputList.focusBackground",
+        "list.hoverBackground",
+        "input.background",
+      ],
+      dark ? "#505050" : "#f3f3f3",
+    ),
     "--tabs-bg": color(c, ["editorGroupHeader.tabsBackground", "panel.background"], panelBg),
-    "--tab-active-bg": color(c, ["tab.activeBackground", "tab.selectedBackground", "editor.background"], editorBg),
-    "--tab-inactive-bg": color(c, ["tab.inactiveBackground", "editorGroupHeader.tabsBackground"], panelBg),
-    "--tab-hover-bg": color(c, ["tab.hoverBackground", "list.hoverBackground"], dark ? "#333333" : "#e8e8e8"),
-    "--input-bg": color(c, ["input.background", "settings.textInputBackground"], dark ? "#1f1f1f" : "#ffffff"),
+    "--tab-active-bg": color(
+      c,
+      ["tab.activeBackground", "tab.selectedBackground", "editor.background"],
+      editorBg,
+    ),
+    "--tab-inactive-bg": color(
+      c,
+      ["tab.inactiveBackground", "editorGroupHeader.tabsBackground"],
+      panelBg,
+    ),
+    "--tab-hover-bg": color(
+      c,
+      ["tab.hoverBackground", "list.hoverBackground"],
+      dark ? "#333333" : "#e8e8e8",
+    ),
+    "--input-bg": color(
+      c,
+      ["input.background", "settings.textInputBackground"],
+      dark ? "#1f1f1f" : "#ffffff",
+    ),
     "--button-bg": color(c, ["button.background"], accent),
     "--button-hover-bg": color(c, ["button.hoverBackground"], accent),
-    "--menu-bg": color(c, ["quickInput.background", "menu.background", "editorWidget.background"], panelBg),
-    "--menu-hover-bg": color(c, ["list.hoverBackground", "menu.selectionBackground"], dark ? "#2a2d2e" : "#e8e8e8"),
+    "--menu-bg": color(
+      c,
+      ["quickInput.background", "menu.background", "editorWidget.background"],
+      panelBg,
+    ),
+    "--menu-hover-bg": color(
+      c,
+      ["list.hoverBackground", "menu.selectionBackground"],
+      dark ? "#2a2d2e" : "#e8e8e8",
+    ),
     "--sidebar-bg": color(
       c,
       ["sideBar.background", "panel.background", "editorGroupHeader.tabsBackground"],
@@ -289,11 +394,31 @@ export function cssVariablesForTheme(theme: AppTheme): Record<string, string> {
 export function terminalThemeForTheme(theme: AppTheme) {
   const c = theme.colors;
   return {
-    background: color(c, ["terminal.background", "editor.background"], theme.type === "dark" ? "#1e1e1e" : "#ffffff"),
-    foreground: color(c, ["terminal.foreground", "editor.foreground", "foreground"], theme.type === "dark" ? "#cccccc" : "#333333"),
-    cursor: color(c, ["terminalCursor.foreground", "editorCursor.foreground"], theme.type === "dark" ? "#aeafad" : "#000000"),
-    cursorAccent: color(c, ["terminalCursor.background", "editor.background"], theme.type === "dark" ? "#1e1e1e" : "#ffffff"),
-    selectionBackground: color(c, ["terminal.selectionBackground", "editor.selectionBackground"], theme.type === "dark" ? "#264f78" : "#add6ff"),
+    background: color(
+      c,
+      ["terminal.background", "editor.background"],
+      theme.type === "dark" ? "#1e1e1e" : "#ffffff",
+    ),
+    foreground: color(
+      c,
+      ["terminal.foreground", "editor.foreground", "foreground"],
+      theme.type === "dark" ? "#cccccc" : "#333333",
+    ),
+    cursor: color(
+      c,
+      ["terminalCursor.foreground", "editorCursor.foreground"],
+      theme.type === "dark" ? "#aeafad" : "#000000",
+    ),
+    cursorAccent: color(
+      c,
+      ["terminalCursor.background", "editor.background"],
+      theme.type === "dark" ? "#1e1e1e" : "#ffffff",
+    ),
+    selectionBackground: color(
+      c,
+      ["terminal.selectionBackground", "editor.selectionBackground"],
+      theme.type === "dark" ? "#264f78" : "#add6ff",
+    ),
     black: color(c, ["terminal.ansiBlack"], "#000000"),
     red: color(c, ["terminal.ansiRed"], "#cd3131"),
     green: color(c, ["terminal.ansiGreen"], "#0dbc79"),

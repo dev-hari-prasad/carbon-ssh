@@ -25,11 +25,7 @@ import { actions, useStore } from "@/lib/store";
 import { TerminalView } from "@/features/terminal/TerminalView";
 import type { Connection, HostGroup } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { IconPicker, type IconValue } from "@/features/connections/IconPicker";
 import { BRAND_ICON_MAP } from "@/features/connections/brandIcons";
 import { Tooltip } from "@/components/Tooltip";
@@ -73,9 +69,7 @@ export function MainArea() {
   }
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
-  const conn = activeTab
-    ? connections.find((c) => c.id === activeTab.connectionId)
-    : null;
+  const conn = activeTab ? connections.find((c) => c.id === activeTab.connectionId) : null;
 
   if (!activeTab || !conn) {
     return <HostsView connections={connections} />;
@@ -218,9 +212,7 @@ function EditGroupPopover({
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(group.name);
   const [deleteSectionOpen, setDeleteSectionOpen] = useState(false);
-  const [pendingDelete, setPendingDelete] = useState<
-    null | "ungroup" | "delete-all"
-  >(null);
+  const [pendingDelete, setPendingDelete] = useState<null | "ungroup" | "delete-all">(null);
 
   const resetLocal = () => {
     setName(group.name);
@@ -289,7 +281,7 @@ function EditGroupPopover({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="group/edit mr-2 inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-border bg-transparent text-fg-muted transition-[width,background-color,border-color,padding,gap,justify-content,color] duration-200 ease-out hover:w-[3.125rem] hover:justify-start hover:gap-0.5 hover:border-[var(--border-strong)] hover:bg-[var(--neutral-hover-bg)] hover:px-1.5 hover:text-fg"
+          className="group/edit mr-2 inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-success/20 bg-success/10 text-fg-muted transition-[width,background-color,border-color,padding,gap,justify-content,color] duration-200 ease-out hover:w-[3.125rem] hover:justify-start hover:gap-0.5 hover:border-success/40 hover:bg-success/20 hover:px-1.5 hover:text-success"
           aria-label="Edit group"
         >
           <PencilSimple size={11} weight="regular" className="shrink-0" />
@@ -304,13 +296,9 @@ function EditGroupPopover({
         className={popoverSurfaceClassName}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="text-[13px] font-sans font-semibold text-fg mb-3">
-          Edit group
-        </div>
+        <div className="text-[13px] font-sans font-semibold text-fg mb-3">Edit group</div>
         <div>
-          <div className="text-[12px] font-sans font-medium text-fg mb-1.5">
-            Name
-          </div>
+          <div className="text-[12px] font-sans font-medium text-fg mb-1.5">Name</div>
           <input
             autoFocus
             value={name}
@@ -433,8 +421,7 @@ function EditGroupPopover({
                       onClick={() => setPendingDelete("delete-all")}
                       className="w-full h-8 rounded-[8px] bg-danger text-white text-[12px] font-sans font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5"
                     >
-                      <Trash size={12} weight="fill" /> Remove group &amp; delete
-                      hosts
+                      <Trash size={12} weight="fill" /> Remove group &amp; delete hosts
                     </button>
                   ) : null}
                 </div>
@@ -505,22 +492,17 @@ function HostsView({ connections }: { connections: Connection[] }) {
     <div className="flex-1 min-w-0 relative bg-bg overflow-hidden">
       <div
         className={`h-full overflow-y-auto px-6 py-6 transition-[padding] ${
-          settingsOpen
-            ? "pr-[calc(340px+2.5rem)]"
-            : selected
-              ? "pr-[calc(320px+2.5rem)]"
-              : ""
+          settingsOpen ? "pr-[calc(340px+2.5rem)]" : selected ? "pr-[calc(320px+2.5rem)]" : ""
         }`}
       >
         <div className="flex items-center justify-between mb-2.5 gap-2">
-          <h2 className="text-[15px] font-sans font-semibold text-fg">Groups</h2>
+          <h2 className="text-[15px] font-sans font-semibold text-fg flex items-center gap-1">
+            <SquaresFour size={16} weight="duotone" className="text-accent/80" />
+            Groups
+          </h2>
           <AddGroupPopover onBeforeOpen={dismissSidebars} />
         </div>
-        <div
-          className={`grid gap-2.5 mb-6 ${
-            sidePanelOpen ? "grid-cols-3" : "grid-cols-4"
-          }`}
-        >
+        <div className={`grid gap-2.5 mb-4 ${sidePanelOpen ? "grid-cols-3" : "grid-cols-4"}`}>
           <div className="relative flex items-stretch gap-1.5 min-w-0">
             <button
               type="button"
@@ -536,12 +518,9 @@ function HostsView({ connections }: { connections: Connection[] }) {
             >
               <AllGroupIcon />
               <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-sans font-semibold text-fg truncate">
-                  All
-                </div>
+                <div className="text-[13px] font-sans font-semibold text-fg truncate">All</div>
                 <div className="text-[11.5px] font-sans text-fg-muted truncate">
-                  {connections.length}{" "}
-                  {connections.length === 1 ? "Host" : "Hosts"}
+                  {connections.length} {connections.length === 1 ? "Host" : "Hosts"}
                 </div>
               </div>
             </button>
@@ -566,8 +545,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
                   Uncategorized
                 </div>
                 <div className="text-[11.5px] font-sans text-fg-muted truncate">
-                  {uncategorizedCount}{" "}
-                  {uncategorizedCount === 1 ? "Host" : "Hosts"}
+                  {uncategorizedCount} {uncategorizedCount === 1 ? "Host" : "Hosts"}
                 </div>
               </div>
             </button>
@@ -581,52 +559,53 @@ function HostsView({ connections }: { connections: Connection[] }) {
           </div>
 
           {groups.map((g) => {
-              const count = groupCounts[g.id] ?? 0;
-              const active = groupFilter === g.id;
-              return (
-                <div
-                  key={g.id}
-                  className={`flex items-center gap-1.5 min-w-0 rounded-[10px] border transition-colors ${
-                    active
-                      ? "bg-[var(--command-active-bg)] border-accent/50 ring-1 ring-accent/30"
-                      : "bg-[var(--bg-panel)] border-border hover:border-[var(--border-strong)]"
-                  }`}
+            const count = groupCounts[g.id] ?? 0;
+            const active = groupFilter === g.id;
+            return (
+              <div
+                key={g.id}
+                className={`flex items-center gap-1.5 min-w-0 rounded-[10px] border transition-colors ${
+                  active
+                    ? "bg-[var(--command-active-bg)] border-accent/50 ring-1 ring-accent/30"
+                    : "bg-[var(--bg-panel)] border-border hover:border-[var(--border-strong)]"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGroupFilter((current) => (current === g.id ? null : g.id));
+                    dismissSidebars();
+                  }}
+                  className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-left"
                 >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setGroupFilter((current) =>
-                        current === g.id ? null : g.id,
-                      );
-                      dismissSidebars();
-                    }}
-                    className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-left"
-                  >
-                    <GroupIcon />
-                    <div className="min-w-0 flex-1">
-                      <div className="text-[13px] font-sans font-semibold text-fg truncate">
-                        {g.name}
-                      </div>
-                      <div className="text-[11.5px] font-sans text-fg-muted">
-                        {count} {count === 1 ? "Host" : "Hosts"}
-                      </div>
+                  <GroupIcon />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[13px] font-sans font-semibold text-fg truncate">
+                      {g.name}
                     </div>
-                  </button>
-                  <EditGroupPopover
-                    group={g}
-                    hostCount={count}
-                    onBeforeOpen={dismissSidebars}
-                    onRemoved={() => {
-                      if (groupFilter === g.id) setGroupFilter(null);
-                    }}
-                  />
-                </div>
-              );
-            })}
+                    <div className="text-[11.5px] font-sans text-fg-muted">
+                      {count} {count === 1 ? "Host" : "Hosts"}
+                    </div>
+                  </div>
+                </button>
+                <EditGroupPopover
+                  group={g}
+                  hostCount={count}
+                  onBeforeOpen={dismissSidebars}
+                  onRemoved={() => {
+                    if (groupFilter === g.id) setGroupFilter(null);
+                  }}
+                />
+              </div>
+            );
+          })}
         </div>
 
-        <div className="flex items-center justify-between mb-2 gap-2">
-          <h2 className="text-[15px] font-sans font-semibold text-fg truncate min-w-0">
+        <div className="h-px bg-gradient-to-r from-transparent via-border-strong/30 to-transparent my-0" />
+
+        <div className="flex items-center justify-between mb-2 gap-2 mt-3">
+          <h2 className="text-[15px] font-sans font-semibold text-fg truncate min-w-0 flex items-center gap-1">
+            <HardDrives size={16} weight="duotone" className="text-accent/80" />
             Hosts
           </h2>
           <div className="flex items-center gap-3 shrink-0">
@@ -660,11 +639,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
         {filteredHosts.length === 0 ? (
           <EmptyHosts />
         ) : (
-          <div
-            className={`grid gap-2.5 ${
-              sidePanelOpen ? "grid-cols-3" : "grid-cols-4"
-            }`}
-          >
+          <div className={`grid gap-2.5 ${sidePanelOpen ? "grid-cols-3" : "grid-cols-4"}`}>
             {filteredHosts.map((c) => (
               <HostCard
                 key={c.id}
@@ -689,10 +664,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
           style={{ background: "var(--sidebar-bg)" }}
         >
           <div className="flex-1 min-h-0 overflow-y-auto">
-            <HostDetails
-              conn={selected}
-              onClose={() => actions.setSelectedHostId(null)}
-            />
+            <HostDetails conn={selected} onClose={() => actions.setSelectedHostId(null)} />
           </div>
         </aside>
       ) : null}
@@ -745,9 +717,7 @@ function HostCard({
     >
       <HostIcon conn={conn} size={36} />
       <div className="min-w-0 flex-1">
-        <div className="text-[12.5px] font-sans font-semibold text-fg truncate">
-          {conn.name}
-        </div>
+        <div className="text-[12.5px] font-sans font-semibold text-fg truncate">{conn.name}</div>
         <div className="text-[11px] font-sans text-fg-muted truncate">
           {conn.tags?.join(", ") ?? `${conn.username}@${conn.host}`}
         </div>
@@ -757,7 +727,7 @@ function HostCard({
           type="button"
           onClick={onShowDetails}
           aria-label="Edit host"
-          className="group/edit inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-border bg-transparent text-fg-muted transition-[width,background-color,border-color,padding,gap,justify-content,color] duration-200 ease-out hover:w-[3.125rem] hover:justify-start hover:gap-0.5 hover:border-[var(--border-strong)] hover:bg-[var(--neutral-hover-bg)] hover:px-1.5 hover:text-fg"
+          className="group/edit inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-success/20 bg-success/10 text-fg-muted transition-[width,background-color,border-color,padding,gap,justify-content,color] duration-200 ease-out hover:w-[3.125rem] hover:justify-start hover:gap-0.5 hover:border-success/40 hover:bg-success/20 hover:px-1.5 hover:text-success"
         >
           <PencilSimple size={11} weight="regular" className="shrink-0" />
           <span className="max-w-0 overflow-hidden whitespace-nowrap text-[11px] font-sans font-medium opacity-0 transition-[max-width,opacity] duration-200 ease-out group-hover/edit:max-w-[2rem] group-hover/edit:opacity-100">
@@ -780,35 +750,47 @@ function HostCard({
 
 function EmptyHosts() {
   return (
-    <button
-      onClick={() => {
-        actions.setSettingsOpen(false);
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("tm:new-connection"));
-        }
-      }}
-      className="w-full flex flex-col items-center justify-center gap-2 px-6 py-12 rounded-[12px] border border-dashed border-[var(--border-strong)] hover:bg-[var(--bg-panel)] transition-colors"
-    >
-      <div className="w-10 h-10 rounded-full bg-[var(--command-bg)] grid place-items-center text-fg-muted">
-        <Plus size={16} weight="bold" />
-      </div>
-      <div className="text-[13px] font-sans font-semibold text-fg">
-        Create your first host
-      </div>
-      <div className="text-[11.5px] font-sans text-fg-muted">
-        Save SSH machines to connect with one click.
-      </div>
-    </button>
+    <div className="flex justify-center py-8 px-1">
+      <button
+        onClick={() => {
+          actions.setSettingsOpen(false);
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("tm:new-connection"));
+          }
+        }}
+        className="group relative flex items-center gap-4 px-5 py-4 rounded-[12px] border border-dashed border-[var(--border-strong)] max-w-[480px] w-full overflow-hidden transition-all duration-300 hover:border-accent hover:border-solid hover:bg-[var(--bg-panel)]/40 active:scale-[0.995]"
+        style={{
+          background: `linear-gradient(155deg, 
+            color-mix(in oklab, var(--bg-panel) 94%, var(--accent)), 
+            var(--bg-panel) 80%, 
+            color-mix(in oklab, var(--bg-panel) 96%, var(--accent)) 100%)`,
+        }}
+      >
+        <div className="w-10 h-10 shrink-0 rounded-[9px] flex items-center justify-center bg-accent/8 text-accent border border-accent/20 transition-transform duration-300 group-hover:scale-105 shadow-sm">
+          <HardDrives size={20} weight="duotone" />
+        </div>
+
+        <div className="flex-1 min-w-0 flex flex-col items-start text-left">
+          <h3 className="text-[14px] font-sans font-bold text-fg tracking-tight">
+            Connect your first SSH host
+          </h3>
+          <p className="text-[11.5px] font-sans text-fg-muted/80 leading-tight mt-0.5">
+            Save your remote servers for one-click access.
+          </p>
+        </div>
+
+        <div className="shrink-0 ml-2">
+          <span className="inline-flex items-center gap-1 px-4 h-8 ml-3 rounded-[8px] text-[11.5px] font-sans font-medium text-accent border border-accent/40 bg-accent/10 transition-colors group-hover:bg-accent/15 group-hover:border-accent/60">
+            <Plus size={11} weight="bold" aria-hidden />
+            Add host
+          </span>
+        </div>
+      </button>
+    </div>
   );
 }
 
-function HostDetails({
-  conn,
-  onClose,
-}: {
-  conn: Connection;
-  onClose: () => void;
-}) {
+function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void }) {
   const [host, setHost] = useState(conn.host);
   const [port, setPort] = useState(String(conn.port));
   const [name, setName] = useState(conn.name);
@@ -865,9 +847,7 @@ function HostDetails({
   return (
     <div className="px-5 py-5 flex flex-col gap-5">
       <div className="flex items-start justify-between gap-2">
-        <div className="text-[15px] font-sans font-semibold text-fg">
-          Host Details
-        </div>
+        <div className="text-[15px] font-sans font-semibold text-fg">Host Details</div>
         <Tooltip label="Close" side="left">
           <button
             type="button"
@@ -1056,9 +1036,7 @@ function HostDetails({
                   type="button"
                   onClick={() => persist({ authType: t })}
                   className={`h-7 rounded-[6px] text-[11.5px] font-sans transition-colors ${
-                    active
-                      ? "bg-[var(--command-active-bg)] text-fg"
-                      : "text-fg-muted hover:text-fg"
+                    active ? "bg-[var(--command-active-bg)] text-fg" : "text-fg-muted hover:text-fg"
                   }`}
                 >
                   {t === "password" ? "Password" : "Private key"}
@@ -1084,9 +1062,7 @@ function HostDetails({
             <SubLabel>Private key</SubLabel>
             <div className="flex items-center gap-2 px-2.5 h-9 rounded-[8px] bg-[var(--input-bg)] border border-border text-fg-muted text-[12px] font-mono">
               <Key size={13} />
-              <span className="truncate">
-                {conn.privateKey ? "Configured" : "No key set"}
-              </span>
+              <span className="truncate">{conn.privateKey ? "Configured" : "No key set"}</span>
             </div>
           </div>
         )}
@@ -1229,8 +1205,7 @@ function ActionsAndDanger({
           Danger zone
         </div>
         <div className="text-[11.5px] font-sans text-fg-muted mb-2.5 leading-snug">
-          Removing this host will close any open sessions and delete its
-          credentials.
+          Removing this host will close any open sessions and delete its credentials.
         </div>
         {confirmDelete ? (
           <div className="flex items-center gap-2">
@@ -1274,9 +1249,7 @@ function FieldLabel({
   className?: string;
 }) {
   return (
-    <div className={`text-[12px] font-sans font-medium text-fg mb-0 ${className}`}>
-      {children}
-    </div>
+    <div className={`text-[12px] font-sans font-medium text-fg mb-0 ${className}`}>{children}</div>
   );
 }
 
@@ -1315,13 +1288,7 @@ function EditableInputRow({
   );
 }
 
-function GroupSelect({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-}) {
+function GroupSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const groups = useStore((s) => s.groups);

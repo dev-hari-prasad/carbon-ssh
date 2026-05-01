@@ -1,6 +1,11 @@
 import { useSyncExternalStore } from "react";
-import { getThemeById, THEMES } from "@/config/themes";
-import { getFontById, getTerminalFontById, DEFAULT_FONT_ID, DEFAULT_TERMINAL_FONT_ID } from "@/config/fonts";
+import { getThemeById, THEMES, DEFAULT_THEME_ID } from "@/config/themes";
+import {
+  getFontById,
+  getTerminalFontById,
+  DEFAULT_FONT_ID,
+  DEFAULT_TERMINAL_FONT_ID,
+} from "@/config/fonts";
 import { applyThemeToDocument } from "@/lib/theme-document";
 import { DEFAULT_AI_SETTINGS, type AISettings } from "./ai";
 import {
@@ -46,6 +51,9 @@ interface State {
   logRetention: LogRetention;
   settingsTab: "general" | "shortcuts" | "logs" | "bangs" | "display" | "ai";
   selectedHostId: string | null;
+  closedTabs: string[];
+  zoomLevel: number;
+  autoOpenTabs: boolean;
 }
 
 let state: State = {
@@ -56,7 +64,7 @@ let state: State = {
   logs: [],
   bottomOpen: false,
   bangs: [],
-  theme: "onedark-pro-darker",
+  theme: DEFAULT_THEME_ID,
   font: DEFAULT_FONT_ID,
   terminalFont: DEFAULT_TERMINAL_FONT_ID,
   settingsOpen: false,
@@ -64,6 +72,9 @@ let state: State = {
   logRetention: DEFAULT_LOG_RETENTION,
   settingsTab: "display",
   selectedHostId: null,
+  closedTabs: [],
+  zoomLevel: 110,
+  autoOpenTabs: true,
 };
 
 let initialized = false;
@@ -75,7 +86,14 @@ function emit() {
 
 function setState(patch: Partial<State> | ((s: State) => Partial<State>)) {
   const next = typeof patch === "function" ? patch(state) : patch;
+  const oldTabs = state.tabs;
   state = { ...state, ...next };
+
+  if (state.autoOpenTabs && next.tabs !== undefined && next.tabs !== oldTabs) {
+    const ids = state.tabs.map((t) => t.connectionId);
+    localStorage.setItem("ssh.last-tabs.v1", JSON.stringify(ids));
+  }
+
   emit();
 }
 
@@ -110,10 +128,40 @@ function ensureInit() {
     font,
     terminalFont,
     ai: loadAISettings(),
+    zoomLevel: Number(localStorage.getItem("ssh.zoom.v1")) || 110,
+    autoOpenTabs: localStorage.getItem("ssh.auto-open.v1") !== "false",
   };
   applyTheme(theme);
   applyFont(font);
   applyTerminalFont(terminalFont);
+  
+  if (typeof window !== "undefined" && (window as any).electron?.setZoomLevel) {
+    (window as any).electron.setZoomLevel(state.zoomLevel);
+  }
+
+  // Restore last tabs if enabled
+  if (state.autoOpenTabs) {
+    const last = JSON.parse(localStorage.getItem("ssh.last-tabs.v1") || "[]") as string[];
+    const connections = state.connections;
+    const restoredTabs: Tab[] = last
+      .map((cid) => {
+        const c = connections.find((x) => x.id === cid);
+        if (!c) return null;
+        return {
+          id: uid(),
+          connectionId: c.id,
+          title: c.name,
+          startedAt: Date.now(),
+          commandCount: 0,
+        };
+      })
+      .filter((t): t is Tab => t !== null);
+    state.tabs = restoredTabs;
+    if (restoredTabs.length > 0) {
+      state.activeTabId = restoredTabs[0].id;
+    }
+  }
+
   emit();
 }
 
@@ -144,11 +192,7 @@ export const actions = {
     }
     setState({ connections: next });
     saveConnections(next);
-    actions.log(
-      "info",
-      "connections",
-      existing ? `Updated ${input.name}` : `Saved ${input.name}`,
-    );
+    actions.log("info", "connections", existing ? `Updated ${input.name}` : `Saved ${input.name}`);
   },
 
   addGroup(input: { name: string }) {
@@ -166,9 +210,7 @@ export const actions = {
     ensureInit();
     const trimmed = name.trim();
     if (!trimmed) return;
-    const next = state.groups.map((g) =>
-      g.id === id ? { ...g, name: trimmed } : g,
-    );
+    const next = state.groups.map((g) => (g.id === id ? { ...g, name: trimmed } : g));
     setState({ groups: next });
     saveGroups(next);
     actions.log("info", "groups", `Renamed group to "${trimmed}"`);
@@ -236,7 +278,7 @@ export const actions = {
     const tab: Tab = {
       id: uid(),
       connectionId,
-      title: `${conn.username}@${conn.host}`,
+      title: conn.name,
       startedAt: Date.now(),
       commandCount: 0,
     };
@@ -247,24 +289,72 @@ export const actions = {
   closeTab(id: string) {
     const idx = state.tabs.findIndex((t) => t.id === id);
     if (idx === -1) return;
+    const tab = state.tabs[idx];
     const tabs = state.tabs.filter((t) => t.id !== id);
     let activeTabId = state.activeTabId;
     if (activeTabId === id) {
       activeTabId = tabs[idx]?.id ?? tabs[idx - 1]?.id ?? null;
     }
-    setState({ tabs, activeTabId });
+    setState({
+      tabs,
+      activeTabId,
+      closedTabs: [tab.connectionId, ...state.closedTabs].slice(0, 20),
+    });
+  },
+
+  restoreTab() {
+    ensureInit();
+    const [lastId, ...rest] = state.closedTabs;
+    if (!lastId) return;
+    actions.openTab(lastId);
+    setState({ closedTabs: rest });
+  },
+
+  setZoomLevel(level: number) {
+    setState({ zoomLevel: level });
+    localStorage.setItem("ssh.zoom.v1", String(level));
+    if (typeof window !== "undefined" && (window as any).electron?.setZoomLevel) {
+      (window as any).electron.setZoomLevel(level);
+    }
+  },
+
+  setAutoOpenTabs(enabled: boolean) {
+    setState({ autoOpenTabs: enabled });
+    localStorage.setItem("ssh.auto-open.v1", String(enabled));
+    if (!enabled) {
+      localStorage.removeItem("ssh.last-tabs.v1");
+    } else {
+      const ids = state.tabs.map((t) => t.connectionId);
+      localStorage.setItem("ssh.last-tabs.v1", JSON.stringify(ids));
+    }
   },
 
   incrementCommandCount(tabId: string) {
     setState((s) => ({
       tabs: s.tabs.map((t) =>
-        t.id === tabId ? { ...t, commandCount: (t.commandCount || 0) + 1 } : t
+        t.id === tabId ? { ...t, commandCount: (t.commandCount || 0) + 1 } : t,
       ),
     }));
   },
 
   setActiveTab(id: string) {
     setState({ activeTabId: id });
+  },
+
+  nextTab() {
+    const { tabs, activeTabId } = state;
+    const items: (string | null)[] = [null, ...tabs.map((t) => t.id)];
+    const idx = items.indexOf(activeTabId);
+    const nextIdx = (idx + 1) % items.length;
+    setState({ activeTabId: items[nextIdx] });
+  },
+
+  prevTab() {
+    const { tabs, activeTabId } = state;
+    const items: (string | null)[] = [null, ...tabs.map((t) => t.id)];
+    const idx = items.indexOf(activeTabId);
+    const prevIdx = (idx - 1 + items.length) % items.length;
+    setState({ activeTabId: items[prevIdx] });
   },
 
   goHome() {
@@ -288,9 +378,9 @@ export const actions = {
   },
 
   setSelectedHostId(id: string | null) {
-    setState((s) => ({ 
-      selectedHostId: id, 
-      settingsOpen: id ? false : s.settingsOpen
+    setState((s) => ({
+      selectedHostId: id,
+      settingsOpen: id ? false : s.settingsOpen,
     }));
   },
 
@@ -328,9 +418,7 @@ export const actions = {
     let next: Bang[];
     if (existing) {
       next = state.bangs.map((b) =>
-        b.id === existing.id
-          ? { ...existing, ...input, trigger, id: existing.id }
-          : b,
+        b.id === existing.id ? { ...existing, ...input, trigger, id: existing.id } : b,
       );
     } else {
       next = [
@@ -362,8 +450,7 @@ export const actions = {
 
   toggleTheme() {
     const current = getThemeById(state.theme);
-    const next =
-      THEMES.find((theme) => theme.type !== current.type)?.id ?? state.theme;
+    const next = THEMES.find((theme) => theme.type !== current.type)?.id ?? state.theme;
     actions.setTheme(next);
   },
 

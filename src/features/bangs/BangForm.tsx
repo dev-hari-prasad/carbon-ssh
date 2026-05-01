@@ -43,7 +43,9 @@ export function BangForm({
       title={initial ? "Edit bang" : "New bang"}
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
           <Button variant="primary" onClick={submit}>
             {initial ? "Save changes" : "Create bang"}
           </Button>
@@ -56,9 +58,7 @@ export function BangForm({
             <span className="font-mono text-fg-dim text-[13px]">!</span>
             <Input
               value={trigger}
-              onChange={(e) =>
-                setTrigger(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))
-              }
+              onChange={(e) => setTrigger(e.target.value.replace(/[^a-zA-Z0-9_-]/g, ""))}
               placeholder="update"
             />
           </div>

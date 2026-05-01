@@ -1,0 +1,48 @@
+appId: com.relay.ssh
+productName: Relay SSH
+copyright: Copyright © 2026
+
+directories:
+  output: dist-electron
+  buildResources: build
+
+files:
+  - "electron/**/*"
+  - ".next/**/*"
+  - "public/**/*"
+  - "src/**/*.ts"
+  - "src/**/*.tsx"
+  - "src/**/*.css"
+  - "next.config.mjs"
+  - "package.json"
+  - "tsconfig.json"
+  - "postcss.config.mjs"
+  - "!node_modules/.cache"
+  - "!node_modules/.pnpm"
+  - "!**/*.map"
+
+asar: false
+
+win:
+  target:
+    - nsis
+  icon: build/icon.ico
+
+mac:
+  target:
+    - dmg
+  icon: build/icon.icns
+  category: public.app-category.developer-tools
+
+linux:
+  target:
+    - AppImage
+    - deb
+  icon: build/icon.png
+  category: Development
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true

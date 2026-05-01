@@ -4,6 +4,7 @@ import { TopBar } from "@/features/layout/TopBar";
 import { MainArea } from "@/features/layout/MainArea";
 import { BottomPanel } from "@/features/layout/BottomPanel";
 import { SettingsSidebar } from "@/features/layout/SettingsSidebar";
+import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
 
 export default function Page() {
   return (
@@ -14,6 +15,7 @@ export default function Page() {
         <SettingsSidebar />
       </div>
       <BottomPanel />
+      <KeyboardShortcuts />
     </div>
   );
 }

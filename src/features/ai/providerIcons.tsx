@@ -1,19 +1,10 @@
-import {
-  AnthropicDark,
-  OpenAIDark,
-  OpenRouterDark,
-  VercelDark,
-} from "@ridemountainpig/svgl-react";
+import { AnthropicDark, OpenAIDark, OpenRouterDark, VercelDark } from "@ridemountainpig/svgl-react";
 import { Cloud, Plugs } from "@phosphor-icons/react";
 import type { AIProviderId } from "@/lib/ai";
 
 type IconProps = { size?: number; className?: string };
 
-export function ProviderIcon({
-  id,
-  size = 14,
-  className = "",
-}: IconProps & { id: AIProviderId }) {
+export function ProviderIcon({ id, size = 14, className = "" }: IconProps & { id: AIProviderId }) {
   const style = { width: size, height: size };
   switch (id) {
     case "openai":

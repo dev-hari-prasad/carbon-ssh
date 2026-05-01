@@ -22,9 +22,9 @@ export function HostIcon({ conn, size = 36 }: { conn: Connection; size?: number 
   }
 
   const color = conn.iconColor ?? "var(--accent)";
-  const sys = SYSTEM_ICONS.find(s => s.id === conn.iconKind) || SYSTEM_ICONS[0];
+  const sys = SYSTEM_ICONS.find((s) => s.id === conn.iconKind) || SYSTEM_ICONS[0];
   const Icon = sys.Icon;
-  
+
   return (
     <div
       className="shrink-0 rounded-full grid place-items-center text-white shadow-inner"

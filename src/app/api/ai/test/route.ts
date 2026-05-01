@@ -1,20 +1,10 @@
 import { generateText } from "ai";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  createLanguageModel,
-  type AISettings,
-} from "@/lib/ai";
+import { createLanguageModel, type AISettings } from "@/lib/ai";
 
 const BodySchema = z.object({
-  provider: z.enum([
-    "openai",
-    "anthropic",
-    "gateway",
-    "openrouter",
-    "bedrock",
-    "custom",
-  ]),
+  provider: z.enum(["openai", "anthropic", "gateway", "openrouter", "bedrock", "custom"]),
   apiKey: z.string(),
   baseUrl: z.string(),
   chatModel: z.string(),
@@ -43,18 +33,14 @@ function messageFromUnknown(e: unknown): string {
   }
 }
 
-const PING_PROMPT =
-  "Reply with exactly one word: ok. No punctuation or explanation.";
+const PING_PROMPT = "Reply with exactly one word: ok. No punctuation or explanation.";
 
 export async function POST(req: Request) {
   let json: unknown;
   try {
     json = await req.json();
   } catch {
-    return NextResponse.json(
-      { ok: false as const, error: "Expected JSON body" },
-      { status: 400 },
-    );
+    return NextResponse.json({ ok: false as const, error: "Expected JSON body" }, { status: 400 });
   }
 
   const parsed = BodySchema.safeParse(json);

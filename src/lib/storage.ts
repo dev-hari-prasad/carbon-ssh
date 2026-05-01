@@ -1,18 +1,11 @@
 import { DEFAULT_THEME_ID, THEMES } from "@/config/themes";
-import {
-  AI_PROVIDERS,
-  DEFAULT_AI_SETTINGS,
-  type AISettings,
-} from "./ai";
+import { AI_PROVIDERS, DEFAULT_AI_SETTINGS, type AISettings } from "./ai";
 import type { Bang, Connection, HostGroup, ThemeId } from "./types";
-import {
-  DEFAULT_LOG_RETENTION,
-  type LogRetention,
-} from "./log-retention";
+import { DEFAULT_LOG_RETENTION, type LogRetention } from "./log-retention";
 
-const KEY = "ssh.connections.v1";
-const GROUPS_KEY = "ssh.groups.v1";
-const BANGS_KEY = "ssh.bangs.v1";
+const KEY = "ssh.connections.v2";
+const GROUPS_KEY = "ssh.groups.v2";
+const BANGS_KEY = "ssh.bangs.v2";
 const THEME_KEY = "ssh.theme.v1";
 const FONT_KEY = "ssh.font.v1";
 const TERMINAL_FONT_KEY = "ssh.terminalFont.v1";
@@ -21,144 +14,9 @@ const LOG_RETENTION_KEY = "ssh.logRetention.v1";
 
 const VALID_LOG_RETENTION = new Set<LogRetention>(["6h", "24h", "3d", "7d", "off"]);
 
-export const MOCK_GROUPS: HostGroup[] = [
-  { id: "admins", name: "Admins" },
-  { id: "production", name: "Production" },
-  { id: "backup", name: "Backup" },
-];
+export const MOCK_GROUPS: HostGroup[] = [];
 
-export const MOCK_CONNECTIONS: Connection[] = [
-  {
-    id: "mock-admin-devops",
-    name: "Admin Devops Team",
-    host: "10.0.0.15",
-    port: 22,
-    username: "stan",
-    authType: "key",
-    createdAt: Date.now(),
-    tags: ["ssh", "admin", "personal"],
-    groupId: "admins",
-    iconKind: "ubuntu",
-    iconColor: "#0ea5b7",
-  },
-  {
-    id: "mock-dev-scheduler",
-    name: "Dev Scheduler",
-    host: "10.0.4.21",
-    port: 22,
-    username: "ops",
-    authType: "key",
-    createdAt: Date.now() - 1,
-    tags: ["ssh", "dev"],
-    groupId: "admins",
-    iconKind: "centos",
-    iconColor: "#ef6a1d",
-  },
-  {
-    id: "mock-lb-us",
-    name: "Load Balancer US",
-    host: "lb-us-1.acme.io",
-    port: 22,
-    username: "deploy",
-    authType: "key",
-    createdAt: Date.now() - 2,
-    tags: ["ssh", "prod", "balancer"],
-    groupId: "production",
-    iconKind: "alpine",
-    iconColor: "#3b82f6",
-  },
-  {
-    id: "mock-web-us-1",
-    name: "Web Server us-1",
-    host: "web1.us.acme.io",
-    port: 22,
-    username: "deploy",
-    authType: "key",
-    createdAt: Date.now() - 3,
-    tags: ["ssh", "dev", "cash"],
-    groupId: "production",
-    iconKind: "centos",
-    iconColor: "#ef6a1d",
-  },
-  {
-    id: "mock-pg-2",
-    name: "Postgresql Replica-2",
-    host: "pg2.acme.io",
-    port: 22,
-    username: "postgres",
-    authType: "password",
-    createdAt: Date.now() - 4,
-    tags: ["ssh", "prod", "db"],
-    groupId: "production",
-    iconKind: "debian",
-    iconColor: "#d6336c",
-  },
-  {
-    id: "mock-pg-1",
-    name: "Postgresql Replica-1",
-    host: "pg1.acme.io",
-    port: 22,
-    username: "postgres",
-    authType: "password",
-    createdAt: Date.now() - 5,
-    tags: ["ssh", "prod", "db"],
-    groupId: "production",
-    iconKind: "debian",
-    iconColor: "#d6336c",
-  },
-  {
-    id: "mock-lb-eu",
-    name: "Load Balancer EU",
-    host: "lb-eu-1.acme.io",
-    port: 22,
-    username: "deploy",
-    authType: "key",
-    createdAt: Date.now() - 6,
-    tags: ["ssh", "prod", "balancer"],
-    groupId: "production",
-    iconKind: "alpine",
-    iconColor: "#3b82f6",
-  },
-  {
-    id: "mock-web-us-0",
-    name: "Web Server us-0",
-    host: "web0.us.acme.io",
-    port: 22,
-    username: "deploy",
-    authType: "key",
-    createdAt: Date.now() - 7,
-    tags: ["ssh", "dev", "cash"],
-    groupId: "production",
-    iconKind: "centos",
-    iconColor: "#b8542d",
-  },
-  {
-    id: "mock-dev-redis",
-    name: "Dev Redis",
-    host: "redis.dev.acme.io",
-    port: 22,
-    username: "redis",
-    authType: "password",
-    createdAt: Date.now() - 8,
-    tags: ["ssh", "dev", "cache"],
-    groupId: "backup",
-    iconKind: "debian",
-    iconColor: "#9b1c1c",
-  },
-  {
-    id: "mock-terraform",
-    name: "Terraform Host",
-    host: "tf.acme.io",
-    port: 22,
-    username: "terra",
-    authType: "key",
-    createdAt: Date.now() - 9,
-    tags: ["ssh", "ops"],
-    groupId: "backup",
-    iconKind: "linux",
-    iconColor: "#7c3aed",
-  },
-];
+export const MOCK_CONNECTIONS: Connection[] = [];
 
 export function loadConnections(): Connection[] {
   if (typeof window === "undefined") return [];
@@ -292,9 +150,7 @@ export function loadAISettings(): AISettings {
     if (!raw) return { ...DEFAULT_AI_SETTINGS };
     const parsed = JSON.parse(raw) as Partial<AISettings> & { model?: string };
     const legacy =
-      typeof parsed.model === "string" && parsed.model.trim() !== ""
-        ? parsed.model
-        : "";
+      typeof parsed.model === "string" && parsed.model.trim() !== "" ? parsed.model : "";
     const chatModel =
       typeof parsed.chatModel === "string"
         ? parsed.chatModel
@@ -306,8 +162,7 @@ export function loadAISettings(): AISettings {
     return {
       ...DEFAULT_AI_SETTINGS,
       provider:
-        parsed.provider &&
-        AI_PROVIDERS.some((p) => p.id === parsed.provider)
+        parsed.provider && AI_PROVIDERS.some((p) => p.id === parsed.provider)
           ? parsed.provider
           : DEFAULT_AI_SETTINGS.provider,
       apiKey: typeof parsed.apiKey === "string" ? parsed.apiKey : "",

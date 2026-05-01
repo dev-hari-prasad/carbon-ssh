@@ -60,10 +60,7 @@ function loadLogsBodyPx(maxPx: number): number {
 
 function saveLogsBodyPx(px: number, maxPx: number) {
   try {
-    window.localStorage.setItem(
-      LOGS_HEIGHT_STORAGE_KEY,
-      String(clampLogsBody(px, maxPx)),
-    );
+    window.localStorage.setItem(LOGS_HEIGHT_STORAGE_KEY, String(clampLogsBody(px, maxPx)));
   } catch {
     /* ignore */
   }
@@ -82,21 +79,10 @@ const LOG_ROW_CELL =
   "min-w-0 border-r border-dotted border-border/55 pr-2.5 sm:pr-3 last:border-r-0 last:pr-0";
 
 function logMatchesSearch(log: { source: string; level: string; message: string }, raw: string) {
-  const tokens = raw
-    .trim()
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean);
+  const tokens = raw.trim().toLowerCase().split(/\s+/).filter(Boolean);
   if (!tokens.length) return true;
   const { kind, target, detail } = parseLogCells(log.message);
-  const haystack = [
-    log.source,
-    log.level,
-    log.message,
-    kind,
-    target,
-    detail,
-  ]
+  const haystack = [log.source, log.level, log.message, kind, target, detail]
     .join(" ")
     .toLowerCase();
   return tokens.every((t) => haystack.includes(t));
@@ -153,13 +139,7 @@ function connectionForSource(connections: Connection[], source: string) {
   return connections.find((c) => c.name === source) ?? null;
 }
 
-function LogSourceGlyph({
-  source,
-  conn,
-}: {
-  source: string;
-  conn: Connection | null;
-}) {
+function LogSourceGlyph({ source, conn }: { source: string; conn: Connection | null }) {
   if (source === "__all__") {
     return (
       <span className="shrink-0 w-3.5 h-3.5 grid place-items-center text-fg-muted">
@@ -211,8 +191,7 @@ function LogsSourcePicker({
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const label =
-    value === "__all__" ? "All sources" : value;
+  const label = value === "__all__" ? "All sources" : value;
   const activeConn = value === "__all__" ? null : connectionForSource(connections, value);
 
   return (
@@ -247,10 +226,11 @@ function LogsSourcePicker({
               onChange("__all__");
               setMenuOpen(false);
             }}
-            className={`w-full flex items-center gap-2 px-2 h-7 rounded-[7px] text-left transition-colors ${value === "__all__"
+            className={`w-full flex items-center gap-2 px-2 h-7 rounded-[7px] text-left transition-colors ${
+              value === "__all__"
                 ? "bg-[var(--command-active-bg)] text-fg"
                 : "text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg"
-              }`}
+            }`}
           >
             <LogSourceGlyph source="__all__" conn={null} />
             <span className="flex-1 min-w-0 truncate text-[11px] font-mono">All sources</span>
@@ -271,16 +251,15 @@ function LogsSourcePicker({
                   onChange(s);
                   setMenuOpen(false);
                 }}
-                className={`w-full flex items-center gap-2 px-2 h-7 rounded-[7px] text-left transition-colors ${active
+                className={`w-full flex items-center gap-2 px-2 h-7 rounded-[7px] text-left transition-colors ${
+                  active
                     ? "bg-[var(--command-active-bg)] text-fg"
                     : "text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg"
-                  }`}
+                }`}
               >
                 <LogSourceGlyph source={s} conn={conn} />
                 <span className="flex-1 min-w-0 truncate text-[11px] font-mono">{s}</span>
-                {active ? (
-                  <Check size={11} weight="bold" className="text-accent shrink-0" />
-                ) : null}
+                {active ? <Check size={11} weight="bold" className="text-accent shrink-0" /> : null}
               </button>
             );
           })}
@@ -298,7 +277,12 @@ function LogsSearchBar({ value, onChange }: { value: string; onChange: (v: strin
       className="inline-flex items-center gap-0.5 h-6 w-full pl-1.5 pr-1 rounded-md border border-border bg-bg text-[10px] font-mono text-fg-muted hover:text-fg hover:border-[var(--border-strong)] focus-within:outline-none focus-within:ring-1 focus-within:ring-border transition-colors"
     >
       <label htmlFor={inputId} className="flex flex-1 min-w-0 items-center gap-1.5 cursor-text">
-        <MagnifyingGlass size={11} weight="bold" className="shrink-0 opacity-70 pointer-events-none" aria-hidden />
+        <MagnifyingGlass
+          size={11}
+          weight="bold"
+          className="shrink-0 opacity-70 pointer-events-none"
+          aria-hidden
+        />
         <input
           id={inputId}
           type="text"
@@ -338,7 +322,8 @@ function ClearLogsButton() {
       label={
         <span>
           <span className="font-semibold block mb-0.5">Clear logs</span>
-          Deletes every saved log entry on this browser. Sessions and tabs are unaffected; this cannot be undone.
+          Deletes every saved log entry on this browser. Sessions and tabs are unaffected; this
+          cannot be undone.
         </span>
       }
     >
@@ -368,7 +353,8 @@ function ClearLogsButton() {
                   Clear all logs?
                 </p>
                 <p className="mt-1 text-[11.5px] font-sans text-fg-muted leading-snug">
-                  This removes activity from the log buffer immediately. This action cannot be undone.
+                  This removes activity from the log buffer immediately. This action cannot be
+                  undone.
                 </p>
               </div>
             </div>
@@ -443,10 +429,13 @@ export function BottomPanel() {
 
   const toggleMs = reduceMotion ? 0 : 0.22;
 
-  const onResizeMove = useCallback((e: PointerEvent) => {
-    const dy = resizeStartRef.current.clientY - e.clientY;
-    setLogsBodyPx(clampLogsBody(resizeStartRef.current.height + dy, viewportMaxLogs));
-  }, [viewportMaxLogs]);
+  const onResizeMove = useCallback(
+    (e: PointerEvent) => {
+      const dy = resizeStartRef.current.clientY - e.clientY;
+      setLogsBodyPx(clampLogsBody(resizeStartRef.current.height + dy, viewportMaxLogs));
+    },
+    [viewportMaxLogs],
+  );
 
   const onResizeEnd = useCallback(
     (_e: PointerEvent) => {
@@ -497,15 +486,10 @@ export function BottomPanel() {
   }, [logs]);
 
   const resolvedFilter =
-    sourceFilter === "__all__" || sources.includes(sourceFilter)
-      ? sourceFilter
-      : "__all__";
+    sourceFilter === "__all__" || sources.includes(sourceFilter) ? sourceFilter : "__all__";
 
   const sourceFilteredLogs = useMemo(
-    () =>
-      resolvedFilter === "__all__"
-        ? logs
-        : logs.filter((l) => l.source === resolvedFilter),
+    () => (resolvedFilter === "__all__" ? logs : logs.filter((l) => l.source === resolvedFilter)),
     [logs, resolvedFilter],
   );
 
@@ -518,19 +502,20 @@ export function BottomPanel() {
   );
 
   const showTotalInHeader =
-    resolvedFilter !== "__all__" ||
-    (SHOW_LOGS_TOOLBAR_SEARCH && logSearchQuery.trim().length > 0);
+    resolvedFilter !== "__all__" || (SHOW_LOGS_TOOLBAR_SEARCH && logSearchQuery.trim().length > 0);
 
   return (
     <div className="border-t border-border bg-bg-panel flex flex-col">
       <div
-        className={`min-h-7 h-7 bg-bg-panel ${open
-            ? `grid grid-rows-1 gap-x-2 pr-1 items-stretch relative isolate ${SHOW_LOGS_TOOLBAR_SEARCH
-              ? "grid-cols-[1fr_minmax(14rem,22rem)_auto]"
-              : "grid-cols-[1fr_auto]"
-            }`
+        className={`min-h-7 h-7 bg-bg-panel ${
+          open
+            ? `grid grid-rows-1 gap-x-2 pr-1 items-stretch relative isolate ${
+                SHOW_LOGS_TOOLBAR_SEARCH
+                  ? "grid-cols-[1fr_minmax(14rem,22rem)_auto]"
+                  : "grid-cols-[1fr_auto]"
+              }`
             : "flex items-stretch"
-          }`}
+        }`}
       >
         {!open ? (
           <button
@@ -553,8 +538,9 @@ export function BottomPanel() {
               type="button"
               aria-expanded={open}
               aria-controls="logs-scroll-region"
-              aria-label={`Collapse logs panel. ${filteredLogs.length} entr${filteredLogs.length === 1 ? "y" : "ies"
-                } visible${showTotalInHeader ? ` of ${logs.length} total.` : "."}`}
+              aria-label={`Collapse logs panel. ${filteredLogs.length} entr${
+                filteredLogs.length === 1 ? "y" : "ies"
+              } visible${showTotalInHeader ? ` of ${logs.length} total.` : "."}`}
               onClick={() => actions.toggleBottom()}
               className="col-span-full row-start-1 z-[1] -m-px min-h-7 h-full rounded-none bg-transparent hover:bg-[var(--menu-hover-bg)]/50 transition-colors border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-inset"
             />
@@ -572,8 +558,9 @@ export function BottomPanel() {
             </div>
 
             <div
-              className={`col-start-2 row-start-1 z-[2] flex justify-center items-center min-w-0 w-full px-0.5 h-full pointer-events-none ${SHOW_LOGS_TOOLBAR_SEARCH ? "" : "hidden"
-                }`}
+              className={`col-start-2 row-start-1 z-[2] flex justify-center items-center min-w-0 w-full px-0.5 h-full pointer-events-none ${
+                SHOW_LOGS_TOOLBAR_SEARCH ? "" : "hidden"
+              }`}
               aria-hidden={!SHOW_LOGS_TOOLBAR_SEARCH}
             >
               <div className="pointer-events-auto w-full min-h-0">
@@ -582,8 +569,9 @@ export function BottomPanel() {
             </div>
 
             <div
-              className={`${SHOW_LOGS_TOOLBAR_SEARCH ? "col-start-3" : "col-start-2"
-                } row-start-1 z-[2] flex items-center gap-1.5 shrink-0 justify-end border-l border-border/60 pl-2 bg-bg-panel h-full`}
+              className={`${
+                SHOW_LOGS_TOOLBAR_SEARCH ? "col-start-3" : "col-start-2"
+              } row-start-1 z-[2] flex items-center gap-1.5 shrink-0 justify-end border-l border-border/60 pl-2 bg-bg-panel h-full`}
             >
               <span className="sr-only" id="logs-source-label">
                 Log source
@@ -638,8 +626,9 @@ export function BottomPanel() {
                 aria-valuemax={viewportMaxLogs}
                 aria-valuenow={logsBodyPx}
                 aria-label="Resize logs height"
-                className={`shrink-0 w-full select-none touch-none bg-border/50 hover:bg-accent/35 active:bg-accent/55 transition-colors outline-none cursor-row-resize ${resizeActive ? "bg-accent/50" : ""
-                  }`}
+                className={`shrink-0 w-full select-none touch-none bg-border/50 hover:bg-accent/35 active:bg-accent/55 transition-colors outline-none cursor-row-resize ${
+                  resizeActive ? "bg-accent/50" : ""
+                }`}
                 style={{ height: LOGS_RESIZE_HANDLE_PX }}
                 tabIndex={0}
                 onPointerDown={(e) => {
@@ -663,9 +652,14 @@ export function BottomPanel() {
             >
               {logs.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center min-h-[10rem] w-full px-4 py-8 text-center gap-3">
-                  <ClockCounterClockwise size={32} weight="duotone" className="text-fg-dim opacity-60" />
-                  <p className="text-fg-dim text-[12.5px] font-mono leading-relaxed">
-                    No log entries yet. <br /> Actions, connections, and commands <br /> will appear here.
+                  <ClockCounterClockwise
+                    size={32}
+                    weight="duotone"
+                    className="text-fg-dim opacity-60"
+                  />
+                  <p className="text-fg-dim text-[13px] font-sans leading-normal">
+                    No log entries yet. <br /> Actions, connections, and commands <br /> will appear
+                    here.
                   </p>
                 </div>
               ) : sourceFilteredLogs.length === 0 ? (
@@ -678,7 +672,7 @@ export function BottomPanel() {
                     className="text-fg-dim shrink-0 opacity-[0.88]"
                     aria-hidden={true}
                   />
-                  <p className="text-fg-dim text-[12.5px] font-mono leading-relaxed">
+                  <p className="text-fg-dim text-[13px] font-sans leading-normal">
                     no logs match your search.
                   </p>
                 </div>
@@ -687,15 +681,20 @@ export function BottomPanel() {
                   {filteredLogs.map((l) => {
                     const rowConn = connectionForSource(connections, l.source);
                     const timeStr = new Date(l.ts).toLocaleTimeString([], { hour12: false });
-                    const { kind: actionKind, target: sessionAddr, detail: cmdDetail } =
-                      parseLogCells(l.message);
+                    const {
+                      kind: actionKind,
+                      target: sessionAddr,
+                      detail: cmdDetail,
+                    } = parseLogCells(l.message);
                     return (
                       <div
                         key={l.id}
                         className="grid items-start gap-x-0 py-1 border-b border-border/40 text-[11.75px] sm:text-[12px] leading-snug last:border-b-0"
                         style={{ gridTemplateColumns: LOG_ROW_GRID_TEMPLATE }}
                       >
-                        <div className={`${LOG_ROW_CELL} text-fg-dim whitespace-nowrap font-mono tabular-nums`}>
+                        <div
+                          className={`${LOG_ROW_CELL} text-fg-dim whitespace-nowrap font-mono tabular-nums`}
+                        >
                           {timeStr}
                         </div>
                         <div
@@ -703,16 +702,23 @@ export function BottomPanel() {
                         >
                           {l.level}
                         </div>
-                        <div className={`${LOG_ROW_CELL} text-fg-dim inline-flex items-center gap-1.5`}>
+                        <div
+                          className={`${LOG_ROW_CELL} text-fg-dim inline-flex items-center gap-1.5`}
+                        >
                           <span className="shrink-0">
                             <LogSourceGlyph source={l.source} conn={rowConn} />
                           </span>
                           <span className="truncate font-mono">{l.source}</span>
                         </div>
-                        <div className={`${LOG_ROW_CELL} text-fg-muted uppercase text-xxs font-sans tracking-wide truncate font-semibold`}>
+                        <div
+                          className={`${LOG_ROW_CELL} text-fg-muted uppercase text-xxs font-sans tracking-wide truncate font-semibold`}
+                        >
                           {actionKind}
                         </div>
-                        <div className={`${LOG_ROW_CELL} text-fg-dim font-mono truncate`} title={sessionAddr || undefined}>
+                        <div
+                          className={`${LOG_ROW_CELL} text-fg-dim font-mono truncate`}
+                          title={sessionAddr || undefined}
+                        >
                           {sessionAddr || (
                             <span className="text-fg-muted/55 select-none" aria-hidden="true">
                               —

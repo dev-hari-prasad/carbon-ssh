@@ -8,12 +8,18 @@ export function Modal({
   title,
   children,
   footer,
+  icon,
+  footerAlign = "end",
+  showFooterSeparator = true,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  icon?: React.ReactNode;
+  footerAlign?: "start" | "end";
+  showFooterSeparator?: boolean;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -42,10 +48,13 @@ export function Modal({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.98, opacity: 0, y: 4 }}
             transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
-            className="relative w-full max-w-md bg-bg-elev border border-border rounded-[14px] shadow-2xl overflow-hidden"
+            className="relative w-full max-w-md bg-bg-elev border border-border rounded-[10px] shadow-2xl overflow-hidden !mb-10"
           >
             <div className="flex items-center justify-between px-4 h-10 border-b border-border bg-bg-panel">
-              <h2 className="font-sans font-semibold text-[13px] text-fg">{title}</h2>
+              <div className="flex items-center gap-2">
+                {icon}
+                <h2 className="font-sans font-semibold text-[13px] text-fg">{title}</h2>
+              </div>
               <button
                 onClick={onClose}
                 className="text-fg-muted hover:text-fg transition-colors"
@@ -56,7 +65,11 @@ export function Modal({
             </div>
             <div className="px-4 py-4 max-h-[70vh] overflow-y-auto">{children}</div>
             {footer ? (
-              <div className="px-4 h-12 border-t border-border bg-bg-panel flex items-center justify-end gap-2">
+              <div
+                className={`px-4  !py-4 h-14 bg-bg-panel flex items-center gap-2 ${
+                  footerAlign === "start" ? "justify-start" : "justify-end"
+                } ${showFooterSeparator ? "border-t border-border" : ""}`}
+              >
                 {footer}
               </div>
             ) : null}

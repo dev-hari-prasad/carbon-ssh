@@ -63,9 +63,7 @@ export function IconPicker({
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const [ready, setReady] = useState(false);
-  const [tab, setTab] = useState<"system" | "brand">(
-    value.kind === "brand" ? "brand" : "system",
-  );
+  const [tab, setTab] = useState<"system" | "brand">(value.kind === "brand" ? "brand" : "system");
   const [query, setQuery] = useState("");
   const triggerWrapRef = useRef<HTMLSpanElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
@@ -73,9 +71,7 @@ export function IconPicker({
   const filteredBrands = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return BRAND_ICONS;
-    return BRAND_ICONS.filter(
-      (b) => b.id.includes(q) || b.label.toLowerCase().includes(q),
-    );
+    return BRAND_ICONS.filter((b) => b.id.includes(q) || b.label.toLowerCase().includes(q));
   }, [query]);
 
   useLayoutEffect(() => {
@@ -127,8 +123,7 @@ export function IconPicker({
     };
   }, [open]);
 
-  const currentColor =
-    value.kind === "system" ? value.color ?? "var(--accent)" : "var(--accent)";
+  const currentColor = value.kind === "system" ? (value.color ?? "var(--accent)") : "var(--accent)";
 
   return (
     <>
@@ -150,9 +145,7 @@ export function IconPicker({
                 opacity: ready ? 1 : 0,
                 transform: ready ? "scale(1)" : "scale(0.96)",
                 transformOrigin: "top",
-                transition: ready
-                  ? "opacity 110ms ease-out, transform 110ms ease-out"
-                  : "none",
+                transition: ready ? "opacity 110ms ease-out, transform 110ms ease-out" : "none",
               }}
               className="w-[280px] max-h-[360px] flex flex-col rounded-[10px] border shadow-2xl overflow-hidden"
             >
@@ -193,8 +186,7 @@ export function IconPicker({
                   <>
                     <div className="grid grid-cols-5 gap-1">
                       {SYSTEM_ICONS.map((s) => {
-                        const active =
-                          value.kind === "system" && value.id === s.id;
+                        const active = value.kind === "system" && value.id === s.id;
                         const Icon = s.Icon;
                         return (
                           <button
@@ -205,10 +197,7 @@ export function IconPicker({
                               onChange({
                                 kind: "system",
                                 id: s.id,
-                                color:
-                                  value.kind === "system"
-                                    ? value.color
-                                    : undefined,
+                                color: value.kind === "system" ? value.color : undefined,
                               })
                             }
                             className={`aspect-square grid place-items-center rounded-[8px] transition-colors ${
@@ -230,8 +219,7 @@ export function IconPicker({
                       </div>
                       <div className="grid grid-cols-10 gap-1">
                         {COLOR_SWATCHES.map((c) => {
-                          const active =
-                            value.kind === "system" && value.color === c;
+                          const active = value.kind === "system" && value.color === c;
                           return (
                             <button
                               key={c}
@@ -239,10 +227,7 @@ export function IconPicker({
                               onClick={() =>
                                 onChange({
                                   kind: "system",
-                                  id:
-                                    value.kind === "system"
-                                      ? value.id
-                                      : "generic",
+                                  id: value.kind === "system" ? value.id : "generic",
                                   color: c,
                                 })
                               }
@@ -268,17 +253,14 @@ export function IconPicker({
                     ) : (
                       <div className="grid grid-cols-5 gap-1">
                         {filteredBrands.map((b) => {
-                          const active =
-                            value.kind === "brand" && value.id === b.id;
+                          const active = value.kind === "brand" && value.id === b.id;
                           const Icon = b.Icon;
                           return (
                             <button
                               key={b.id}
                               type="button"
                               title={b.label}
-                              onClick={() =>
-                                onChange({ kind: "brand", id: b.id })
-                              }
+                              onClick={() => onChange({ kind: "brand", id: b.id })}
                               className={`aspect-square grid place-items-center rounded-[8px] transition-colors ${
                                 active
                                   ? "bg-[var(--neutral-hover-bg)] ring-1 ring-fg/40"
@@ -294,7 +276,6 @@ export function IconPicker({
                   </>
                 )}
               </div>
-
             </div>,
             document.body,
           )
@@ -317,9 +298,7 @@ function TabBtn({
       type="button"
       onClick={onClick}
       className={`h-7 px-2.5 rounded-[7px] text-[11.5px] font-sans transition-colors ${
-        active
-          ? "bg-[var(--command-active-bg)] text-fg"
-          : "text-fg-muted hover:text-fg"
+        active ? "bg-[var(--command-active-bg)] text-fg" : "text-fg-muted hover:text-fg"
       }`}
     >
       {children}
