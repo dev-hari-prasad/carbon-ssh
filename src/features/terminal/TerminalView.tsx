@@ -8,13 +8,44 @@ interface Props {
   conn: Connection;
 }
 
-function clipLogLine(text: string, max = 160) {
-  const t = text.trim();
-  if (t.length <= max) return t;
-  return `${t.slice(0, Math.max(0, max - 1))}…`;
+type ClientMessage =
+  | {
+      type: "connect";
+      data: {
+        host: string;
+        port: number;
+        username: string;
+        password?: string;
+        privateKey?: string;
+        passphrase?: string;
+        cols: number;
+        rows: number;
+      };
+    }
+  | { type: "input"; data: string }
+  | { type: "resize"; data: { cols: number; rows: number } }
+  | { type: "close" };
+
+type ServerMessage =
+  | { type: "data"; data: string }
+  | { type: "error"; message: string }
+  | { type: "connected" }
+  | { type: "closed" };
+
+function buildWebSocketUrl() {
+  const url = new URL("/api/ws", window.location.origin);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  return url.toString();
 }
 
-type HandleOutcome = "ok" | "closed";
+function parseServerMessage(data: unknown): ServerMessage | null {
+  if (typeof data !== "string") return null;
+  try {
+    return JSON.parse(data) as ServerMessage;
+  } catch {
+    return null;
+  }
+}
 
 export function TerminalView({ tab, conn }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -54,108 +85,75 @@ export function TerminalView({ tab, conn }: Props) {
         }
       });
 
-      const C = {
-        dim: "\x1b[2m",
-        reset: "\x1b[0m",
-        bold: "\x1b[1m",
-        blue: "\x1b[38;5;111m",
-        green: "\x1b[38;5;114m",
-        yellow: "\x1b[38;5;221m",
-        red: "\x1b[38;5;203m",
-      };
-      const prompt = `${C.green}${conn.username}${C.reset}${C.dim}@${C.reset}${C.blue}${conn.host}${C.reset} ${C.dim}~${C.reset} ${C.bold}>${C.reset} `;
+      term.writeln("relay/ssh — live session shell");
+      term.writeln(`connecting to ${conn.username}@${conn.host}:${conn.port}…`);
+      actions.log("info", conn.name, `Connecting to ${conn.username}@${conn.host}`);
 
-      term.writeln(`${C.dim}relay/ssh — local session shell${C.reset}`);
-      term.writeln(
-        `${C.dim}attempting ${conn.username}@${conn.host}:${conn.port}…${C.reset}`,
-      );
-      term.writeln(
-        `${C.yellow}note:${C.reset} this build is a UI shell — no live SSH transport.`,
-      );
-      term.writeln(`${C.dim}type ${C.reset}help${C.dim} for available commands.${C.reset}`);
-      term.write("\r\n" + prompt);
-      actions.log("info", conn.name, `Session ${tab.title} ready (offline shell)`);
+      const socket = new WebSocket(buildWebSocketUrl());
+      let closed = false;
 
-      let buffer = "";
-      const writePrompt = () => term.write("\r\n" + prompt);
-
-      /** Counts submissions (non-empty trimmed line). CRLF‑safe; logs commands to activity panel. */
-      const handle = (cmd: string): HandleOutcome => {
-        const c = cmd.trim();
-        if (!c) return "ok";
-        actions.incrementCommandCount(tab.id);
-        const recap = `${tab.title}: ${clipLogLine(cmd)}`;
-
-        const [name, ...args] = c.split(/\s+/);
-        switch (name) {
-          case "help":
-            term.writeln(
-              "available: help, whoami, hostname, date, echo, clear, exit",
-            );
-            break;
-          case "whoami":
-            term.writeln(conn.username);
-            break;
-          case "hostname":
-            term.writeln(conn.host);
-            break;
-          case "date":
-            term.writeln(new Date().toString());
-            break;
-          case "echo":
-            term.writeln(args.join(" "));
-            break;
-          case "clear":
-            term.clear();
-            break;
-          case "exit":
-            actions.log("info", conn.name, `$ exit · ${recap}`);
-            term.writeln(`${C.dim}connection closed.${C.reset}`);
-            actions.closeTab(tab.id);
-            return "closed";
-          default:
-            term.writeln(`${C.red}command not found:${C.reset} ${name}`);
-            actions.log("warn", conn.name, `$ ${recap}`);
-            return "ok";
+      const send = (message: ClientMessage) => {
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify(message));
         }
-
-        actions.log("info", conn.name, `$ ${recap}`);
-        return "ok";
       };
 
-      const submitLine = () => {
-        const line = buffer;
-        buffer = "";
-        term.write("\r\n");
-        const outcome = handle(line);
-        if (outcome === "closed" || disposed) return;
-        term.write(prompt);
+      const handleClosed = () => {
+        if (closed) return;
+        closed = true;
+        term.writeln("\r\nconnection closed.");
+        actions.log("info", conn.name, `Session ${tab.title} closed`);
       };
+
+      socket.addEventListener("open", () => {
+        send({
+          type: "connect",
+          data: {
+            host: conn.host,
+            port: conn.port,
+            username: conn.username,
+            password: conn.authType === "password" ? conn.password : undefined,
+            privateKey: conn.authType === "key" ? conn.privateKey : undefined,
+            passphrase: conn.authType === "key" ? conn.passphrase : undefined,
+            cols: term.cols,
+            rows: term.rows,
+          },
+        });
+      });
+
+      socket.addEventListener("message", (event) => {
+        const message = parseServerMessage(event.data);
+        if (!message) return;
+        switch (message.type) {
+          case "data":
+            term.write(message.data);
+            break;
+          case "connected":
+            term.writeln("connected.");
+            actions.log("info", conn.name, `Session ${tab.title} connected`);
+            break;
+          case "closed":
+            handleClosed();
+            break;
+          case "error":
+            term.writeln(`\r\nerror: ${message.message}`);
+            actions.log("error", conn.name, message.message);
+            break;
+        }
+      });
+
+      socket.addEventListener("close", handleClosed);
+      socket.addEventListener("error", () => {
+        term.writeln("\r\nwebsocket error.");
+        actions.log("error", conn.name, "WebSocket error");
+      });
 
       const dataSub = term.onData((data: string) => {
-        for (let i = 0; i < data.length; i++) {
-          const ch = data[i];
-          const code = ch.charCodeAt(0);
-          // Enter is often `\r`; some environments send `\n` or `\r\n` together.
-          if (ch === "\r" || ch === "\n") {
-            submitLine();
-            if (ch === "\r" && data[i + 1] === "\n") i += 1;
-            continue;
-          }
-          if (code === 127) {
-            if (buffer.length > 0) {
-              buffer = buffer.slice(0, -1);
-              term.write("\b \b");
-            }
-          } else if (code === 3) {
-            term.write("^C");
-            buffer = "";
-            writePrompt();
-          } else if (code >= 32) {
-            buffer += ch;
-            term.write(ch);
-          }
-        }
+        send({ type: "input", data });
+      });
+
+      const resizeSub = term.onResize(({ cols, rows }) => {
+        send({ type: "resize", data: { cols, rows } });
       });
 
       const ro = new ResizeObserver(() => {
@@ -169,7 +167,12 @@ export function TerminalView({ tab, conn }: Props) {
 
       cleanups.push(() => {
         dataSub.dispose();
+        resizeSub.dispose();
         ro.disconnect();
+        if (socket.readyState === WebSocket.OPEN) {
+          socket.send(JSON.stringify({ type: "close" } satisfies ClientMessage));
+        }
+        socket.close();
         term.dispose();
       });
     })();
@@ -180,12 +183,16 @@ export function TerminalView({ tab, conn }: Props) {
     };
   }, [
     tab.id,
+    tab.title,
     conn.id,
     conn.name,
     conn.host,
     conn.username,
     conn.port,
-    tab.title,
+    conn.authType,
+    conn.password,
+    conn.privateKey,
+    conn.passphrase,
     themeId,
   ]);
 
