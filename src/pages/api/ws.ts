@@ -1,6 +1,6 @@
 import type { Server as HttpServer } from "http";
 import type { NextApiRequest, NextApiResponse } from "next";
-import { WebSocketServer, type WebSocket } from "ws";
+import { WebSocket, WebSocketServer, type RawData } from "ws";
 import { connectSsh, type SshSession } from "@/lib/ssh";
 
 export const config = {
@@ -37,7 +37,7 @@ type ServerWithWss = HttpServer & {
   wss?: WebSocketServer;
 };
 
-function parseClientMessage(raw: WebSocket.RawData): ClientMessage | null {
+function parseClientMessage(raw: RawData): ClientMessage | null {
   if (typeof raw !== "string") return null;
   try {
     return JSON.parse(raw) as ClientMessage;
@@ -47,7 +47,7 @@ function parseClientMessage(raw: WebSocket.RawData): ClientMessage | null {
 }
 
 function send(ws: WebSocket, message: ServerMessage) {
-  if (ws.readyState !== ws.OPEN) return;
+  if (ws.readyState !== WebSocket.OPEN) return;
   ws.send(JSON.stringify(message));
 }
 

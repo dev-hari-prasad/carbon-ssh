@@ -71,7 +71,8 @@ export function connectSsh(
           },
           disconnect() {
             if (shell) {
-              shell.end("exit\n");
+              shell.write("exit\n");
+              shell.end();
             }
             client.end();
             handleClose();

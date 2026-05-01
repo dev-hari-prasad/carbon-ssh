@@ -169,9 +169,7 @@ export function TerminalView({ tab, conn }: Props) {
         dataSub.dispose();
         resizeSub.dispose();
         ro.disconnect();
-        if (socket.readyState === WebSocket.OPEN) {
-          socket.send(JSON.stringify({ type: "close" } satisfies ClientMessage));
-        }
+        send({ type: "close" });
         socket.close();
         term.dispose();
       });
@@ -190,9 +188,6 @@ export function TerminalView({ tab, conn }: Props) {
     conn.username,
     conn.port,
     conn.authType,
-    conn.password,
-    conn.privateKey,
-    conn.passphrase,
     themeId,
   ]);
 
