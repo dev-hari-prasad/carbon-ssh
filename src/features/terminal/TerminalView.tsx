@@ -38,8 +38,7 @@ function buildWebSocketUrl() {
   return url.toString();
 }
 
-function parseServerMessage(data: unknown): ServerMessage | null {
-  if (typeof data !== "string") return null;
+function parseServerMessage(data: string): ServerMessage | null {
   try {
     return JSON.parse(data) as ServerMessage;
   } catch {
@@ -150,8 +149,8 @@ export function TerminalView({ tab, conn }: Props) {
         });
       });
 
-      socket.addEventListener("message", (event) => {
-        const message = parseServerMessage(event.data);
+      const handleMessagePayload = (payload: string) => {
+        const message = parseServerMessage(payload);
         if (!message) return;
         switch (message.type) {
           case "data":
@@ -168,6 +167,16 @@ export function TerminalView({ tab, conn }: Props) {
             term.writeln(`\r\nerror: ${message.message}`);
             actions.log("error", connectionSnapshot.name, message.message);
             break;
+        }
+      };
+
+      socket.addEventListener("message", (event) => {
+        if (typeof event.data === "string") {
+          handleMessagePayload(event.data);
+        } else if (event.data instanceof ArrayBuffer) {
+          handleMessagePayload(new TextDecoder().decode(event.data));
+        } else if (event.data instanceof Blob) {
+          event.data.text().then(handleMessagePayload).catch(() => undefined);
         }
       });
 

@@ -38,9 +38,16 @@ type ServerWithWss = HttpServer & {
 };
 
 function parseClientMessage(raw: RawData): ClientMessage | null {
-  if (typeof raw !== "string") return null;
+  const text =
+    typeof raw === "string"
+      ? raw
+      : Array.isArray(raw)
+        ? Buffer.concat(raw).toString("utf8")
+        : Buffer.isBuffer(raw)
+          ? raw.toString("utf8")
+          : Buffer.from(raw).toString("utf8");
   try {
-    return JSON.parse(raw) as ClientMessage;
+    return JSON.parse(text) as ClientMessage;
   } catch {
     return null;
   }
@@ -140,7 +147,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       });
 
       ws.on("close", handleClose);
-      ws.on("error", (error) => handleError(error as Error));
+      ws.on("error", handleError);
     });
   }
 

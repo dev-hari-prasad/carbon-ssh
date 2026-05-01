@@ -66,12 +66,11 @@ export function connectSsh(
           send(data: string) {
             shell?.write(data);
           },
-          resize(nextCols: number, nextRows: number) {
-            shell?.setWindow(nextRows, nextCols, 0, 0);
+          resize(cols: number, rows: number) {
+            shell?.setWindow(rows, cols, 0, 0);
           },
           disconnect() {
             if (shell) {
-              shell.write("exit\n");
               shell.end();
             }
             client.end();
