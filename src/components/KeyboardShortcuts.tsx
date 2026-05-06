@@ -9,13 +9,14 @@ export function KeyboardShortcuts() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isMac = typeof window !== "undefined" && /Mac|iPhone|iPod|iPad/.test(navigator.platform);
+      const isMac =
+        typeof window !== "undefined" && /Mac|iPhone|iPod|iPad/.test(navigator.platform);
       const mod = isMac ? e.metaKey : e.ctrlKey;
       const shift = e.shiftKey;
       const key = e.key.toLowerCase();
 
-      // Toggle Sidebar (Bottom Panel/Logs): Mod+H
-      if (mod && !shift && key === "h") {
+      // Toggle Activity (Bottom Panel/Logs): Mod+A
+      if (mod && !shift && key === "a") {
         e.preventDefault();
         actions.toggleBottom();
         return;
@@ -28,8 +29,8 @@ export function KeyboardShortcuts() {
         return;
       }
 
-      // View Hosts: Mod+Shift+H
-      if (mod && shift && key === "h") {
+      // View Hosts: Mod+H
+      if (mod && !shift && key === "h") {
         e.preventDefault();
         actions.goHome();
         return;
@@ -39,6 +40,13 @@ export function KeyboardShortcuts() {
       if (mod && (key === "t" || key === "k" || key === "p")) {
         e.preventDefault();
         window.dispatchEvent(new CustomEvent("tm:focus-search"));
+        return;
+      }
+
+      // AI/Bang Palette: Mod+I
+      if (mod && !shift && key === "i") {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent("tm:open-ai-bang"));
         return;
       }
 
@@ -63,7 +71,7 @@ export function KeyboardShortcuts() {
         e.preventDefault();
         if (key === "=" || key === "+") actions.setZoomLevel(Math.min(135, zoomLevel + 5));
         if (key === "-") actions.setZoomLevel(Math.max(75, zoomLevel - 5));
-        if (key === "0") actions.setZoomLevel(110);
+        if (key === "0") actions.resetZoomLevel();
         return;
       }
 

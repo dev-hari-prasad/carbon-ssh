@@ -34,23 +34,33 @@ app.prepare().then(() => {
     handle(req, res, parsedUrl);
   });
 
-  // Use prependListener to ensure our upgrade handler fires BEFORE
-  // any listener Next.js might register (e.g. for HMR websocket)
-  server.prependListener(
-    "upgrade",
-    (req: IncomingMessage, socket: Duplex, head: Buffer) => {
-      const { pathname } = parse(req.url || "", true);
-      console.log("[server] Upgrade request for:", pathname);
+  // Hijack upgrade listeners so Next.js doesn't destroy our WebSocket
+  // Next.js lazily attaches its upgrade listener later, so we must monkey-patch server.on
+  const nextListeners: any[] = [];
+  const originalOn = server.on.bind(server);
+  
+  server.on = function (event, listener) {
+    if (event === "upgrade") {
+      nextListeners.push(listener);
+      return this;
+    }
+    return originalOn(event, listener);
+  } as typeof server.on;
 
-      if (pathname === "/api/ws") {
-        wss.handleUpgrade(req, socket, head, (ws) => {
-          console.log("[server] WebSocket upgrade completed for /api/ws");
-          wss.emit("connection", ws, req);
-        });
+  originalOn("upgrade", (req: IncomingMessage, socket: Duplex, head: Buffer) => {
+    const { pathname } = parse(req.url || "", true);
+    if (pathname === "/api/ws") {
+      wss.handleUpgrade(req, socket, head, (ws) => {
+        console.log("[server] WebSocket upgrade completed for /api/ws");
+        wss.emit("connection", ws, req);
+      });
+    } else {
+      // Pass other upgrades (like HMR) to Next.js
+      for (const listener of nextListeners) {
+        listener(req, socket, head);
       }
-      // Non-matching paths: do nothing — Next.js HMR handler will pick them up
-    },
-  );
+    }
+  });
 
   server.listen(port, () => {
     console.log(`> Ready on http://${hostname}:${port}`);

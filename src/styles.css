@@ -118,6 +118,15 @@
   label[for],
   a[href] {
     cursor: pointer;
+    transition:
+      opacity 0.2s ease,
+      background-color 0.2s ease,
+      transform 0.1s ease,
+      filter 0.2s ease;
+  }
+  button:not(:disabled):active,
+  [role="button"]:not(:disabled):active {
+    transform: scale(0.98);
   }
   button:disabled,
   [role="button"][aria-disabled="true"] {

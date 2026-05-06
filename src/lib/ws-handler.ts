@@ -5,6 +5,7 @@ interface ConnectPayload {
   host: string;
   port: number;
   username: string;
+  authMethod?: "password" | "privateKey";
   password?: string;
   privateKey?: string;
   passphrase?: string;
@@ -23,6 +24,59 @@ type ServerMessage =
   | { type: "error"; message: string }
   | { type: "connected" }
   | { type: "closed" };
+
+function resolveAuthMethod(data: ConnectPayload): "password" | "privateKey" {
+  if (data.authMethod === "privateKey") return "privateKey";
+  if (!data.authMethod && data.privateKey) return "privateKey";
+  return "password";
+}
+
+function normalizePrivateKey(privateKey?: string): string {
+  return (privateKey ?? "")
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+}
+
+function formatSshError(error: Error, authMethod: "password" | "privateKey"): string {
+  const details = error as Error & { code?: string; level?: string };
+  const message = error.message || "";
+  const lower = message.toLowerCase();
+
+  if (
+    details.level === "client-authentication" ||
+    lower.includes("all configured authentication methods failed") ||
+    lower.includes("authentication failed")
+  ) {
+    return "Authentication failed";
+  }
+
+  if (
+    authMethod === "privateKey" &&
+    (lower.includes("privatekey") ||
+      lower.includes("private key") ||
+      lower.includes("key format") ||
+      lower.includes("parse") ||
+      lower.includes("encrypted"))
+  ) {
+    return "Invalid private key";
+  }
+
+  if (
+    details.code === "ECONNREFUSED" ||
+    lower.includes("econnrefused") ||
+    lower.includes("connection refused")
+  ) {
+    return "Connection refused";
+  }
+
+  if (lower.includes("connection closed") || lower.includes("connection lost")) {
+    return "SSH connection closed";
+  }
+
+  return message || "SSH connection failed";
+}
 
 export function handleWsConnection(ws: WebSocket): void {
   let shell: ClientChannel | null = null;
@@ -59,7 +113,7 @@ export function handleWsConnection(ws: WebSocket): void {
   }
 
   function handleError(error: Error): void {
-    console.error("[ws-handler] SSH error:", error.message);
+    console.error("[ws-handler] SSH error stack trace:\n", error.stack || error);
     sendMsg({ type: "error", message: error.message });
   }
 
@@ -96,12 +150,21 @@ export function handleWsConnection(ws: WebSocket): void {
       closed = false;
 
       const { host, port, username, password, privateKey, passphrase, cols, rows } = message.data;
+      const authMethod = resolveAuthMethod(message.data);
+      const normalizedPrivateKey = normalizePrivateKey(privateKey);
+
+      if (authMethod === "privateKey" && !normalizedPrivateKey) {
+        sendMsg({ type: "error", message: "Invalid private key" });
+        handleClose();
+        return;
+      }
 
       const sshClient = new Client();
       client = sshClient;
 
       sshClient.on("keyboard-interactive", (_name, _instructions, _lang, prompts, finish) => {
         if (
+          authMethod === "password" &&
           prompts.length > 0 &&
           prompts[0].prompt.toLowerCase().includes("password") &&
           password
@@ -121,7 +184,7 @@ export function handleWsConnection(ws: WebSocket): void {
           { term: "xterm-256color", cols: termCols, rows: termRows },
           (err, stream) => {
             if (err) {
-              console.error("[ws-handler] Shell error:", err.message);
+              console.error("[ws-handler] Shell error full trace:\n", err.stack || err);
               handleError(err);
               sshClient.end();
               return;
@@ -150,10 +213,10 @@ export function handleWsConnection(ws: WebSocket): void {
       });
 
       sshClient.on("error", (err) => {
-        console.error("[ws-handler] SSH client error:", err.message);
+        console.error("[ws-handler] SSH client error full trace:\n", err.stack || err);
         if (!shell) {
           // Connection failed before shell was established
-          sendMsg({ type: "error", message: err.message });
+          sendMsg({ type: "error", message: formatSshError(err, authMethod) });
           handleClose();
         } else {
           handleError(err);
@@ -172,16 +235,25 @@ export function handleWsConnection(ws: WebSocket): void {
         readyTimeout: 20_000,
         keepaliveInterval: 10_000,
         tryKeyboard: true,
+        hostVerifier: () => true,
       };
 
-      if (password) config.password = password;
-      if (privateKey) {
-        config.privateKey = privateKey.replace(/\\n/g, "\n");
+      if (authMethod === "password") {
+        config.password = password ?? "";
       }
-      if (passphrase) config.passphrase = passphrase;
+      if (authMethod === "privateKey") {
+        config.privateKey = normalizedPrivateKey;
+        if (passphrase) config.passphrase = passphrase;
+      }
 
       console.log(`[ws-handler] Connecting to ${username}@${host}:${port}...`);
-      sshClient.connect(config);
+      try {
+        sshClient.connect(config);
+      } catch (error) {
+        const err = error instanceof Error ? error : new Error(String(error));
+        sendMsg({ type: "error", message: formatSshError(err, authMethod) });
+        handleClose();
+      }
       return;
     }
 

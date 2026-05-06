@@ -2,13 +2,19 @@ appId: com.relay.ssh
 productName: Relay SSH
 copyright: Copyright © 2026
 
+beforeBuild: electron/before-build.cjs
+afterPack: electron/after-pack.cjs
+
 directories:
-  output: dist-electron
+  output: dist-electron-out
   buildResources: build
 
 files:
   - "electron/**/*"
   - ".next/**/*"
+  - "!.next/dev/**/*"
+  - "!.next/cache/**/*"
+  - "!.next/node_modules/**/*"
   - "public/**/*"
   - "src/**/*.ts"
   - "src/**/*.tsx"
@@ -17,9 +23,9 @@ files:
   - "package.json"
   - "tsconfig.json"
   - "postcss.config.mjs"
-  - "!node_modules/.cache"
-  - "!node_modules/.pnpm"
   - "!**/*.map"
+  - "!**/*.sqlite"
+  - "!**/*.sqlite-journal"
 
 asar: false
 

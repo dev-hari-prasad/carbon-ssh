@@ -23,14 +23,16 @@ import {
 } from "@phosphor-icons/react";
 import { actions, useStore } from "@/lib/store";
 import { TerminalView } from "@/features/terminal/TerminalView";
-import type { Connection, HostGroup } from "@/lib/types";
+import type { AuthType, Connection, ConnectionRuntimeStatus, HostGroup } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { IconPicker, type IconValue } from "@/features/connections/IconPicker";
 import { BRAND_ICON_MAP } from "@/features/connections/brandIcons";
+import { AuthMethodToggle } from "@/features/connections/AuthMethodToggle";
 import { Tooltip } from "@/components/Tooltip";
 import { HostIcon } from "@/components/HostIcon";
 import { hostAllowsAiFeatures } from "@/lib/ai";
+import { AnimatePresence, motion } from "framer-motion";
 
 function PopoverButtonKbd({
   children,
@@ -68,29 +70,43 @@ export function MainArea() {
     return <div className="flex-1 bg-bg" />;
   }
 
-  const activeTab = tabs.find((t) => t.id === activeTabId);
-  const conn = activeTab ? connections.find((c) => c.id === activeTab.connectionId) : null;
-
-  if (!activeTab || !conn) {
-    return <HostsView connections={connections} />;
-  }
+  const activeTab = activeTabId ? tabs.find((t) => t.id === activeTabId) ?? null : null;
+  const activeConn = activeTab ? connections.find((c) => c.id === activeTab.connectionId) ?? null : null;
+  const showTerminalSurface = Boolean(activeTabId && activeTab && activeConn);
 
   return (
-    <div className="flex-1 relative bg-bg overflow-hidden">
-      {tabs.map((t) => {
-        const c = connections.find((x) => x.id === t.connectionId);
-        if (!c) return null;
-        const visible = t.id === activeTabId;
-        return (
-          <div
-            key={t.id}
-            className="absolute inset-0"
-            style={{ visibility: visible ? "visible" : "hidden" }}
-          >
-            <TerminalView tab={t} conn={c} />
-          </div>
-        );
-      })}
+    <div className="flex-1 min-h-0 relative bg-bg overflow-hidden">
+      {tabs.length > 0 ? (
+        <div
+          className="absolute inset-0"
+          aria-hidden={!showTerminalSurface}
+          style={{
+            visibility: showTerminalSurface ? "visible" : "hidden",
+            pointerEvents: showTerminalSurface ? "auto" : "none",
+          }}
+        >
+          {tabs.map((t) => {
+            const c = connections.find((x) => x.id === t.connectionId);
+            if (!c) return null;
+            const visible = showTerminalSurface && t.id === activeTabId;
+            return (
+              <div
+                key={t.id}
+                className="absolute inset-0"
+                style={{ visibility: visible ? "visible" : "hidden" }}
+              >
+                <TerminalView tab={t} conn={c} />
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+
+      {!showTerminalSurface ? (
+        <div className="absolute inset-0 z-10 min-h-0 flex flex-col">
+          <HostsView connections={connections} />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -457,6 +473,7 @@ function EditGroupPopover({
 function HostsView({ connections }: { connections: Connection[] }) {
   const groups = useStore((s) => s.groups);
   const settingsOpen = useStore((s) => s.settingsOpen);
+  const connectionStatus = useStore((s) => s.connectionStatus);
   const groupCounts = useMemo(() => {
     const m: Record<string, number> = {};
     for (const c of connections) {
@@ -491,7 +508,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
   return (
     <div className="flex-1 min-w-0 relative bg-bg overflow-hidden">
       <div
-        className={`h-full overflow-y-auto px-6 py-6 transition-[padding] ${
+        className={`h-full overflow-y-auto px-6 py-6 ${
           settingsOpen ? "pr-[calc(340px+2.5rem)]" : selected ? "pr-[calc(320px+2.5rem)]" : ""
         }`}
       >
@@ -645,6 +662,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
                 key={c.id}
                 conn={c}
                 active={selectedId === c.id}
+                status={connectionStatus[c.id]}
                 onShowDetails={() => {
                   actions.setSelectedHostId(c.id);
                 }}
@@ -658,16 +676,23 @@ function HostsView({ connections }: { connections: Connection[] }) {
         )}
       </div>
 
-      {!settingsOpen && selected ? (
-        <aside
-          className="absolute z-20 top-4 right-4 bottom-4 w-[320px] max-w-[min(320px,calc(100%-2rem))] flex flex-col rounded-[14px] border border-[var(--border-strong)] shadow-2xl overflow-hidden"
-          style={{ background: "var(--sidebar-bg)" }}
-        >
-          <div className="flex-1 min-h-0 overflow-y-auto">
-            <HostDetails conn={selected} onClose={() => actions.setSelectedHostId(null)} />
-          </div>
-        </aside>
-      ) : null}
+      <AnimatePresence>
+        {!settingsOpen && selected ? (
+          <motion.aside
+            key="host-details"
+            initial={{ x: "100%", opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: "100%", opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="absolute z-20 top-4 right-4 bottom-4 w-[320px] max-w-[min(320px,calc(100%-2rem))] flex flex-col rounded-[14px] border border-[var(--border-strong)] shadow-2xl overflow-hidden"
+            style={{ background: "var(--sidebar-bg)" }}
+          >
+            <div className="flex-1 min-h-0 overflow-y-auto">
+              <HostDetails conn={selected} onClose={() => actions.setSelectedHostId(null)} />
+            </div>
+          </motion.aside>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }
@@ -699,14 +724,18 @@ function AllGroupIcon() {
 function HostCard({
   conn,
   active,
+  status,
   onShowDetails,
   onConnect,
 }: {
   conn: Connection;
   active: boolean;
+  status?: ConnectionRuntimeStatus;
   onShowDetails: () => void;
   onConnect: () => void;
 }) {
+  const isConnecting = status?.state === "connecting";
+
   return (
     <div
       className={`flex items-center gap-3 px-3 py-3 rounded-[10px] border transition-colors ${
@@ -737,11 +766,12 @@ function HostCard({
         <button
           type="button"
           onClick={onConnect}
+          disabled={isConnecting}
           aria-label="Connect"
-          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-[6px] border border-border bg-[var(--command-bg)] text-fg hover:bg-[var(--command-active-bg)] hover:border-[var(--border-strong)] transition-colors text-[11px] font-sans font-medium"
+          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-[6px] border border-border bg-[var(--command-bg)] text-fg hover:bg-[var(--command-active-bg)] hover:border-[var(--border-strong)] disabled:opacity-55 disabled:pointer-events-none transition-colors text-[11px] font-sans font-medium"
         >
           <Lightning size={11} weight="fill" />
-          Connect
+          {isConnecting ? "Connecting" : "Connect"}
         </button>
       </div>
     </div>
@@ -795,17 +825,34 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
   const [port, setPort] = useState(String(conn.port));
   const [name, setName] = useState(conn.name);
   const [username, setUsername] = useState(conn.username);
+  const [authType, setAuthType] = useState<AuthType>(conn.authType);
   const [password, setPassword] = useState(conn.password ?? "");
+  const [privateKey, setPrivateKey] = useState(conn.privateKey ?? "");
+  const [passphrase, setPassphrase] = useState(conn.passphrase ?? "");
   const [tagDraft, setTagDraft] = useState("");
+  const status = useStore((s) => s.connectionStatus[conn.id]);
 
   useEffect(() => {
     setHost(conn.host);
     setPort(String(conn.port));
     setName(conn.name);
     setUsername(conn.username);
+    setAuthType(conn.authType);
     setPassword(conn.password ?? "");
+    setPrivateKey(conn.privateKey ?? "");
+    setPassphrase(conn.passphrase ?? "");
     setTagDraft("");
-  }, [conn.id, conn.host, conn.port, conn.name, conn.username, conn.password]);
+  }, [
+    conn.id,
+    conn.host,
+    conn.port,
+    conn.name,
+    conn.username,
+    conn.authType,
+    conn.password,
+    conn.privateKey,
+    conn.passphrase,
+  ]);
 
   const persist = (patch: Partial<Connection>) => {
     actions.upsertConnection({
@@ -1012,7 +1059,7 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
         </div>
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 pt-4 border-t border-border/70">
         <FieldLabel>Credentials</FieldLabel>
 
         <div>
@@ -1027,26 +1074,11 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
 
         <div>
           <SubLabel>Auth method</SubLabel>
-          <div className="grid grid-cols-2 gap-1 p-1 bg-[var(--input-bg)] border border-border rounded-[8px]">
-            {(["password", "key"] as const).map((t) => {
-              const active = conn.authType === t;
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => persist({ authType: t })}
-                  className={`h-7 rounded-[6px] text-[11.5px] font-sans transition-colors ${
-                    active ? "bg-[var(--command-active-bg)] text-fg" : "text-fg-muted hover:text-fg"
-                  }`}
-                >
-                  {t === "password" ? "Password" : "Private key"}
-                </button>
-              );
-            })}
-          </div>
+          <AuthMethodToggle value={authType} onChange={setAuthType} />
         </div>
 
-        {conn.authType === "password" ? (
+        <div className="space-y-3 transition-all duration-200">
+          {authType === "password" ? (
           <div>
             <SubLabel>Password</SubLabel>
             <EditableInputRow
@@ -1058,14 +1090,31 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
             />
           </div>
         ) : (
-          <div>
-            <SubLabel>Private key</SubLabel>
-            <div className="flex items-center gap-2 px-2.5 h-9 rounded-[8px] bg-[var(--input-bg)] border border-border text-fg-muted text-[12px] font-mono">
-              <Key size={13} />
-              <span className="truncate">{conn.privateKey ? "Configured" : "No key set"}</span>
+          <>
+            <div>
+              <SubLabel hint="PEM / OpenSSH">Private key</SubLabel>
+              <textarea
+                value={privateKey}
+                onChange={(e) => setPrivateKey(e.target.value)}
+                placeholder={"-----BEGIN OPENSSH PRIVATE KEY-----\n"}
+                spellCheck={false}
+                wrap="off"
+                className="w-full min-h-[80px] max-h-[100px] resize-y overflow-auto px-3 py-2.5 rounded-[8px] bg-[var(--input-bg)] border border-border focus:border-[var(--border-strong)] text-[12px] leading-relaxed font-mono text-fg placeholder:text-fg-muted focus:outline-none whitespace-pre"
+              />
             </div>
-          </div>
-        )}
+            <div>
+              <SubLabel hint="optional">Passphrase</SubLabel>
+              <EditableInputRow
+                icon={<Key size={13} />}
+                value={passphrase}
+                onChange={setPassphrase}
+                placeholder="Passphrase"
+                type="password"
+              />
+            </div>
+          </>
+          )}
+        </div>
       </div>
 
       <ActionsAndDanger
@@ -1074,7 +1123,13 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
         port={port}
         name={name}
         username={username}
+        authType={authType}
         password={password}
+        privateKey={privateKey}
+        passphrase={passphrase}
+        isConnecting={status?.state === "connecting"}
+        statusMessage={status?.message}
+        statusState={status?.state}
         onSave={() => {
           const portN = Number(port);
           persist({
@@ -1082,7 +1137,10 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
             port: portN > 0 ? portN : conn.port,
             name: name.trim() || conn.name,
             username: username.trim() || conn.username,
-            password: conn.authType === "password" ? password : conn.password,
+            authType,
+            password: authType === "password" ? password : undefined,
+            privateKey: authType === "privateKey" ? privateKey : undefined,
+            passphrase: authType === "privateKey" ? passphrase : undefined,
           });
         }}
         onCancel={() => {
@@ -1090,7 +1148,10 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
           setPort(String(conn.port));
           setName(conn.name);
           setUsername(conn.username);
+          setAuthType(conn.authType);
           setPassword(conn.password ?? "");
+          setPrivateKey(conn.privateKey ?? "");
+          setPassphrase(conn.passphrase ?? "");
         }}
       />
     </div>
@@ -1103,7 +1164,13 @@ function ActionsAndDanger({
   port,
   name,
   username,
+  authType,
   password,
+  privateKey,
+  passphrase,
+  isConnecting,
+  statusMessage,
+  statusState,
   onSave,
   onCancel,
 }: {
@@ -1112,7 +1179,13 @@ function ActionsAndDanger({
   port: string;
   name: string;
   username: string;
+  authType: AuthType;
   password: string;
+  privateKey: string;
+  passphrase: string;
+  isConnecting: boolean;
+  statusMessage?: string;
+  statusState?: ConnectionRuntimeStatus["state"];
   onSave: () => void;
   onCancel: () => void;
 }) {
@@ -1127,7 +1200,10 @@ function ActionsAndDanger({
     Number(port) !== conn.port ||
     name.trim() !== conn.name ||
     username.trim() !== conn.username ||
-    (conn.authType === "password" && password !== (conn.password ?? ""));
+    authType !== conn.authType ||
+    (authType === "password" && password !== (conn.password ?? "")) ||
+    (authType === "privateKey" &&
+      (privateKey !== (conn.privateKey ?? "") || passphrase !== (conn.passphrase ?? "")));
 
   const canSave =
     dirty &&
@@ -1189,10 +1265,21 @@ function ActionsAndDanger({
           actions.setSettingsOpen(false);
           actions.openTab(conn.id);
         }}
-        className="h-10 rounded-[10px] bg-accent text-accent-fg text-[13px] font-sans font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-2"
+        disabled={isConnecting}
+        className="h-10 rounded-[10px] bg-accent text-accent-fg text-[13px] font-sans font-semibold hover:opacity-90 disabled:opacity-55 disabled:pointer-events-none transition-opacity inline-flex items-center justify-center gap-2"
       >
-        <Lightning size={13} weight="fill" /> Connect
+        <Lightning size={13} weight="fill" /> {isConnecting ? "Connecting" : "Connect"}
       </button>
+
+      {statusMessage ? (
+        <div
+          className={`text-[11px] font-sans leading-snug ${
+            statusState === "error" ? "text-danger" : "text-fg-muted"
+          }`}
+        >
+          {statusMessage}
+        </div>
+      ) : null}
 
       <div
         className="mt-2 rounded-[10px] border p-3"
@@ -1253,10 +1340,13 @@ function FieldLabel({
   );
 }
 
-function SubLabel({ children }: { children: React.ReactNode }) {
+function SubLabel({ children, hint }: { children: React.ReactNode; hint?: string }) {
   return (
-    <div className="text-[10.5px] uppercase tracking-wider font-sans font-semibold text-fg-dim mb-1">
-      {children}
+    <div className="flex items-baseline justify-between gap-2 mb-1">
+      <span className="text-[10.5px] uppercase tracking-wider font-sans font-semibold text-fg-dim">
+        {children}
+      </span>
+      {hint ? <span className="text-[10.5px] font-mono text-fg-dim">{hint}</span> : null}
     </div>
   );
 }

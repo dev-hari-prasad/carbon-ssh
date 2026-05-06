@@ -40,4 +40,19 @@ export function applyThemeToDocument(t: ThemeId) {
   root.classList.toggle("light", theme.type === "light");
   root.classList.toggle("dark", theme.type === "dark");
   root.setAttribute("data-theme", theme.id);
+
+  const el = window as Window & {
+    electron?: { platform?: string; setTitleBarOverlay?: (o: { color: string; symbolColor: string; height?: number }) => void };
+  };
+  const { electron } = el;
+  if (
+    electron?.setTitleBarOverlay &&
+    (electron.platform === "win32" || electron.platform === "linux")
+  ) {
+    electron.setTitleBarOverlay({
+      color: vars["--titlebar-bg"],
+      symbolColor: vars["--titlebar-fg"],
+      height: 36,
+    });
+  }
 }

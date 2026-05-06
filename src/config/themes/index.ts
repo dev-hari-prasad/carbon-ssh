@@ -50,6 +50,7 @@ export type AppTheme = {
   name: string;
   type: "dark" | "light";
   colors: Record<string, string>;
+  syntax: Record<string, string>;
 };
 
 const entries: Array<{ id: string; file: string; raw: RawTheme }> = [
@@ -104,6 +105,50 @@ function inferType(raw: RawTheme, colors: Record<string, string>): "dark" | "lig
     : "dark";
 }
 
+function extractSyntaxColors(
+  raw: RawTheme,
+  baseSyntax?: Record<string, string>,
+): Record<string, string> {
+  const syntax: Record<string, string> = { ...baseSyntax };
+
+  if (Array.isArray(raw.tokenColors)) {
+    for (const token of raw.tokenColors) {
+      if (
+        !token ||
+        typeof token !== "object" ||
+        !("settings" in token) ||
+        !token.settings ||
+        typeof token.settings !== "object" ||
+        !("foreground" in token.settings) ||
+        typeof token.settings.foreground !== "string"
+      ) {
+        continue;
+      }
+      
+      const fg = token.settings.foreground;
+      const scopeRaw = (token as { scope?: unknown }).scope;
+      const scopes: string[] = Array.isArray(scopeRaw)
+        ? scopeRaw.filter((s): s is string => typeof s === "string")
+        : typeof scopeRaw === "string"
+          ? scopeRaw.split(",").map((s) => s.trim())
+          : [];
+
+      for (const scope of scopes) {
+        if (scope === "comment" || scope.startsWith("comment.")) syntax.comment = fg;
+        else if (scope === "string" || scope.startsWith("string.")) syntax.string = fg;
+        else if (scope === "keyword" || scope.startsWith("keyword.")) syntax.keyword = fg;
+        else if (scope === "entity.name.function" || scope.startsWith("entity.name.function.")) syntax.function = fg;
+        else if (scope === "variable" || scope.startsWith("variable.")) syntax.variable = fg;
+        else if (scope === "constant" || scope.startsWith("constant.")) syntax.constant = fg;
+        else if (scope === "entity.name.type" || scope.startsWith("entity.name.type.")) syntax.type = fg;
+        else if (scope === "support.type.property-name" || scope.startsWith("support.type.property-name.") || scope.startsWith("variable.other.property")) syntax.property = fg;
+      }
+    }
+  }
+
+  return syntax;
+}
+
 function resolveTheme(
   entry: { id: string; file: string; raw: RawTheme },
   seen = new Set<string>(),
@@ -114,6 +159,7 @@ function resolveTheme(
       name: entry.raw.name ?? entry.id,
       type: inferType(entry.raw, entry.raw.colors ?? {}),
       colors: entry.raw.colors ?? {},
+      syntax: extractSyntaxColors(entry.raw),
     };
   }
 
@@ -121,12 +167,14 @@ function resolveTheme(
   const base = entry.raw.include ? byFile.get(includeFile(entry.raw.include)) : undefined;
   const baseTheme = base ? resolveTheme(base, seen) : undefined;
   const colors = { ...(baseTheme?.colors ?? {}), ...(entry.raw.colors ?? {}) };
+  const syntax = extractSyntaxColors(entry.raw, baseTheme?.syntax);
 
   return {
     id: entry.id,
     name: nameOverrides[entry.id] ?? entry.raw.name ?? entry.id,
     type: inferType(entry.raw, colors),
     colors,
+    syntax,
   };
 }
 
@@ -388,6 +436,14 @@ export function cssVariablesForTheme(theme: AppTheme): Record<string, string> {
     "--neutral-hover-bg": dark
       ? `color-mix(in oklab, ${editorFg} 8%, transparent)`
       : `color-mix(in oklab, ${editorFg} 6%, transparent)`,
+    "--syntax-comment": theme.syntax.comment ?? (dark ? "#6a9955" : "#008000"),
+    "--syntax-string": theme.syntax.string ?? (dark ? "#ce9178" : "#a31515"),
+    "--syntax-keyword": theme.syntax.keyword ?? (dark ? "#569cd6" : "#0000ff"),
+    "--syntax-function": theme.syntax.function ?? (dark ? "#dcdcaa" : "#795e26"),
+    "--syntax-variable": theme.syntax.variable ?? (dark ? "#9cdcfe" : "#001080"),
+    "--syntax-constant": theme.syntax.constant ?? (dark ? "#b5cea8" : "#098658"),
+    "--syntax-type": theme.syntax.type ?? (dark ? "#4ec9b0" : "#267f99"),
+    "--syntax-property": theme.syntax.property ?? (dark ? "#9cdcfe" : "#001080"),
   };
 }
 

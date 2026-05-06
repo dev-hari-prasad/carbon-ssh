@@ -8,6 +8,7 @@ import type { AuthType, Connection } from "@/lib/types";
 import { actions } from "@/lib/store";
 import { IconPicker, type IconValue, SYSTEM_ICONS } from "./IconPicker";
 import { BRAND_ICONS } from "./brandIcons";
+import { AuthMethodToggle } from "./AuthMethodToggle";
 
 export function ConnectionForm({
   open,
@@ -41,12 +42,13 @@ export function ConnectionForm({
     setIcon(
       initial?.iconBrand
         ? { kind: "brand", id: initial.iconBrand }
-        : { kind: "system", id: initial?.iconKind ?? "generic", color: initial?.iconColor }
+        : { kind: "system", id: initial?.iconKind ?? "generic", color: initial?.iconColor },
     );
   }, [open, initial]);
 
   const submit = useCallback(() => {
     if (!name.trim() || !host.trim() || !username.trim()) return;
+
     actions.upsertConnection({
       id: initial?.id,
       name: name.trim(),
@@ -55,32 +57,47 @@ export function ConnectionForm({
       username: username.trim(),
       authType,
       password: authType === "password" ? password : undefined,
-      privateKey: authType === "key" ? privateKey : undefined,
-      passphrase: authType === "key" ? passphrase : undefined,
+      privateKey: authType === "privateKey" ? privateKey : undefined,
+      passphrase: authType === "privateKey" ? passphrase : undefined,
       iconKind: icon.kind === "system" ? icon.id : undefined,
       iconColor: icon.kind === "system" ? icon.color : undefined,
       iconBrand: icon.kind === "brand" ? icon.id : undefined,
       aiFeaturesEnabled: initial?.aiFeaturesEnabled,
     });
+
     onClose();
-  }, [name, host, port, username, authType, password, privateKey, passphrase, icon, initial, onClose]);
+  }, [
+    authType,
+    host,
+    icon,
+    initial,
+    name,
+    onClose,
+    passphrase,
+    password,
+    port,
+    privateKey,
+    username,
+  ]);
 
   useEffect(() => {
     if (!open) return;
+
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       const el = e.target as HTMLElement;
       if (el.closest("input, textarea, [contenteditable='true']")) return;
-      
-      const k = e.key.toLowerCase();
-      if (k === "s") {
+
+      const key = e.key.toLowerCase();
+      if (key === "s") {
         e.preventDefault();
         submit();
-      } else if (k === "c") {
+      } else if (key === "c") {
         e.preventDefault();
         onClose();
       }
     };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, submit, onClose]);
@@ -92,35 +109,41 @@ export function ConnectionForm({
       title={initial ? "Edit connection" : "New connection"}
       icon={<HardDrives size={18} weight="duotone" className="text-accent" />}
       footerAlign="start"
-      showFooterSeparator={false}
+      panelClassName="max-w-lg"
+      showFooterSeparator
       footer={
         <>
           <Button variant="primary" onClick={submit} className="gap-2">
             {initial ? "Save changes" : "Create"}
             <Kbd variant="onAccent">S</Kbd>
           </Button>
-          <Button variant="ghost" onClick={onClose} className="gap-2">
+          <Button variant="outline" onClick={onClose} className="gap-2">
             Cancel
-            {/* <Kbd>C</Kbd> */}
           </Button>
         </>
       }
     >
-      <div className="space-y-3.5">
+      <div className="space-y-4">
         <Field label="Name">
           <div className="relative group">
-            <div className="absolute left-1 top-1/2 -translate-y-1/2 z-10">
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="production-web-01"
+              className="pr-10"
+            />
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 z-10">
               <IconPicker value={icon} onChange={setIcon}>
-                {(open) => {
+                {(openPicker) => {
                   const Icon =
                     icon.kind === "system"
-                      ? SYSTEM_ICONS.find((s) => s.id === icon.id)?.Icon ?? HardDrives
-                      : BRAND_ICONS.find((b) => b.id === icon.id)?.Icon ?? HardDrives;
+                      ? (SYSTEM_ICONS.find((item) => item.id === icon.id)?.Icon ?? HardDrives)
+                      : (BRAND_ICONS.find((item) => item.id === icon.id)?.Icon ?? HardDrives);
 
                   return (
                     <button
                       type="button"
-                      onClick={open}
+                      onClick={openPicker}
                       className="w-7 h-7 flex items-center justify-center rounded-[6px] hover:bg-bg-elev border border-transparent hover:border-border transition-all"
                       style={{
                         color: icon.kind === "system" ? (icon.color ?? "var(--accent)") : undefined,
@@ -136,20 +159,16 @@ export function ConnectionForm({
                 }}
               </IconPicker>
             </div>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="production-web-01"
-              className="pl-10"
-            />
           </div>
         </Field>
-        <div className="grid grid-cols-[1fr_88px] gap-2">
+
+        <div className="grid grid-cols-[1fr_96px] gap-3">
           <Field label="Host">
             <Input
               value={host}
               onChange={(e) => setHost(e.target.value)}
               placeholder="example.com"
+              className="font-mono"
             />
           </Field>
           <Field label="Port">
@@ -157,9 +176,11 @@ export function ConnectionForm({
               value={port}
               onChange={(e) => setPort(e.target.value.replace(/\D/g, ""))}
               placeholder="22"
+              className="font-mono"
             />
           </Field>
         </div>
+
         <Field label="Username">
           <Input
             value={username}
@@ -169,22 +190,7 @@ export function ConnectionForm({
         </Field>
 
         <Field label="Auth method">
-          <div className="grid grid-cols-2 gap-1 p-1 bg-bg border border-border rounded-md">
-            {(["password", "key"] as AuthType[]).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setAuthType(t)}
-                className={`h-7 rounded text-[12px] font-mono transition-colors ${
-                  authType === t
-                    ? "bg-bg-elev text-fg border border-border-strong"
-                    : "text-fg-muted hover:text-fg"
-                }`}
-              >
-                {t === "password" ? "Password" : "Private key"}
-              </button>
-            ))}
-          </div>
+          <AuthMethodToggle value={authType} onChange={setAuthType} />
         </Field>
 
         {authType === "password" ? (
@@ -193,7 +199,7 @@ export function ConnectionForm({
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Password"
             />
           </Field>
         ) : (
@@ -202,7 +208,10 @@ export function ConnectionForm({
               <Textarea
                 value={privateKey}
                 onChange={(e) => setPrivateKey(e.target.value)}
-                placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
+                placeholder={"-----BEGIN OPENSSH PRIVATE KEY-----\n"}
+                spellCheck={false}
+                wrap="off"
+                className="min-h-[80px] max-h-[100px] resize-y overflow-auto font-mono leading-relaxed whitespace-pre"
               />
             </Field>
             <Field label="Passphrase" hint="optional">
@@ -210,6 +219,7 @@ export function ConnectionForm({
                 type="password"
                 value={passphrase}
                 onChange={(e) => setPassphrase(e.target.value)}
+                placeholder="Passphrase"
               />
             </Field>
           </>

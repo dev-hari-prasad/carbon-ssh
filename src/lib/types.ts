@@ -1,4 +1,12 @@
-export type AuthType = "password" | "key";
+export type AuthType = "password" | "privateKey";
+
+export type ConnectionRuntimeState = "idle" | "connecting" | "connected" | "closed" | "error";
+
+export interface ConnectionRuntimeStatus {
+  state: ConnectionRuntimeState;
+  message?: string;
+  updatedAt: number;
+}
 
 export interface Connection {
   id: string;

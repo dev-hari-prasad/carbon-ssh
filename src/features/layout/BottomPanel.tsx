@@ -12,6 +12,7 @@ import {
   WarningCircle,
   ClockCounterClockwise,
   X,
+  ArrowsDownUp,
 } from "@phosphor-icons/react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { HostIcon } from "@/components/HostIcon";
@@ -24,7 +25,7 @@ const LOGS_HEIGHT_STORAGE_KEY = "terminal-muse.logs-panel-height.v1";
 const DEFAULT_LOGS_BODY_PX = 160;
 /** Area above logs used as drag resize target (excluding bottom strip). */
 const LOGS_RESIZE_HANDLE_PX = 6;
-const LOGS_BODY_MIN_PX = 300;
+const LOGS_BODY_MIN_PX = 100;
 /** Max height of log body (excluding resize handle/bottom strip) vs viewport */
 const LOGS_BODY_MAX_SCREEN_FRACTION = 0.45;
 
@@ -74,9 +75,8 @@ const levelColor = {
 
 /** Columns: time · level · saved host · kind · session / target · command or message */
 const LOG_ROW_GRID_TEMPLATE =
-  "minmax(4.875rem,5.375rem) minmax(2.625rem,3.25rem) minmax(6.75rem,9.25rem) minmax(4.25rem,5.75rem) minmax(9rem,12.5rem) minmax(0,1fr)";
-const LOG_ROW_CELL =
-  "min-w-0 border-r border-dotted border-border/55 pr-2.5 sm:pr-3 last:border-r-0 last:pr-0";
+  "minmax(4.875rem,5.375rem) minmax(2.625rem,3.25rem) minmax(6.75rem,9.25rem) minmax(4.25rem,5.75rem) minmax(9rem,12.5rem) minmax(0,1fr) minmax(4.5rem,6rem)";
+const LOG_ROW_CELL = "min-w-0 pr-4 sm:pr-6 last:pr-0";
 
 function logMatchesSearch(log: { source: string; level: string; message: string }, raw: string) {
   const tokens = raw.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -115,21 +115,50 @@ function parseLogCells(message: string): { kind: string; target: string; detail:
         detail && /\bnot found\b|command not found/i.test(detail) ? "Unknown" : "Command";
       return { kind, target, detail: detail || body };
     }
+    
+    const spaceMatch = body.match(/^(\S+)(?:\s+(.*))?$/s);
+    if (spaceMatch) {
+      return { kind: "Command", target: spaceMatch[1], detail: spaceMatch[2] || "—" };
+    }
+
     return { kind: "Command", target: "", detail: body };
   }
 
   const low = t.toLowerCase();
-  if (low.startsWith("opening session"))
+  
+  if (low.startsWith("connecting to ")) {
+     return { kind: "Connect", target: t.slice("connecting to ".length).trim(), detail: "—" };
+  }
+  
+  if (low.startsWith("opening session ")) {
     return {
       kind: "Open",
-      target: "",
-      detail: t.replace(/^opening\s+session\s+/i, "").trim() || t,
+      target: t.slice("opening session ".length).trim(),
+      detail: "—",
     };
+  }
+
+  const sessionMatch = t.match(/^Session (.+) (connected|closed)$/i);
+  if (sessionMatch) {
+     return { kind: sessionMatch[2].toLowerCase() === "connected" ? "Ready" : "Close", target: sessionMatch[1], detail: "—" };
+  }
+
+  if (low.startsWith("updated ") || low.startsWith("saved ") || low.startsWith("deleted ")) {
+     const space = t.indexOf(" ");
+     return { kind: "Change", target: t.slice(space + 1).trim(), detail: t.slice(0, space) };
+  }
+  
+  if (low.startsWith("created group ") || low.startsWith("removed group ") || low.startsWith("renamed group to ")) {
+     const kind = low.startsWith("created") ? "Create" : low.startsWith("removed") ? "Delete" : "Rename";
+     const match = t.match(/"([^"]+)"/);
+     return { kind, target: match ? match[1] : "Group", detail: t };
+  }
+
   if (/\breplay\/ssh\b|offline shell\b|session .* ready/i.test(t))
-    return { kind: "Ready", target: "", detail: t };
+    return { kind: "System", target: "", detail: t };
 
   if (/\bnot found\b|command not found/i.test(low))
-    return { kind: "Unknown", target: "", detail: t };
+    return { kind: "Error", target: "", detail: t };
 
   if (/deleted|removed|warn:/i.test(t)) return { kind: "Change", target: "", detail: t };
   return { kind: "Info", target: "", detail: t };
@@ -214,7 +243,7 @@ function LogsSourcePicker({
         align="end"
         side="top"
         sideOffset={6}
-        className="p-1 min-w-[11rem] max-w-[16rem] max-h-60 overflow-y-auto rounded-[10px] border border-border bg-[var(--menu-bg)] shadow-2xl"
+        className="p-1 min-w-[11rem] max-w-[16rem] max-h-52 overflow-y-auto rounded-[10px] border border-border bg-[var(--menu-bg)] shadow-2xl scrollbar-thin"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div role="listbox" aria-label="Log source">
@@ -400,9 +429,35 @@ export function BottomPanel() {
       : logsBodyFallbackMaxPx(),
   );
   const [resizeActive, setResizeActive] = useState(false);
+  const [showResizeHint, setShowResizeHint] = useState(false);
+  const hintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const triggerHint = useCallback(() => {
+    setShowResizeHint(true);
+    if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
+    hintTimeoutRef.current = setTimeout(() => {
+      setShowResizeHint(false);
+    }, 3000);
+  }, []);
+
   const resizeStartRef = useRef({ clientY: 0, height: DEFAULT_LOGS_BODY_PX });
   const captureResizeRef = useRef<{ node: HTMLElement; pointerId: number } | null>(null);
   const skipHeightPersist = useRef(true);
+
+  useEffect(() => {
+    if (open) {
+      triggerHint();
+    }
+  }, [open, triggerHint]);
+
+  useEffect(() => {
+    if (resizeActive) {
+      setShowResizeHint(true);
+      if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
+    } else {
+      triggerHint();
+    }
+  }, [resizeActive, triggerHint]);
 
   useEffect(() => {
     skipHeightPersist.current = true;
@@ -528,8 +583,8 @@ export function BottomPanel() {
             <CaretUp size={11} weight="bold" />
             Activity Logs
             <span className="text-fg-dim font-mono normal-case tracking-normal">
-              ({filteredLogs.length}
-              {showTotalInHeader ? `/${logs.length}` : null})
+              ({filteredLogs.length > 99 ? "99+" : filteredLogs.length}
+              {showTotalInHeader ? `/${logs.length > 99 ? "99+" : logs.length}` : null})
             </span>
           </button>
         ) : (
@@ -552,8 +607,8 @@ export function BottomPanel() {
               <CaretDown size={11} weight="bold" className="shrink-0" aria-hidden />
               <span>Activity Logs</span>
               <span className="text-fg-dim font-mono normal-case tracking-normal">
-                ({filteredLogs.length}
-                {showTotalInHeader ? `/${logs.length}` : null})
+                ({filteredLogs.length > 99 ? "99+" : filteredLogs.length}
+                {showTotalInHeader ? `/${logs.length > 99 ? "99+" : logs.length}` : null})
               </span>
             </div>
 
@@ -602,7 +657,7 @@ export function BottomPanel() {
               duration: resizeActive ? 0 : toggleMs,
               ease: [0.32, 0.72, 0, 1],
             }}
-            className="overflow-hidden bg-bg border-t border-border/40 flex flex-col"
+            className="bg-bg border-t border-border/40 flex flex-col overflow-visible"
           >
             <Tooltip
               label={
@@ -626,7 +681,7 @@ export function BottomPanel() {
                 aria-valuemax={viewportMaxLogs}
                 aria-valuenow={logsBodyPx}
                 aria-label="Resize logs height"
-                className={`shrink-0 w-full select-none touch-none bg-border/50 hover:bg-accent/35 active:bg-accent/55 transition-colors outline-none cursor-row-resize ${
+                className={`shrink-0 w-full select-none touch-none bg-border/50 hover:bg-accent/35 active:bg-accent/55 transition-colors outline-none cursor-row-resize relative flex items-center justify-center ${
                   resizeActive ? "bg-accent/50" : ""
                 }`}
                 style={{ height: LOGS_RESIZE_HANDLE_PX }}
@@ -635,6 +690,7 @@ export function BottomPanel() {
                   if (e.button !== 0) return;
                   onResizePointerDown(e);
                 }}
+                onMouseEnter={triggerHint}
                 onKeyDown={(e) => {
                   if (e.key === "ArrowUp" || e.key === "ArrowDown") {
                     e.preventDefault();
@@ -642,7 +698,23 @@ export function BottomPanel() {
                     setLogsBodyPx(clampLogsBody(logsBodyPx + delta, viewportMaxLogs));
                   }
                 }}
-              />
+              >
+                <AnimatePresence>
+                  {showResizeHint && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8, y: 4 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, y: 4 }}
+                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none"
+                    >
+                      <div className="px-2 py-0.5 rounded-full bg-accent/90 text-[9px] font-bold text-white uppercase tracking-wider shadow-lg border border-white/10 whitespace-nowrap flex items-center gap-1">
+                        <ArrowsDownUp size={10} weight="bold" />
+                        Resize
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </Tooltip>
             <div
               id="logs-scroll-region"
@@ -678,7 +750,19 @@ export function BottomPanel() {
                 </div>
               ) : (
                 <div className="flex flex-col min-h-0">
-                  {filteredLogs.map((l) => {
+                  <div
+                    className="grid items-center gap-x-4 py-1.5 mb-1 border-b border-border/60 text-[10px] font-sans font-bold tracking-wider text-fg-muted uppercase sticky top-0 bg-bg z-10"
+                    style={{ gridTemplateColumns: LOG_ROW_GRID_TEMPLATE }}
+                  >
+                    <div className={LOG_ROW_CELL}>Time</div>
+                    <div className={LOG_ROW_CELL}>Level</div>
+                    <div className={LOG_ROW_CELL}>Host</div>
+                    <div className={LOG_ROW_CELL}>Event</div>
+                    <div className={LOG_ROW_CELL}>Target</div>
+                    <div className={LOG_ROW_CELL}>Details</div>
+                    <div className="min-w-0">User</div>
+                  </div>
+                  {[...filteredLogs].reverse().map((l) => {
                     const rowConn = connectionForSource(connections, l.source);
                     const timeStr = new Date(l.ts).toLocaleTimeString([], { hour12: false });
                     const {
@@ -689,7 +773,7 @@ export function BottomPanel() {
                     return (
                       <div
                         key={l.id}
-                        className="grid items-start gap-x-0 py-1 border-b border-border/40 text-[11.75px] sm:text-[12px] leading-snug last:border-b-0"
+                        className="grid items-start gap-x-4 py-1 border-b border-border/40 text-[11.75px] sm:text-[12px] leading-snug last:border-b-0"
                         style={{ gridTemplateColumns: LOG_ROW_GRID_TEMPLATE }}
                       >
                         <div
@@ -725,8 +809,15 @@ export function BottomPanel() {
                             </span>
                           )}
                         </div>
-                        <div className="min-w-0 text-fg font-mono text-[11.5px] sm:text-[12px] break-words">
+                        <div className={`${LOG_ROW_CELL} min-w-0 text-fg font-mono text-[11.5px] sm:text-[12px] break-words`}>
                           {cmdDetail}
+                        </div>
+                        <div className="min-w-0 text-fg-dim font-mono truncate uppercase text-xxs tracking-wider">
+                          {rowConn?.username || (
+                            <span className="text-fg-muted/55 select-none" aria-hidden="true">
+                              —
+                            </span>
+                          )}
                         </div>
                       </div>
                     );

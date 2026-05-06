@@ -47,9 +47,16 @@ export const FONTS: AppFont[] = [
 export const TERMINAL_FONTS: AppFont[] = [
   {
     id: "jetbrains-mono",
-    name: "JetBrains Mono",
+    name: "JetBrains Mono (default)",
     family: "JetBrains Mono",
     stack: `"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace`,
+    category: "mono",
+  },
+  {
+    id: "geist-mono",
+    name: "Geist Mono",
+    family: "Geist Mono",
+    stack: `"Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace`,
     category: "mono",
   },
   {

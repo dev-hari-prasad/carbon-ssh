@@ -4,6 +4,7 @@ export interface SshConnectionOptions {
   host: string;
   port: number;
   username: string;
+  authMethod?: "password" | "privateKey";
   password?: string;
   privateKey?: string;
   passphrase?: string;
@@ -23,6 +24,59 @@ interface SessionHandlers {
   onError: (error: Error) => void;
 }
 
+function resolveAuthMethod(options: SshConnectionOptions): "password" | "privateKey" {
+  if (options.authMethod === "privateKey") return "privateKey";
+  if (!options.authMethod && options.privateKey) return "privateKey";
+  return "password";
+}
+
+function normalizePrivateKey(privateKey?: string): string {
+  return (privateKey ?? "")
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n");
+}
+
+function formatSshError(error: Error, authMethod: "password" | "privateKey"): Error {
+  const details = error as Error & { code?: string; level?: string };
+  const message = error.message || "";
+  const lower = message.toLowerCase();
+
+  if (
+    details.level === "client-authentication" ||
+    lower.includes("all configured authentication methods failed") ||
+    lower.includes("authentication failed")
+  ) {
+    return new Error("Authentication failed");
+  }
+
+  if (
+    authMethod === "privateKey" &&
+    (lower.includes("privatekey") ||
+      lower.includes("private key") ||
+      lower.includes("key format") ||
+      lower.includes("parse") ||
+      lower.includes("encrypted"))
+  ) {
+    return new Error("Invalid private key");
+  }
+
+  if (
+    details.code === "ECONNREFUSED" ||
+    lower.includes("econnrefused") ||
+    lower.includes("connection refused")
+  ) {
+    return new Error("Connection refused");
+  }
+
+  if (lower.includes("connection closed") || lower.includes("connection lost")) {
+    return new Error("SSH connection closed");
+  }
+
+  return new Error(message || "SSH connection failed");
+}
+
 export function connectSsh(
   options: SshConnectionOptions,
   handlers: SessionHandlers,
@@ -32,6 +86,13 @@ export function connectSsh(
     let shell: ClientChannel | null = null;
     let settled = false;
     let closed = false;
+    const authMethod = resolveAuthMethod(options);
+    const normalizedPrivateKey = normalizePrivateKey(options.privateKey);
+
+    if (authMethod === "privateKey" && !normalizedPrivateKey) {
+      reject(new Error("Invalid private key"));
+      return;
+    }
 
     const handleClose = () => {
       if (closed) return;
@@ -60,6 +121,7 @@ export function connectSsh(
     client.on("keyboard-interactive", (name, instructions, instructionsLang, prompts, finish) => {
       // Automatic handling or fail if we don't have interactive response
       if (
+        authMethod === "password" &&
         prompts.length > 0 &&
         prompts[0].prompt.toLowerCase().includes("password") &&
         options.password
@@ -105,7 +167,7 @@ export function connectSsh(
       });
     });
 
-    client.on("error", handleError);
+    client.on("error", (error) => handleError(formatSshError(error, authMethod)));
     client.on("close", handleClose);
 
     const config: ConnectConfig = {
@@ -115,18 +177,24 @@ export function connectSsh(
       readyTimeout: 20_000,
       keepaliveInterval: 10_000,
       tryKeyboard: true,
+      hostVerifier: () => true,
     };
 
-    if (options.password) {
-      config.password = options.password;
+    if (authMethod === "password") {
+      config.password = options.password ?? "";
     }
-    if (options.privateKey) {
-      config.privateKey = options.privateKey;
-    }
-    if (options.passphrase) {
-      config.passphrase = options.passphrase;
+    if (authMethod === "privateKey") {
+      config.privateKey = normalizedPrivateKey;
+      if (options.passphrase) {
+        config.passphrase = options.passphrase;
+      }
     }
 
-    client.connect(config);
+    try {
+      client.connect(config);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      handleError(formatSshError(err, authMethod));
+    }
   });
 }

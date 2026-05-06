@@ -13,6 +13,8 @@ import {
   SquaresFour,
   FolderDashed,
   MagnifyingGlass,
+  LockKey,
+  WarningCircle,
 } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import { actions, useStore } from "@/lib/store";
@@ -22,8 +24,86 @@ import { Tooltip } from "@/components/Tooltip";
 import { HostIcon } from "@/components/HostIcon";
 import { AnimatePresence, motion } from "framer-motion";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { ConnectionRuntimeState } from "@/lib/types";
 
 type Popover = "machines" | null;
+
+function TabFavicon({
+  conn,
+  state,
+  active,
+}: {
+  conn: Connection | undefined;
+  state: ConnectionRuntimeState | undefined;
+  active: boolean;
+}) {
+  const isConnecting = state === "connecting";
+  const isError = state === "error";
+
+  if (!conn) {
+    return (
+      <TerminalWindow
+        size={14}
+        weight={active ? "duotone" : "regular"}
+        className="shrink-0 text-fg-muted"
+      />
+    );
+  }
+
+  if (isError) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative w-4 h-4 shrink-0 flex items-center justify-center text-danger"
+      >
+        <WarningCircle size={14} weight="fill" />
+      </motion.div>
+    );
+  }
+
+  return (
+    <div className="relative w-4 h-4 shrink-0 flex items-center justify-center">
+      <AnimatePresence>
+        {isConnecting && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="absolute inset-0 z-10"
+          >
+            <svg
+              className="w-full h-full animate-spin text-accent"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              shapeRendering="geometricPrecision"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="9"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeDasharray="24 60"
+                className="opacity-90"
+              />
+            </svg>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <motion.div
+        animate={{
+          scale: isConnecting ? 0.6 : 1,
+        }}
+        transition={{ duration: 0.2, ease: "easeInOut" }}
+      >
+        <HostIcon conn={conn} size={16} />
+      </motion.div>
+    </div>
+  );
+}
 
 export function TopBar() {
   const tabs = useStore((s) => s.tabs);
@@ -31,6 +111,7 @@ export function TopBar() {
   const connections = useStore((s) => s.connections);
   const groups = useStore((s) => s.groups);
   const settingsOpen = useStore((s) => s.settingsOpen);
+  const connectionStatus = useStore((s) => s.connectionStatus);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -189,22 +270,18 @@ export function TopBar() {
                             : "bg-[var(--command-bg)] text-fg-muted hover:bg-[var(--command-active-bg)] hover:text-fg border-border"
                         }`}
                       >
-                        {c ? (
-                          <HostIcon conn={c} size={16} />
-                        ) : (
-                          <TerminalWindow
-                            size={14}
-                            weight={active ? "duotone" : "regular"}
-                            className="shrink-0"
-                          />
-                        )}
+                        <TabFavicon
+                          conn={c}
+                          state={c ? connectionStatus[c.id]?.state : undefined}
+                          active={active}
+                        />
                         <span
                           className="flex-1 whitespace-nowrap overflow-hidden block min-w-0 pr-4"
                           style={{
                             maskImage:
-                               "linear-gradient(to right, black calc(100% - 16px), transparent 100%)",
+                              "linear-gradient(to right, black calc(100% - 16px), transparent 100%)",
                             WebkitMaskImage:
-                               "linear-gradient(to right, black calc(100% - 16px), transparent 100%)",
+                              "linear-gradient(to right, black calc(100% - 16px), transparent 100%)",
                           }}
                         >
                           {t.title}
@@ -273,31 +350,42 @@ export function TopBar() {
           </Popover>
         </div>
 
-        <div className="flex items-center gap-0.5 shrink-0 relative h-8 self-center">
-          <div className="w-px h-4 bg-border ml-1.5 mr-1 opacity-60" />
+        <div className="flex items-center shrink-0 relative h-8 self-center">
+          <div className="w-px h-4 bg-border ml-1 mr-0.5 opacity-60" />
           <Tooltip label="Bangs" side="bottom">
             <button
               onClick={() => actions.openSettingsTab("bangs")}
               aria-label="Bangs"
-              className="w-8 h-8 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+              className="w-7 h-7 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
             >
-              <Lightning size={17} weight="duotone" />
+              <Lightning size={17} weight="regular" />
             </button>
           </Tooltip>
           <Tooltip label="Activity Logs" side="bottom">
             <button
               onClick={() => actions.toggleBottom()}
               aria-label="Activity logs"
-              className="w-8 h-8 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+              className="w-7 h-7 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
             >
-              <ClockCounterClockwise size={17} weight="duotone" />
+              <ClockCounterClockwise size={17} weight="regular" />
+            </button>
+          </Tooltip>
+          <Tooltip label="Lock" side="bottom">
+            <button
+              onClick={() => actions.lockApp()}
+              aria-label="Lock App"
+              className="w-7 h-7 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+            >
+              <LockKey size={17} weight="regular" />
             </button>
           </Tooltip>
           <Tooltip label="Settings" side="bottom">
             <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => actions.toggleSettings()}
               aria-label="Toggle settings"
-              className={`w-8 h-8 grid place-items-center rounded-[7px] transition-colors ${
+              className={`w-7 h-7 grid place-items-center rounded-[7px] transition-colors ${
                 settingsOpen
                   ? "text-fg bg-[var(--command-active-bg)]"
                   : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
@@ -361,6 +449,7 @@ function MachinesPopover({
   const [activeArea, setActiveArea] = useState<"groups" | "hosts">("hosts");
   const [selectedGroupIndex, setSelectedGroupIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const connectionStatus = useStore((s) => s.connectionStatus);
 
   const filteredHosts = search.trim()
     ? connections.filter(
@@ -442,7 +531,7 @@ function MachinesPopover({
       } else if (e.key === "Enter") {
         if (activeArea === "hosts") {
           const selected = filteredHosts[selectedIndex];
-          if (selected) {
+          if (selected && connectionStatus[selected.id]?.state !== "connecting") {
             e.preventDefault();
             onConnect(selected);
           }
@@ -452,7 +541,15 @@ function MachinesPopover({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [filteredHosts, selectedIndex, onConnect, activeArea, selectedGroupIndex, allGroups]);
+  }, [
+    filteredHosts,
+    selectedIndex,
+    onConnect,
+    activeArea,
+    selectedGroupIndex,
+    allGroups,
+    connectionStatus,
+  ]);
 
   return (
     <div className="bg-[var(--menu-bg)] border border-border rounded-[12px] shadow-2xl overflow-hidden flex w-[550px] h-[360px]">
@@ -539,30 +636,38 @@ function MachinesPopover({
                 </div>
               </div>
             ) : (
-              filteredHosts.map((c, i) => (
-                <div
-                  key={c.id}
-                  className={`group flex items-center gap-2.5 px-2.5 py-1.5 rounded-[8px] cursor-pointer transition-colors ${
-                    i === selectedIndex
-                      ? "bg-[var(--bg-panel)] shadow-sm"
-                      : "hover:bg-[var(--bg-panel)]"
-                  }`}
-                  onClick={() => onConnect(c)}
-                  onMouseEnter={() => setSelectedIndex(i)}
-                >
-                  <div className="shrink-0">
-                    <HostIcon conn={c} size={24} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[12.5px] font-sans font-medium text-fg truncate">
-                      {c.name}
+              filteredHosts.map((c, i) => {
+                const isConnecting = connectionStatus[c.id]?.state === "connecting";
+
+                return (
+                  <div
+                    key={c.id}
+                    className={`group flex items-center gap-2.5 px-2.5 py-1.5 rounded-[8px] transition-colors ${
+                      isConnecting ? "cursor-wait opacity-70" : "cursor-pointer"
+                    } ${
+                      i === selectedIndex
+                        ? "bg-[var(--bg-panel)] shadow-sm"
+                        : "hover:bg-[var(--bg-panel)]"
+                    }`}
+                    onClick={() => {
+                      if (!isConnecting) onConnect(c);
+                    }}
+                    onMouseEnter={() => setSelectedIndex(i)}
+                  >
+                    <div className="shrink-0">
+                      <HostIcon conn={c} size={24} />
                     </div>
-                    <div className="text-[10.5px] font-mono text-fg-dim truncate leading-none mt-0.5">
-                      ssh://{c.username}@{c.host}:{c.port}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[12.5px] font-sans font-medium text-fg truncate">
+                        {c.name}
+                      </div>
+                      <div className="text-[10.5px] font-mono text-fg-dim truncate leading-none mt-0.5">
+                        {isConnecting ? "connecting..." : `ssh://${c.username}@${c.host}:${c.port}`}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

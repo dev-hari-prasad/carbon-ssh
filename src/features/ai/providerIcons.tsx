@@ -1,5 +1,5 @@
-import { AnthropicDark, OpenAIDark, OpenRouterDark, VercelDark } from "@ridemountainpig/svgl-react";
-import { Cloud, Plugs } from "@phosphor-icons/react";
+import { AmazonWebServicesDark, AnthropicDark, OpenAIDark, OpenRouterDark, VercelDark } from "@ridemountainpig/svgl-react";
+import { Plugs } from "@phosphor-icons/react";
 import type { AIProviderId } from "@/lib/ai";
 
 type IconProps = { size?: number; className?: string };
@@ -16,9 +16,7 @@ export function ProviderIcon({ id, size = 14, className = "" }: IconProps & { id
     case "openrouter":
       return <OpenRouterDark style={style} className={className} />;
     case "bedrock":
-      return (
-        <Cloud size={size} className={`text-orange-400 ${className}`} weight="bold" aria-hidden />
-      );
+      return <AmazonWebServicesDark style={style} className={className} />;
     case "custom":
       return <Plugs size={size} className={className} weight="bold" />;
   }

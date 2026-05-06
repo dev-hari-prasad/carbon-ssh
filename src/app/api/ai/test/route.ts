@@ -7,7 +7,6 @@ const BodySchema = z.object({
   provider: z.enum(["openai", "anthropic", "gateway", "openrouter", "bedrock", "custom"]),
   apiKey: z.string(),
   baseUrl: z.string(),
-  chatModel: z.string(),
   autocompleteModel: z.string(),
 });
 
@@ -16,7 +15,7 @@ function toSettings(body: z.infer<typeof BodySchema>): AISettings {
     provider: body.provider,
     apiKey: body.apiKey,
     baseUrl: body.baseUrl,
-    chatModel: body.chatModel,
+    chatModel: "",
     autocompleteModel: body.autocompleteModel,
     autocompleteEnabled: false,
     chatEnabled: false,
@@ -52,19 +51,8 @@ export async function POST(req: Request) {
   }
 
   const s = toSettings(parsed.data);
-  const chatLm = createLanguageModel(s, "chat");
   const acLm = createLanguageModel(s, "autocomplete");
 
-  if (!chatLm) {
-    return NextResponse.json(
-      {
-        ok: false as const,
-        error:
-          "Chat model is not ready. Add an API key (if required), fill the base URL for custom endpoints, and set a chat model id.",
-      },
-      { status: 400 },
-    );
-  }
   if (!acLm) {
     return NextResponse.json(
       {
@@ -73,23 +61,6 @@ export async function POST(req: Request) {
           "Autocomplete model is not ready. Check API key, base URL, and autocomplete model id.",
       },
       { status: 400 },
-    );
-  }
-
-  try {
-    await generateText({
-      model: chatLm,
-      prompt: PING_PROMPT,
-      maxOutputTokens: 12,
-      maxRetries: 0,
-    });
-  } catch (e) {
-    return NextResponse.json(
-      {
-        ok: false as const,
-        error: `Chat model: ${messageFromUnknown(e)}`,
-      },
-      { status: 502 },
     );
   }
 

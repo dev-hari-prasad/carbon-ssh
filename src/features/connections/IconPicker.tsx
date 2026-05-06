@@ -63,7 +63,7 @@ export function IconPicker({
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const [ready, setReady] = useState(false);
-  const [tab, setTab] = useState<"system" | "brand">(value.kind === "brand" ? "brand" : "system");
+  const [tab, setTab] = useState<"system" | "brand">(value.kind === "system" ? "system" : "brand");
   const [query, setQuery] = useState("");
   const triggerWrapRef = useRef<HTMLSpanElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
@@ -150,11 +150,11 @@ export function IconPicker({
               className="w-[280px] max-h-[360px] flex flex-col rounded-[10px] border shadow-2xl overflow-hidden"
             >
               <div className="px-2 pt-2 pb-1.5 flex items-center gap-1 border-b border-border">
-                <TabBtn active={tab === "system"} onClick={() => setTab("system")}>
-                  Default
-                </TabBtn>
                 <TabBtn active={tab === "brand"} onClick={() => setTab("brand")}>
                   Brands
+                </TabBtn>
+                <TabBtn active={tab === "system"} onClick={() => setTab("system")}>
+                  Shapes
                 </TabBtn>
                 <div className="flex-1" />
                 <button

@@ -1,5 +1,6 @@
 allowBuilds:
-  cpu-features: true
+  better-sqlite3: false
+  cpu-features: false
   electron: true
   electron-winstaller: true
   esbuild: true

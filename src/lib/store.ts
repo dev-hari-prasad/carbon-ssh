@@ -8,14 +8,31 @@ import {
 } from "@/config/fonts";
 import { applyThemeToDocument } from "@/lib/theme-document";
 import { DEFAULT_AI_SETTINGS, type AISettings } from "./ai";
+import { normalizeConnectionCredentials } from "./credentials";
 import {
   DEFAULT_LOG_RETENTION,
   pruneLogsToRetention,
   retentionCutoffMs,
   type LogRetention,
 } from "./log-retention";
-import type { Bang, Connection, HostGroup, LogEntry, Tab, ThemeId } from "./types";
+import type {
+  Bang,
+  Connection,
+  ConnectionRuntimeStatus,
+  HostGroup,
+  LogEntry,
+  Tab,
+  ThemeId,
+} from "./types";
 import {
+  applyTelemetryPreference,
+  trackFeatureUsed,
+} from "./telemetry";
+import {
+  DEFAULT_ACCESS_SETTINGS,
+  loadAccessSettings,
+  loadConnectionsAsync,
+  saveConnectionsAsync,
   loadAISettings,
   loadBangs,
   loadConnections,
@@ -23,20 +40,27 @@ import {
   loadTerminalFont,
   loadGroups,
   loadLogRetention,
+  loadTerminalCursorStyle,
   loadTheme,
   saveAISettings,
   saveBangs,
   saveConnections,
   saveFont,
   saveTerminalFont,
+  saveTerminalCursorStyle,
   saveGroups,
   saveLogRetention,
+  saveAccessSettings,
   saveTheme,
+  type AccessSettings,
   uid,
+  loadTelemetryEnabled,
+  saveTelemetryEnabled,
 } from "./storage";
 
 interface State {
   connections: Connection[];
+  connectionStatus: Record<string, ConnectionRuntimeStatus>;
   groups: HostGroup[];
   tabs: Tab[];
   activeTabId: string | null;
@@ -50,14 +74,26 @@ interface State {
   ai: AISettings;
   logRetention: LogRetention;
   settingsTab: "general" | "shortcuts" | "logs" | "bangs" | "display" | "ai";
+  settingsOpenCount: number;
   selectedHostId: string | null;
   closedTabs: string[];
   zoomLevel: number;
   autoOpenTabs: boolean;
+  terminalCursorStyle: string;
+  isUnlocked: boolean;
+  access: AccessSettings;
+  telemetryEnabled: boolean;
+}
+
+/** Default UI scale: 100% in Electron; 110% in the browser. */
+export function getDefaultInterfaceZoom(): number {
+  if (typeof window === "undefined") return 110;
+  return (window as any).electron?.setZoomLevel ? 100 : 110;
 }
 
 let state: State = {
   connections: [],
+  connectionStatus: {},
   groups: [],
   tabs: [],
   activeTabId: null,
@@ -71,11 +107,18 @@ let state: State = {
   ai: { ...DEFAULT_AI_SETTINGS },
   logRetention: DEFAULT_LOG_RETENTION,
   settingsTab: "display",
+  settingsOpenCount: 0,
   selectedHostId: null,
   closedTabs: [],
   zoomLevel: 110,
   autoOpenTabs: true,
+  terminalCursorStyle: "blinking-underline",
+  isUnlocked: false,
+  access: { ...DEFAULT_ACCESS_SETTINGS },
+  telemetryEnabled: true,
 };
+
+const SETTINGS_OPEN_COUNT_KEY = "ssh.settings-open-count.v1";
 
 let initialized = false;
 const listeners = new Set<() => void>();
@@ -97,6 +140,10 @@ function setState(patch: Partial<State> | ((s: State) => Partial<State>)) {
   emit();
 }
 
+function getDefaultSettingsTabForCount(count: number) {
+  return count < 3 ? "display" : ("general" as const);
+}
+
 function applyTheme(t: ThemeId) {
   applyThemeToDocument(t);
 }
@@ -113,36 +160,10 @@ function applyTerminalFont(id: string) {
   document.documentElement.style.setProperty("--font-mono", font.stack);
 }
 
-function ensureInit() {
-  if (initialized || typeof window === "undefined") return;
-  initialized = true;
-  const theme = loadTheme();
-  const font = loadFont();
-  const terminalFont = loadTerminalFont();
-  state = {
-    ...state,
-    connections: loadConnections(),
-    groups: loadGroups(),
-    bangs: loadBangs(),
-    theme,
-    font,
-    terminalFont,
-    ai: loadAISettings(),
-    zoomLevel: Number(localStorage.getItem("ssh.zoom.v1")) || 110,
-    autoOpenTabs: localStorage.getItem("ssh.auto-open.v1") !== "false",
-  };
-  applyTheme(theme);
-  applyFont(font);
-  applyTerminalFont(terminalFont);
-  
-  if (typeof window !== "undefined" && (window as any).electron?.setZoomLevel) {
-    (window as any).electron.setZoomLevel(state.zoomLevel);
-  }
-
-  // Restore last tabs if enabled
-  if (state.autoOpenTabs) {
+function getRestoredTabsState(connections: Connection[], currentState: State) {
+  if (!currentState.autoOpenTabs || currentState.tabs.length > 0) return {};
+  try {
     const last = JSON.parse(localStorage.getItem("ssh.last-tabs.v1") || "[]") as string[];
-    const connections = state.connections;
     const restoredTabs: Tab[] = last
       .map((cid) => {
         const c = connections.find((x) => x.id === cid);
@@ -156,10 +177,55 @@ function ensureInit() {
         };
       })
       .filter((t): t is Tab => t !== null);
-    state.tabs = restoredTabs;
+
     if (restoredTabs.length > 0) {
-      state.activeTabId = restoredTabs[0].id;
+      return { tabs: restoredTabs, activeTabId: restoredTabs[0].id };
     }
+  } catch (e) {
+    console.error("Failed to parse restored tabs", e);
+  }
+  return {};
+}
+
+function ensureInit() {
+  if (initialized || typeof window === "undefined") return;
+  initialized = true;
+  const theme = loadTheme();
+  const font = loadFont();
+  const terminalFont = loadTerminalFont();
+  const access = loadAccessSettings();
+  state = {
+    ...state,
+    connections: [],
+    groups: loadGroups(),
+    bangs: loadBangs(),
+    theme,
+    font,
+    terminalFont,
+    ai: loadAISettings(),
+    zoomLevel: Number(localStorage.getItem("ssh.zoom.v1")) || getDefaultInterfaceZoom(),
+    autoOpenTabs: localStorage.getItem("ssh.auto-open.v1") !== "false",
+    terminalCursorStyle: loadTerminalCursorStyle(),
+    settingsOpenCount: Number(localStorage.getItem(SETTINGS_OPEN_COUNT_KEY)) || 0,
+    access,
+    isUnlocked: !access.appLockEnabled,
+    telemetryEnabled: loadTelemetryEnabled(),
+  };
+  applyTheme(theme);
+  applyFont(font);
+  applyTerminalFont(terminalFont);
+
+  actions.initializeLogs();
+
+  if (typeof window !== "undefined" && (window as any).electron?.setZoomLevel) {
+    (window as any).electron.setZoomLevel(state.zoomLevel);
+  }
+
+  if (!access.appLockEnabled) {
+    loadConnectionsAsync().then((connections) => {
+      const tabState = getRestoredTabsState(connections, state);
+      setState({ connections, ...tabState });
+    });
   }
 
   emit();
@@ -178,21 +244,41 @@ export function useStore<T>(selector: (s: State) => T): T {
 }
 
 export const actions = {
+  async unlockApp() {
+    const connections = await loadConnectionsAsync();
+    const tabState = getRestoredTabsState(connections, state);
+    setState({ isUnlocked: true, connections, ...tabState });
+  },
+  lockApp() {
+    setState({ isUnlocked: false });
+  },
+  setAccessSettings(access: AccessSettings) {
+    ensureInit();
+    saveAccessSettings(access);
+    setState({ access, isUnlocked: !access.appLockEnabled ? true : state.isUnlocked });
+  },
   upsertConnection(input: Omit<Connection, "id" | "createdAt"> & { id?: string }) {
     ensureInit();
-    const existing = input.id ? state.connections.find((c) => c.id === input.id) : null;
+    const normalizedInput = normalizeConnectionCredentials(input);
+    const existing = normalizedInput.id
+      ? state.connections.find((c) => c.id === normalizedInput.id)
+      : null;
     let next: Connection[];
     if (existing) {
       next = state.connections.map((c) =>
-        c.id === existing.id ? { ...existing, ...input, id: existing.id } : c,
+        c.id === existing.id ? { ...existing, ...normalizedInput, id: existing.id } : c,
       );
     } else {
-      const conn: Connection = { ...input, id: uid(), createdAt: Date.now() };
+      const conn: Connection = { ...normalizedInput, id: uid(), createdAt: Date.now() };
       next = [...state.connections, conn];
     }
     setState({ connections: next });
-    saveConnections(next);
-    actions.log("info", "connections", existing ? `Updated ${input.name}` : `Saved ${input.name}`);
+    saveConnectionsAsync(next);
+    actions.log(
+      "info",
+      "connections",
+      existing ? `Updated ${normalizedInput.name}` : `Saved ${normalizedInput.name}`,
+    );
   },
 
   addGroup(input: { name: string }) {
@@ -227,7 +313,7 @@ export const actions = {
     );
     setState({ groups: nextGroups, connections: nextConnections });
     saveGroups(nextGroups);
-    saveConnections(nextConnections);
+    saveConnectionsAsync(nextConnections);
     actions.log("warn", "groups", `Removed group "${g.name}" (hosts kept)`);
   },
 
@@ -253,7 +339,7 @@ export const actions = {
       activeTabId,
     });
     saveGroups(nextGroups);
-    saveConnections(connections);
+    saveConnectionsAsync(connections);
     actions.log("warn", "groups", `Removed group "${g.name}" and deleted its hosts`);
   },
 
@@ -267,7 +353,7 @@ export const actions = {
       activeTabId = tabs[tabs.length - 1]?.id ?? null;
     }
     setState({ connections: next, tabs, activeTabId });
-    saveConnections(next);
+    saveConnectionsAsync(next);
     if (conn) actions.log("warn", "connections", `Deleted ${conn.name}`);
   },
 
@@ -275,6 +361,10 @@ export const actions = {
     ensureInit();
     const conn = state.connections.find((c) => c.id === connectionId);
     if (!conn) return;
+    if (state.connectionStatus[connectionId]?.state === "connecting") {
+      actions.log("warn", conn.name, "Connection attempt already in progress");
+      return;
+    }
     const tab: Tab = {
       id: uid(),
       connectionId,
@@ -282,8 +372,25 @@ export const actions = {
       startedAt: Date.now(),
       commandCount: 0,
     };
-    setState({ tabs: [...state.tabs, tab], activeTabId: tab.id, settingsOpen: false });
+    setState({
+      tabs: [...state.tabs, tab],
+      activeTabId: tab.id,
+      settingsOpen: false,
+      connectionStatus: {
+        ...state.connectionStatus,
+        [connectionId]: { state: "connecting", updatedAt: Date.now() },
+      },
+    });
     actions.log("info", conn.name, `Opening session ${tab.title}`);
+  },
+
+  setConnectionStatus(connectionId: string, status: Omit<ConnectionRuntimeStatus, "updatedAt">) {
+    setState({
+      connectionStatus: {
+        ...state.connectionStatus,
+        [connectionId]: { ...status, updatedAt: Date.now() },
+      },
+    });
   },
 
   closeTab(id: string) {
@@ -295,10 +402,17 @@ export const actions = {
     if (activeTabId === id) {
       activeTabId = tabs[idx]?.id ?? tabs[idx - 1]?.id ?? null;
     }
+    const connectionId = tab.connectionId;
+    const stillOpenForConn = tabs.some((t) => t.connectionId === connectionId);
+    const connectionStatus = { ...state.connectionStatus };
+    if (!stillOpenForConn) {
+      delete connectionStatus[connectionId];
+    }
     setState({
       tabs,
       activeTabId,
       closedTabs: [tab.connectionId, ...state.closedTabs].slice(0, 20),
+      connectionStatus,
     });
   },
 
@@ -316,6 +430,11 @@ export const actions = {
     if (typeof window !== "undefined" && (window as any).electron?.setZoomLevel) {
       (window as any).electron.setZoomLevel(level);
     }
+  },
+
+  resetZoomLevel() {
+    ensureInit();
+    actions.setZoomLevel(getDefaultInterfaceZoom());
   },
 
   setAutoOpenTabs(enabled: boolean) {
@@ -366,15 +485,48 @@ export const actions = {
   },
 
   toggleSettings() {
-    setState((s) => ({ settingsOpen: !s.settingsOpen, selectedHostId: null }));
+    setState((s) => {
+      if (s.settingsOpen) {
+        return { settingsOpen: false, selectedHostId: null };
+      }
+
+      const nextCount = s.settingsOpenCount + 1;
+      if (typeof window !== "undefined") {
+        localStorage.setItem(SETTINGS_OPEN_COUNT_KEY, String(nextCount));
+      }
+
+      return {
+        settingsOpen: true,
+        settingsTab: getDefaultSettingsTabForCount(nextCount),
+        settingsOpenCount: nextCount,
+        selectedHostId: null,
+      };
+    });
   },
 
   setSettingsOpen(open: boolean) {
-    setState((s) => ({ settingsOpen: open, selectedHostId: open ? null : s.selectedHostId }));
+    setState((s) => {
+      if (!open || s.settingsOpen) {
+        return { settingsOpen: open, selectedHostId: open ? null : s.selectedHostId };
+      }
+
+      const nextCount = s.settingsOpenCount + 1;
+      if (typeof window !== "undefined") {
+        localStorage.setItem(SETTINGS_OPEN_COUNT_KEY, String(nextCount));
+      }
+
+      return {
+        settingsOpen: true,
+        settingsTab: getDefaultSettingsTabForCount(nextCount),
+        settingsOpenCount: nextCount,
+        selectedHostId: null,
+      };
+    });
   },
 
   openSettingsTab(tab: State["settingsTab"]) {
-    setState({ settingsOpen: true, settingsTab: tab });
+    setState({ settingsOpen: true, settingsTab: tab, selectedHostId: null });
+    trackFeatureUsed("settings_tab_opened", { tab });
   },
 
   setSelectedHostId(id: string | null) {
@@ -384,6 +536,18 @@ export const actions = {
     }));
   },
 
+  async initializeLogs() {
+    try {
+      const res = await fetch(`/api/logs?retention=${state.logRetention}`);
+      const data = await res.json();
+      if (data.logs) {
+        setState({ logs: data.logs });
+      }
+    } catch (e) {
+      console.error("Failed to load logs from db:", e);
+    }
+  },
+
   log(level: LogEntry["level"], source: string, message: string) {
     ensureInit();
     if (state.logRetention === "off") return;
@@ -391,6 +555,14 @@ export const actions = {
     const min = retentionCutoffMs(state.logRetention, now);
     if (min == null) return;
     const entry: LogEntry = { id: uid(), ts: now, level, source, message };
+
+    // Save to server SQLite
+    fetch("/api/logs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(entry),
+    }).catch((e) => console.error("Failed to save log:", e));
+
     setState((s) => {
       const merged = [...s.logs, entry].filter((l) => l.ts >= min);
       return { logs: merged.slice(-499) };
@@ -398,6 +570,9 @@ export const actions = {
   },
 
   clearLogs() {
+    fetch("/api/logs", { method: "DELETE" }).catch((e) =>
+      console.error("Failed to clear logs:", e),
+    );
     setState({ logs: [] });
   },
 
@@ -466,10 +641,21 @@ export const actions = {
     applyTerminalFont(id);
   },
 
+  setTerminalCursorStyle(style: string) {
+    setState({ terminalCursorStyle: style });
+    saveTerminalCursorStyle(style);
+  },
   updateAI(patch: Partial<AISettings>) {
     ensureInit();
     const next = { ...state.ai, ...patch };
     setState({ ai: next });
     saveAISettings(next);
+  },
+
+  setTelemetryEnabled(enabled: boolean) {
+    ensureInit();
+    saveTelemetryEnabled(enabled);
+    setState({ telemetryEnabled: enabled });
+    applyTelemetryPreference();
   },
 };

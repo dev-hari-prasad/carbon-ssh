@@ -1,6 +1,6 @@
 import { forwardRef, type ButtonHTMLAttributes } from "react";
 
-type Variant = "primary" | "ghost" | "outline" | "danger";
+type Variant = "primary" | "ghost" | "outline" | "danger" | "destructive";
 type Size = "sm" | "md";
 
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -16,6 +16,8 @@ const variants: Record<Variant, string> = {
   ghost: "text-fg-muted hover:text-fg hover:bg-bg-elev",
   outline: "border border-border text-fg hover:border-border-strong hover:bg-bg-elev",
   danger: "text-danger hover:bg-danger/10",
+  destructive:
+    "border border-danger/40 bg-danger/10 text-danger shadow-sm hover:bg-danger/20 hover:border-danger/60",
 };
 
 const sizes: Record<Size, string> = {

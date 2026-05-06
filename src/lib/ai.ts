@@ -184,7 +184,7 @@ export function createLanguageModel(s: AISettings, role: AIModelRole): LanguageM
 }
 
 export function isAIConfigured(s: AISettings): boolean {
-  return createLanguageModel(s, "chat") !== null && createLanguageModel(s, "autocomplete") !== null;
+  return createLanguageModel(s, "autocomplete") !== null;
 }
 
 /** When unset or true, this host honors global AI settings; when false, AI is off for its sessions. */

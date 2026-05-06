@@ -70,7 +70,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
     >
       <head>
-        <style id="theme-vars" dangerouslySetInnerHTML={{ __html: DEFAULT_RULE }} />
+        <style
+          id="theme-vars"
+          suppressHydrationWarning
+          dangerouslySetInnerHTML={{ __html: DEFAULT_RULE }}
+        />
         <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
       </head>
       <body suppressHydrationWarning>{children}</body>
