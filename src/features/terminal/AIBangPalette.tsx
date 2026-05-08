@@ -198,9 +198,9 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
                     onSelect(v);
                     onOpenChange(false);
                   }}
-                  className="flex items-center gap-2.5 px-2 py-1.5 mt-0.5 rounded-[7px] text-fg cursor-pointer hover:bg-[var(--menu-hover-bg)] aria-selected:bg-[var(--command-active-bg)] aria-selected:text-fg transition-all group border border-transparent aria-selected:border-accent/10"
+                  className="flex items-center gap-2.5 px-2 py-1.5 mt-0.5 rounded-sm text-fg cursor-pointer hover:bg-[var(--menu-hover-bg)] aria-selected:bg-[var(--command-active-bg)] aria-selected:text-fg transition-all group border border-transparent aria-selected:border-accent/10"
                 >
-                  <div className="w-6 h-6 shrink-0 rounded-[6px] bg-accent/5 border border-accent/10 grid place-items-center text-accent">
+                  <div className="w-6 h-6 shrink-0 rounded-sm bg-accent/5 border border-accent/10 grid place-items-center text-accent">
                     <MagicWand size={13} weight="fill" />
                   </div>
                   <div className="flex items-center justify-between gap-3 min-w-0 flex-1">
@@ -241,9 +241,9 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
                     onSelect(bang.command);
                     onOpenChange(false);
                   }}
-                  className="flex items-center gap-2.5 px-2 py-1.5 mt-0.5 rounded-[7px] text-fg cursor-pointer hover:bg-[var(--menu-hover-bg)] aria-selected:bg-[var(--command-active-bg)] aria-selected:text-fg transition-all group border border-transparent aria-selected:border-accent/10"
+                  className="flex items-center gap-2.5 px-2 py-1.5 mt-0.5 rounded-sm text-fg cursor-pointer hover:bg-[var(--menu-hover-bg)] aria-selected:bg-[var(--command-active-bg)] aria-selected:text-fg transition-all group border border-transparent aria-selected:border-accent/10"
                 >
-                  <div className="w-6 h-6 shrink-0 rounded-[6px] bg-accent/5 border border-accent/10 grid place-items-center text-accent">
+                  <div className="w-6 h-6 shrink-0 rounded-sm bg-accent/5 border border-accent/10 grid place-items-center text-accent">
                     <Lightning size={13} weight="fill" />
                   </div>
                   <div className="flex items-center justify-between gap-3 min-w-0 flex-1">

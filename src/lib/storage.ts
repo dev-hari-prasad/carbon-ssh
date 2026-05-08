@@ -18,6 +18,9 @@ const TEMP_PASSWORD_KEY = "ssh.temp-pwd";
 const PASSKEY_ID_KEY = "ssh.vault-passkey-id";
 const PASSKEY_PROVIDER_KEY = "ssh.vault-passkey-provider";
 const TELEMETRY_ENABLED_KEY = "ssh.telemetry-enabled.v1";
+const TAB_BAR_ORIENTATION_KEY = "ssh.tab-bar-orientation.v1";
+const SIDEBAR_COLLAPSED_KEY = "ssh.sidebar-collapsed.v1";
+const SIDEBAR_WIDTH_KEY = "ssh.sidebar-width.v1";
 
 const VALID_LOG_RETENTION = new Set<LogRetention>(["24h", "3d", "7d", "30d", "90d", "1y", "off"]);
 
@@ -299,6 +302,44 @@ export function saveLogRetention(r: LogRetention) {
 
 export function uid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+}
+
+export type TabBarOrientation = "horizontal" | "vertical";
+
+export function loadTabBarOrientation(): TabBarOrientation {
+  if (typeof window === "undefined") return "horizontal";
+  const v = window.localStorage.getItem(TAB_BAR_ORIENTATION_KEY);
+  if (v === "vertical") return "vertical";
+  return "horizontal";
+}
+
+export function saveTabBarOrientation(o: TabBarOrientation): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(TAB_BAR_ORIENTATION_KEY, o);
+}
+
+export function loadSidebarCollapsed(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "true";
+}
+
+export function saveSidebarCollapsed(v: boolean): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(v));
+}
+
+export function loadSidebarWidth(orientation?: TabBarOrientation): number {
+  if (typeof window === "undefined") return orientation === "vertical" ? 260 : 200;
+  const v = Number(window.localStorage.getItem(SIDEBAR_WIDTH_KEY));
+  if (orientation === "vertical") {
+    return v >= 200 && v <= 400 ? v : 260;
+  }
+  return v >= 60 && v <= 400 ? v : 200;
+}
+
+export function saveSidebarWidth(w: number): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(SIDEBAR_WIDTH_KEY, String(w));
 }
 
 /** Default ON — user can disable anytime in Privacy settings */

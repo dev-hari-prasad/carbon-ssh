@@ -47,7 +47,7 @@ import {
   type LogRetention,
 } from "@/lib/log-retention";
 import { AI_PROVIDERS, getProviderMeta, isAIConfigured, type AIProviderId } from "@/lib/ai";
-import { savePasswordAccess } from "@/lib/storage";
+import { savePasswordAccess, type TabBarOrientation } from "@/lib/storage";
 import { setUpBestAvailablePasskey } from "@/lib/passkeys";
 import type { Bang } from "@/lib/types";
 import {
@@ -110,11 +110,11 @@ export function SettingsSidebar() {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: "100%", opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="absolute z-30 top-4 right-4 bottom-4 w-[340px] max-w-[min(340px,calc(100%-2rem))] flex flex-col rounded-[12px] border border-[var(--border-strong)] shadow-2xl overflow-hidden"
+            className="absolute z-30 top-2.5 right-2.5 bottom-2.5 w-[340px] max-w-[min(340px,calc(100%-1.25rem))] flex flex-col rounded-lg border border-[var(--border-strong)] shadow-2xl overflow-hidden"
             style={{ background: "var(--sidebar-bg)" }}
           >
             <div className="px-3 pt-3 pb-2 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1 p-1 rounded-[10px] bg-[var(--command-bg)] border border-border flex-wrap">
+              <div className="flex items-center gap-1 p-1 rounded-md bg-[var(--command-bg)] border border-border flex-wrap">
                 <SidebarTabBtn
                   active={tab === "general"}
                   onClick={() => setTab("general")}
@@ -151,7 +151,7 @@ export function SettingsSidebar() {
                 <button
                   onClick={() => actions.setSettingsOpen(false)}
                   aria-label="Close settings"
-                  className="w-7 h-7 shrink-0 grid place-items-center rounded-[8px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
+                  className="w-7 h-7 shrink-0 grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
                 >
                   <X size={13} weight="bold" />
                 </button>
@@ -211,7 +211,7 @@ function SidebarTabBtn({
       <button
         onClick={onClick}
         aria-label={label}
-        className={`w-7 h-7 grid place-items-center rounded-[7px] transition-colors ${
+        className={`w-7 h-7 grid place-items-center rounded-sm transition-colors ${
           active ? "bg-[var(--command-active-bg)] text-fg" : "text-fg-muted hover:text-fg"
         }`}
       >
@@ -246,7 +246,7 @@ function BangsPanel({ onEdit, onNew }: { onEdit: (b: Bang) => void; onNew: () =>
           </div>
           <button
             onClick={onNew}
-            className="h-8 px-3 rounded-[9px] bg-accent text-accent-fg text-[12px] font-sans font-bold hover:opacity-90 transition-opacity flex items-center gap-1.5 shadow-sm"
+            className="h-8 px-3 rounded-sm bg-accent text-accent-fg text-[12px] font-sans font-bold hover:opacity-90 transition-opacity flex items-center gap-1.5 shadow-sm"
           >
             <Plus size={13} weight="bold" /> New
           </button>
@@ -262,7 +262,7 @@ function BangsPanel({ onEdit, onNew }: { onEdit: (b: Bang) => void; onNew: () =>
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search bangs..."
-            className="w-full h-9 pl-9 pr-3 rounded-[10px] bg-[var(--input-bg)] border border-border text-[12.5px] font-sans text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
+            className="w-full h-9 pl-9 pr-3 rounded-md bg-[var(--input-bg)] border border-border text-[12.5px] font-sans text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20 transition-all"
           />
         </div>
       </div>
@@ -294,11 +294,11 @@ function BangsPanel({ onEdit, onNew }: { onEdit: (b: Bang) => void; onNew: () =>
             {filtered.map((b) => (
               <div
                 key={b.id}
-                className="group relative flex flex-col p-3 rounded-[12px] border border-border/60 bg-[var(--command-bg)]/40 hover:bg-[var(--command-bg)]/80 hover:border-border transition-all cursor-default"
+                className="group relative flex flex-col p-3 rounded-lg border border-border/60 bg-[var(--command-bg)]/40 hover:bg-[var(--command-bg)]/80 hover:border-border transition-all cursor-default"
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 shrink-0 rounded-[9px] bg-bg border border-border grid place-items-center text-accent shadow-sm">
+                    <div className="w-8 h-8 shrink-0 rounded-sm bg-bg border border-border grid place-items-center text-accent shadow-sm">
                       <Lightning size={15} weight="fill" />
                     </div>
                     <div className="flex flex-col min-w-0">
@@ -321,14 +321,14 @@ function BangsPanel({ onEdit, onNew }: { onEdit: (b: Bang) => void; onNew: () =>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => onEdit(b)}
-                      className="w-7 h-7 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-bg transition-colors"
+                      className="w-7 h-7 grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-bg transition-colors"
                       title="Edit"
                     >
                       <PencilSimple size={13} />
                     </button>
                     <button
                       onClick={() => actions.deleteBang(b.id)}
-                      className="w-7 h-7 grid place-items-center rounded-[7px] text-fg-muted hover:text-danger hover:bg-danger/5 transition-colors"
+                      className="w-7 h-7 grid place-items-center rounded-sm text-fg-muted hover:text-danger hover:bg-danger/5 transition-colors"
                       title="Delete"
                     >
                       <Trash size={13} />
@@ -441,7 +441,7 @@ function TelemetryDisclosureMarkdown() {
 
   return (
     <div className="min-h-0 w-full pb-2">
-      <div className="rounded-[10px] border border-border bg-[var(--command-bg)]/30 px-3 py-3">
+      <div className="rounded-md border border-border bg-[var(--command-bg)]/30 px-3 py-3">
         {md === null && !failed ? (
           <p className="text-[11px] font-sans text-fg-muted">Loading policy…</p>
         ) : failed ? (
@@ -465,6 +465,7 @@ function GeneralPanel() {
   const zoomLevel = useStore((s) => s.zoomLevel);
   const autoOpenTabs = useStore((s) => s.autoOpenTabs);
   const terminalCursorStyle = useStore((s) => s.terminalCursorStyle);
+  const tabBarOrientation = useStore((s) => s.tabBarOrientation);
   const access = useStore((s) => s.access);
   const telemetryEnabled = useStore((s) => s.telemetryEnabled);
   const [confirmClose, setConfirmClose] = useState(true);
@@ -537,18 +538,18 @@ function GeneralPanel() {
               </span>
             </div>
 
-            <div className="flex items-center gap-0.5 p-0.5 rounded-[9px] bg-[var(--command-bg)] border border-border shrink-0">
+            <div className="flex items-center gap-0.5 p-0.5 rounded-sm bg-[var(--command-bg)] border border-border shrink-0">
               <button
                 onClick={() => actions.setZoomLevel(Math.max(75, zoomLevel - 5))}
                 aria-label="Zoom out"
-                className="w-6 h-6 grid place-items-center rounded-[6px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+                className="w-6 h-6 grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
               >
                 <Minus size={11} weight="bold" />
               </button>
               <Tooltip label={`Reset to ${getDefaultInterfaceZoom()}%`} side="top">
                 <button
                   onClick={() => actions.resetZoomLevel()}
-                  className="min-w-[42px] h-6 px-1 rounded-[6px] text-[10.5px] font-mono font-bold text-accent hover:bg-[var(--command-active-bg)] transition-colors"
+                  className="min-w-[42px] h-6 px-1 rounded-sm text-[10.5px] font-mono font-bold text-accent hover:bg-[var(--command-active-bg)] transition-colors"
                 >
                   {zoomLevel}%
                 </button>
@@ -556,7 +557,7 @@ function GeneralPanel() {
               <button
                 onClick={() => actions.setZoomLevel(Math.min(135, zoomLevel + 5))}
                 aria-label="Zoom in"
-                className="w-6 h-6 grid place-items-center rounded-[6px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+                className="w-6 h-6 grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
               >
                 <Plus size={11} weight="bold" />
               </button>
@@ -565,16 +566,30 @@ function GeneralPanel() {
 
           <div className="flex flex-col gap-2 mt-6 px-0">
             <div className="flex flex-col min-w-0">
+              <span className="text-[13px] font-sans font-medium text-fg">Tab Bar</span>
+              <span className="text-[11px] font-sans text-fg-muted leading-tight">
+                Switch between horizontal and vertical tab layouts.
+              </span>
+            </div>
+            <TabBarOrientationSelect
+              value={tabBarOrientation}
+              onChange={(v) => actions.setTabBarOrientation(v)}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2 mt-5 px-0">
+            <div className="flex flex-col min-w-0">
               <span className="text-[13px] font-sans font-medium text-fg">Terminal Cursor</span>
               <span className="text-[11px] font-sans text-fg-muted leading-tight">
                 Choose the shape and behavior of the terminal cursor.
               </span>
             </div>
-            <TerminalCursorSelect 
-              value={terminalCursorStyle} 
-              onChange={(v) => actions.setTerminalCursorStyle(v)} 
+            <TerminalCursorSelect
+              value={terminalCursorStyle}
+              onChange={(v) => actions.setTerminalCursorStyle(v)}
             />
           </div>
+
         </div>
       </SettingsGroup>
 
@@ -646,7 +661,7 @@ function GeneralPanel() {
                     Cancel
                   </button>
                 </div>
-                <div className="p-1 flex items-center gap-1 rounded-[10px] bg-[var(--command-bg)] border border-border">
+                <div className="p-1 flex items-center gap-1 rounded-md bg-[var(--command-bg)] border border-border">
                   <SubTabBtn
                     active={access.method === "passkey"}
                     onClick={() => {
@@ -694,7 +709,7 @@ function GeneralPanel() {
                           value={accessPassword}
                           onChange={(e) => setAccessPassword(e.target.value)}
                           placeholder="New lock password"
-                          className="w-full h-9 pl-2.5 pr-8 rounded-[8px] bg-[var(--input-bg)] border border-border text-[12.5px] font-sans text-fg placeholder:text-fg-muted focus:outline-none focus:border-border-strong"
+                          className="w-full h-9 pl-2.5 pr-8 rounded-sm bg-[var(--input-bg)] border border-border text-[12.5px] font-sans text-fg placeholder:text-fg-muted focus:outline-none focus:border-border-strong"
                         />
                         <button
                           type="button"
@@ -707,7 +722,7 @@ function GeneralPanel() {
                       <button
                         type="button"
                         onClick={enablePassword}
-                        className="h-9 px-3 rounded-[8px] bg-accent text-accent-fg text-[12px] font-sans font-semibold hover:opacity-90"
+                        className="h-9 px-3 rounded-sm bg-accent text-accent-fg text-[12px] font-sans font-semibold hover:opacity-90"
                       >
                         Save
                       </button>
@@ -731,7 +746,7 @@ function GeneralPanel() {
           <AlertDialogHeader>
             <AlertDialogTitle>
               {" "}
-              <span className="text-danger">WARNING:</span> Skip app lock?
+              <span className="text-danger">WARNING:</span> Distructive Action
             </AlertDialogTitle>
             <AlertDialogDescription className="text-fg-muted whitespace-pre-wrap">
               Anyone with access to your computer can access Carbon. This may allow unauthorized
@@ -741,7 +756,7 @@ function GeneralPanel() {
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <AlertDialogFooter className="mt-3">
             <AlertDialogAction onClick={disableAppLockConfirmed} variant="destructive">
               Skip app lock anyway
             </AlertDialogAction>
@@ -774,7 +789,7 @@ function GeneralPanel() {
         icon={<ShieldCheck size={13} weight="duotone" className="text-fg-dim" aria-hidden />}
       >
         <div className="px-2 pb-2 flex flex-col gap-2">
-          <div className="p-1 flex items-center gap-1 rounded-[10px] bg-[var(--command-bg)] border border-border">
+          <div className="p-1 flex items-center gap-1 rounded-md bg-[var(--command-bg)] border border-border">
             <SubTabBtn
               active={privacySubTab === "analytics"}
               onClick={() => setPrivacySubTab("analytics")}
@@ -842,7 +857,7 @@ function LogRetentionSelect({
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="w-full h-9 flex items-center gap-2 pl-2.5 pr-2 bg-[var(--input-bg)] border border-border rounded-[8px] text-left hover:border-border-strong focus:outline-none focus:border-accent transition-colors"
+        className="w-full h-9 flex items-center gap-2 pl-2.5 pr-2 bg-[var(--input-bg)] border border-border rounded-sm text-left hover:border-border-strong focus:outline-none focus:border-accent transition-colors"
       >
         <span className="flex-1 min-w-0 text-[13px] font-sans text-fg truncate">
           {current.label}
@@ -853,7 +868,7 @@ function LogRetentionSelect({
       {open ? (
         <div
           role="listbox"
-          className="absolute left-0 right-0 top-full mt-1 p-1 z-30 bg-[var(--menu-bg)] border border-border rounded-[10px] shadow-2xl"
+          className="absolute left-0 right-0 top-full mt-1 p-1 z-30 bg-[var(--menu-bg)] border border-border rounded-md shadow-2xl"
         >
           {LOG_RETENTION_OPTIONS.map((opt) => {
             const active = opt.id === value;
@@ -867,7 +882,7 @@ function LogRetentionSelect({
                   onChange(opt.id);
                   setOpen(false);
                 }}
-                className={`w-full flex items-center gap-2.5 px-2 min-h-9 rounded-[7px] text-left transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-2 min-h-9 rounded-sm text-left transition-colors ${
                   active
                     ? "bg-[var(--command-active-bg)] text-fg"
                     : "text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg"
@@ -919,7 +934,7 @@ function TerminalCursorSelect({
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="w-full h-9 flex items-center gap-2 pl-2.5 pr-2 bg-[var(--input-bg)] border border-border rounded-[8px] text-left hover:border-border-strong focus:outline-none focus:border-accent transition-colors"
+        className="w-full h-9 flex items-center gap-2 pl-2.5 pr-2 bg-[var(--input-bg)] border border-border rounded-sm text-left hover:border-border-strong focus:outline-none focus:border-accent transition-colors"
       >
         <div className="flex-1 flex items-center gap-2 min-w-0">
           <CursorPreview style={current.style as any} blink={false} />
@@ -933,7 +948,7 @@ function TerminalCursorSelect({
       {open ? (
         <div
           role="listbox"
-          className="absolute left-0 right-0 top-full mt-1 p-1 z-30 bg-[var(--menu-bg)] border border-border rounded-[10px] shadow-2xl"
+          className="absolute left-0 right-0 top-full mt-1 p-1 z-30 bg-[var(--menu-bg)] border border-border rounded-md shadow-2xl"
         >
           {CURSOR_STYLE_OPTIONS.map((opt) => {
             const active = opt.id === value;
@@ -947,7 +962,7 @@ function TerminalCursorSelect({
                   onChange(opt.id);
                   setOpen(false);
                 }}
-                className={`w-full flex items-center gap-2.5 px-2 min-h-9 rounded-[7px] text-left transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-2 min-h-9 rounded-sm text-left transition-colors ${
                   active
                     ? "bg-[var(--command-active-bg)] text-fg"
                     : "text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg"
@@ -963,6 +978,45 @@ function TerminalCursorSelect({
           })}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function TabBarOrientationSelect({
+  value,
+  onChange,
+}: {
+  value: TabBarOrientation;
+  onChange: (v: TabBarOrientation) => void;
+}) {
+  return (
+    <div className="p-1 flex items-center gap-1 rounded-md bg-[var(--command-bg)] border border-border">
+      <SubTabBtn
+        active={value === "horizontal"}
+        onClick={() => onChange("horizontal")}
+        className="flex-1 gap-1"
+      >
+        <span className="inline-flex items-center gap-1">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="shrink-0">
+            <rect x="0.5" y="0.5" width="11" height="3" rx="0.75" stroke="currentColor" strokeWidth="1.1" />
+            <rect x="0.5" y="5" width="11" height="6.5" rx="0.75" stroke="currentColor" strokeWidth="1.1" opacity="0.35" />
+          </svg>
+          <span>Horizontal</span>
+        </span>
+      </SubTabBtn>
+      <SubTabBtn
+        active={value === "vertical"}
+        onClick={() => onChange("vertical")}
+        className="flex-1 gap-1"
+      >
+        <span className="inline-flex items-center gap-1">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="shrink-0">
+            <rect x="0.5" y="0.5" width="3.5" height="11" rx="0.75" stroke="currentColor" strokeWidth="1.1" />
+            <rect x="5.5" y="0.5" width="6" height="11" rx="0.75" stroke="currentColor" strokeWidth="1.1" opacity="0.35" />
+          </svg>
+          <span>Vertical</span>
+        </span>
+      </SubTabBtn>
     </div>
   );
 }
@@ -1058,7 +1112,7 @@ function ToggleRow({
       type="button"
       onClick={() => !disabled && onChange(!value)}
       disabled={disabled}
-      className={`flex items-start justify-between gap-3 px-2 py-2.5 rounded-[8px] text-left ${
+      className={`flex items-start justify-between gap-3 px-2 py-2.5 rounded-sm text-left ${
         disabled ? "opacity-55 cursor-not-allowed" : "hover:bg-[var(--menu-hover-bg)]"
       }`}
     >
@@ -1118,7 +1172,7 @@ const SHORTCUTS: Array<{
     items: [
       { keys: ["Mod", "K"], label: "Open machines picker" },
       { keys: ["Mod", "P"], label: "Quick-switch machines" },
-      { keys: ["Mod", "A"], label: "Toggle Activity" },
+      { keys: ["Mod", "Shift", "A"], label: "Toggle Activity" },
       { keys: ["Mod", "S"], label: "Toggle settings" },
     ],
   },
@@ -1160,7 +1214,7 @@ function ShortcutsPanel() {
             {g.items.map((s) => (
               <div
                 key={s.label}
-                className="flex items-center justify-between gap-3 px-2 py-1.5 rounded-[8px] hover:bg-[var(--menu-hover-bg)]"
+                className="flex items-center justify-between gap-3 px-2 py-1.5 rounded-sm hover:bg-[var(--menu-hover-bg)]"
               >
                 <span className="text-[12.5px] font-sans text-fg">{s.label}</span>
                 <span className="flex items-center gap-1 shrink-0">
@@ -1175,7 +1229,7 @@ function ShortcutsPanel() {
                     return (
                       <span key={i} className="flex items-center gap-1">
                         {i > 0 ? <span className="text-[10px] text-fg-dim">+</span> : null}
-                        <kbd className="px-1.5 h-[20px] min-w-[20px] inline-flex items-center justify-center rounded-[5px] border border-border bg-[var(--command-bg)] text-[10.5px] font-mono text-fg-muted">
+                        <kbd className="px-1.5 h-[20px] min-w-[20px] inline-flex items-center justify-center rounded-sm border border-border bg-[var(--command-bg)] text-[10.5px] font-mono text-fg-muted">
                           {label}
                         </kbd>
                       </span>
@@ -1223,7 +1277,7 @@ function Section({
     <div className="flex flex-col">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-3 py-2.5 rounded-[8px] hover:bg-[var(--menu-hover-bg)]"
+        className="w-full flex items-center justify-between px-3 py-2.5 rounded-sm hover:bg-[var(--menu-hover-bg)]"
       >
         <span className="text-[13.5px] font-sans font-medium text-fg">{label}</span>
         {open ? (
@@ -1241,7 +1295,7 @@ function FontSection() {
   const [tab, setTab] = useState<"app" | "terminal">("app");
   return (
     <div className="flex flex-col gap-2">
-      <div className="mx-2 p-1 flex items-center gap-1 rounded-[10px] bg-[var(--command-bg)] border border-border">
+      <div className="mx-2 p-1 flex items-center gap-1 rounded-md bg-[var(--command-bg)] border border-border">
         <SubTabBtn active={tab === "app"} onClick={() => setTab("app")} className="flex-1">
           App font
         </SubTabBtn>
@@ -1279,7 +1333,7 @@ function SubTabBtn({
     >
       <button
         onClick={onClick}
-        className={`h-7 w-full px-2.5 rounded-[7px] text-[11.5px] font-sans transition-colors flex items-center justify-center ${
+        className={`h-7 w-full px-2.5 rounded-sm text-[11.5px] font-sans transition-colors flex items-center justify-center ${
           active ? "bg-[var(--command-active-bg)] text-fg" : "text-fg-muted hover:text-fg"
         }`}
       >
@@ -1333,7 +1387,7 @@ function FontRow({
   return (
     <button
       onClick={onSelect}
-      className={`w-full flex items-center gap-3 px-2 py-2 rounded-[10px] text-left transition-colors ${
+      className={`w-full flex items-center gap-3 px-2 py-2 rounded-md text-left transition-colors ${
         active
           ? "bg-[var(--command-active-bg)] ring-1 ring-accent/40"
           : "hover:bg-[var(--menu-hover-bg)]"
@@ -1360,7 +1414,7 @@ function FontRow({
 function FontPreview({ font }: { font: AppFont }) {
   return (
     <div
-      className="w-[68px] h-[44px] rounded-[6px] overflow-hidden shrink-0 border border-[var(--border-strong)] bg-[var(--bg)] grid place-items-center"
+      className="w-[68px] h-[44px] rounded-sm overflow-hidden shrink-0 border border-[var(--border-strong)] bg-[var(--bg)] grid place-items-center"
       aria-hidden
     >
       <span
@@ -1396,7 +1450,7 @@ function ThemeList() {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="mx-2 p-1 flex items-center gap-1 rounded-[10px] bg-[var(--command-bg)] border border-border">
+      <div className="mx-2 p-1 flex items-center gap-1 rounded-md bg-[var(--command-bg)] border border-border">
         <SubTabBtn active={tab === "dark"} onClick={() => setTab("dark")} className="flex-1">
           Dark
         </SubTabBtn>
@@ -1430,7 +1484,7 @@ function ThemeRow({
   return (
     <button
       onClick={onSelect}
-      className={`w-full flex items-center gap-3 px-2 py-2 rounded-[10px] text-left transition-colors ${
+      className={`w-full flex items-center gap-3 px-2 py-2 rounded-md text-left transition-colors ${
         active
           ? "bg-[var(--command-active-bg)] ring-1 ring-accent/40"
           : "hover:bg-[var(--menu-hover-bg)]"
@@ -1468,7 +1522,7 @@ function ThemePreview({ theme }: { theme: AppTheme }) {
 
   return (
     <div
-      className="w-[68px] h-[44px] rounded-[6px] overflow-hidden shrink-0 border"
+      className="w-[68px] h-[44px] rounded-sm overflow-hidden shrink-0 border"
       style={{ borderColor: border, background: bg }}
     >
       <div className="h-2.5 w-full" style={{ background: titleBg }} />
@@ -1547,7 +1601,7 @@ function AIPanelFaq() {
       <div className="px-1 pb-1.5 text-[10.5px] uppercase tracking-wider font-sans font-semibold text-fg-dim">
         AI & privacy
       </div>
-      <div className="flex flex-col rounded-[10px] border border-border bg-[var(--command-bg)]/40 overflow-hidden">
+      <div className="flex flex-col rounded-md border border-border bg-[var(--command-bg)]/40 overflow-hidden">
         {AI_PANEL_FAQ.map((item, i) => {
           const isOpen = openIndex === i;
           return (
@@ -1742,7 +1796,7 @@ function AIPanel() {
           type="button"
           disabled={!ready || testPhase === "loading"}
           onClick={() => void runConnectionTest()}
-          className="h-10 w-full rounded-[10px] bg-accent text-accent-fg text-[13px] font-sans font-semibold hover:opacity-90 disabled:opacity-45 disabled:pointer-events-none transition-opacity inline-flex items-center justify-center gap-2"
+          className="h-10 w-full rounded-md bg-accent text-accent-fg text-[13px] font-sans font-semibold hover:opacity-90 disabled:opacity-45 disabled:pointer-events-none transition-opacity inline-flex items-center justify-center gap-2"
         >
           {testPhase === "loading" ? (
             <>
@@ -1830,7 +1884,7 @@ function ProviderSelect({
           onClick={() => setOpen((o) => !o)}
           aria-haspopup="listbox"
           aria-expanded={open}
-          className="w-full h-9 flex items-center gap-2 pl-2.5 pr-2 bg-[var(--input-bg)] border border-border rounded-[8px] text-left hover:border-border-strong focus:outline-none focus:border-accent transition-colors"
+          className="w-full h-9 flex items-center gap-2 pl-2.5 pr-2 bg-[var(--input-bg)] border border-border rounded-sm text-left hover:border-border-strong focus:outline-none focus:border-accent transition-colors"
         >
           <span className="w-4 h-4 grid place-items-center text-fg shrink-0">
             <ProviderIcon id={value} size={14} />
@@ -1843,7 +1897,7 @@ function ProviderSelect({
       {open ? (
         <div
           role="listbox"
-          className="absolute left-0 right-0 top-full mt-1 p-1 z-20 bg-[var(--menu-bg)] border border-border rounded-[10px] shadow-2xl"
+          className="absolute left-0 right-0 top-full mt-1 p-1 z-20 bg-[var(--menu-bg)] border border-border rounded-md shadow-2xl"
         >
           {AI_PROVIDERS.map((p) => {
             const active = p.id === value;
@@ -1857,7 +1911,7 @@ function ProviderSelect({
                   onChange(p.id);
                   setOpen(false);
                 }}
-                className={`w-full flex items-center gap-2.5 px-2 h-9 rounded-[7px] text-left transition-colors ${
+                className={`w-full flex items-center gap-2.5 px-2 h-9 rounded-sm text-left transition-colors ${
                   active
                     ? "bg-[var(--command-active-bg)] text-fg"
                     : "text-fg hover:bg-[var(--menu-hover-bg)]"
@@ -1879,7 +1933,7 @@ function ProviderSelect({
 
 function IconFieldRow({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
-    <div className="flex items-center gap-2 px-2.5 h-9 rounded-[8px] bg-[var(--input-bg)] border border-border focus-within:border-[var(--border-strong)] transition-colors">
+    <div className="flex items-center gap-2 px-2.5 h-9 rounded-sm bg-[var(--input-bg)] border border-border focus-within:border-[var(--border-strong)] transition-colors">
       <span className="text-fg-muted shrink-0">{icon}</span>
       {children}
     </div>

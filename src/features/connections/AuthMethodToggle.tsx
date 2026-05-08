@@ -17,7 +17,7 @@ export function AuthMethodToggle({
 }) {
   return (
     <div
-      className={`grid grid-cols-2 gap-1 p-1 bg-[var(--input-bg)] border border-border rounded-[9px] ${className}`}
+      className={`grid grid-cols-2 gap-1 p-1 bg-[var(--input-bg)] border border-border rounded-sm ${className}`}
     >
       {AUTH_METHODS.map((method) => {
         const active = value === method.value;
@@ -28,7 +28,7 @@ export function AuthMethodToggle({
             key={method.value}
             type="button"
             onClick={() => onChange(method.value)}
-            className={`h-8 flex items-center justify-center gap-1.5 rounded-[7px] text-[11.5px] font-sans font-medium transition-colors ${
+            className={`h-8 flex items-center justify-center gap-1.5 rounded-sm text-[11.5px] font-sans font-medium transition-colors ${
               active
                 ? "bg-[var(--command-active-bg)] text-fg shadow-sm"
                 : "text-fg-muted hover:text-fg hover:bg-[var(--neutral-hover-bg)]"

@@ -15,8 +15,8 @@ export function KeyboardShortcuts() {
       const shift = e.shiftKey;
       const key = e.key.toLowerCase();
 
-      // Toggle Activity (Bottom Panel/Logs): Mod+A
-      if (mod && !shift && key === "a") {
+      // Toggle Activity (Bottom Panel/Logs): Mod+Shift+A
+      if (mod && shift && key === "a") {
         e.preventDefault();
         actions.toggleBottom();
         return;
@@ -100,7 +100,7 @@ export function KeyboardShortcuts() {
 
     window.addEventListener("keydown", handleKeyDown, { capture: true });
     return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
-  }, [activeTabId]);
+  }, [activeTabId, zoomLevel]);
 
   return null;
 }

@@ -9,7 +9,7 @@ export function Kbd({
 }) {
   return (
     <kbd
-      className={`px-1.5 h-[18px] inline-flex items-center justify-center rounded-[5px] text-[10px] font-mono leading-none ${
+      className={`px-1.5 h-[18px] inline-flex items-center justify-center rounded-sm text-[10px] font-mono leading-none ${
         variant === "onAccent"
           ? "border border-white/30 bg-white/15 text-accent-fg"
           : variant === "onInverse"

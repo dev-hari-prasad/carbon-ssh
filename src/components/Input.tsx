@@ -1,7 +1,7 @@
 import { forwardRef, type InputHTMLAttributes, type TextareaHTMLAttributes } from "react";
 
 const fieldBase =
-  "w-full bg-[var(--input-bg)] border border-border rounded-[8px] px-3 h-9 text-[12.5px] font-sans text-fg placeholder:text-fg-muted transition-colors focus:outline-none focus:border-[var(--border-strong)]";
+  "w-full bg-[var(--input-bg)] border border-border rounded-sm px-3 h-9 text-[12.5px] font-sans text-fg placeholder:text-fg-muted transition-colors focus:outline-none focus:border-[var(--border-strong)]";
 
 export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
   function Input({ className = "", ...rest }, ref) {

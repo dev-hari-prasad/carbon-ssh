@@ -1,6 +1,7 @@
 "use strict";
 
 const path = require("path");
+const fs = require("fs");
 const { createRequire } = require("module");
 
 const projectRoot = path.join(__dirname, "..");
@@ -16,8 +17,13 @@ const { rebuild } = createRequire(electronBuilderPkg)("@electron/rebuild");
  * Returning false skips electron-builder's default @electron/rebuild pass.
  */
 module.exports = async function beforeBuild(context) {
+  const standaloneDir = path.join(projectRoot, ".next", "standalone");
+  const buildPath = fs.existsSync(path.join(standaloneDir, "node_modules"))
+    ? standaloneDir
+    : context.appDir;
+
   await rebuild({
-    buildPath: context.appDir,
+    buildPath,
     electronVersion: context.electronVersion,
     arch: context.arch,
     platform: context.platform.nodeName,

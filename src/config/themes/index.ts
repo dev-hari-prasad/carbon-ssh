@@ -6,7 +6,6 @@ import lightPlus from "./light_plus.json";
 import lightModern from "./light_modern.json";
 import hcBlack from "./hc_black.json";
 import hcLight from "./hc_light.json";
-import theme2026Dark from "./2026-dark.json";
 import theme2026Light from "./2026-light.json";
 import abyss from "./abyss-color-theme.json";
 import dimmedMonokai from "./dimmed-monokai-color-theme.json";
@@ -25,7 +24,6 @@ export const RECOMMENDED_THEME_IDS = [
   "dark_modern",
   "2026-light",
   "light_modern",
-  "2026-dark",
   "dark_vs",
   "light_vs",
   "onedark-pro",
@@ -54,7 +52,6 @@ export type AppTheme = {
 };
 
 const entries: Array<{ id: string; file: string; raw: RawTheme }> = [
-  { id: "2026-dark", file: "2026-dark.json", raw: theme2026Dark },
   { id: "2026-light", file: "2026-light.json", raw: theme2026Light },
   { id: "abyss", file: "abyss-color-theme.json", raw: abyss },
   { id: "dark_modern", file: "dark_modern.json", raw: darkModern },

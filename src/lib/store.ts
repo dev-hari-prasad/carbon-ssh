@@ -56,6 +56,13 @@ import {
   uid,
   loadTelemetryEnabled,
   saveTelemetryEnabled,
+  loadTabBarOrientation,
+  saveTabBarOrientation,
+  loadSidebarCollapsed,
+  saveSidebarCollapsed,
+  loadSidebarWidth,
+  saveSidebarWidth,
+  type TabBarOrientation,
 } from "./storage";
 
 interface State {
@@ -83,6 +90,9 @@ interface State {
   isUnlocked: boolean;
   access: AccessSettings;
   telemetryEnabled: boolean;
+  tabBarOrientation: TabBarOrientation;
+  sidebarCollapsed: boolean;
+  sidebarWidth: number;
 }
 
 /** Default UI scale: 100% in Electron; 110% in the browser. */
@@ -116,6 +126,9 @@ let state: State = {
   isUnlocked: false,
   access: { ...DEFAULT_ACCESS_SETTINGS },
   telemetryEnabled: true,
+  tabBarOrientation: "horizontal",
+  sidebarCollapsed: false,
+  sidebarWidth: 200,
 };
 
 const SETTINGS_OPEN_COUNT_KEY = "ssh.settings-open-count.v1";
@@ -194,6 +207,7 @@ function ensureInit() {
   const font = loadFont();
   const terminalFont = loadTerminalFont();
   const access = loadAccessSettings();
+  const tabBarOrientation = loadTabBarOrientation();
   state = {
     ...state,
     connections: [],
@@ -210,6 +224,9 @@ function ensureInit() {
     access,
     isUnlocked: !access.appLockEnabled,
     telemetryEnabled: loadTelemetryEnabled(),
+    tabBarOrientation,
+    sidebarCollapsed: loadSidebarCollapsed(),
+    sidebarWidth: loadSidebarWidth(tabBarOrientation),
   };
   applyTheme(theme);
   applyFont(font);
@@ -232,10 +249,10 @@ function ensureInit() {
 }
 
 export function useStore<T>(selector: (s: State) => T): T {
-  ensureInit();
   return useSyncExternalStore(
     (cb) => {
       listeners.add(cb);
+      ensureInit();
       return () => listeners.delete(cb);
     },
     () => selector(state),
@@ -657,5 +674,30 @@ export const actions = {
     saveTelemetryEnabled(enabled);
     setState({ telemetryEnabled: enabled });
     applyTelemetryPreference();
+  },
+
+  setTabBarOrientation(o: TabBarOrientation) {
+    ensureInit();
+    saveTabBarOrientation(o);
+    if (o === "vertical" && state.sidebarWidth < 200) {
+      setState({ tabBarOrientation: o, sidebarWidth: 260 });
+    } else {
+      setState({ tabBarOrientation: o });
+    }
+  },
+
+  setSidebarCollapsed(v: boolean) {
+    ensureInit();
+    saveSidebarCollapsed(v);
+    setState({ sidebarCollapsed: v });
+  },
+
+  setSidebarWidth(w: number) {
+    ensureInit();
+    const isVertical = state.tabBarOrientation === "vertical";
+    const minW = isVertical ? 200 : 60;
+    const clamped = Math.max(minW, Math.min(400, Math.round(w)));
+    saveSidebarWidth(clamped);
+    setState({ sidebarWidth: clamped });
   },
 };

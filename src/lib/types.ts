@@ -33,6 +33,8 @@ export interface Connection {
     | "windows"
     | "generic";
   iconBrand?: string;
+  iconIconoir?: string;
+  iconIconoirStyle?: "stroke" | "solid";
   /** When false, AI autocomplete and assistant are disabled for this host's sessions (default allows AI). */
   aiFeaturesEnabled?: boolean;
 }

@@ -7,10 +7,11 @@
   "main": "electron/main.cjs",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "dev": "tsx server.ts",
+    "dev": "set NODE_OPTIONS=--max-old-space-size=4096 && tsx server.ts",
     "dev:electron": "concurrently -k -n server,electron -c cyan,green \"tsx server.ts\" \"wait-on -t 60000 -i 3000 http://localhost:3000 && electron .\"",
     "build": "next build",
-    "build:electron": "powershell -Command \"Get-Process 'Relay SSH*' -ErrorAction SilentlyContinue | Stop-Process -Force\" && next build --turbopack && electron-builder --config electron-builder.yml",
+    "build:electron": "powershell -Command \"Get-Process 'Relay SSH*' -ErrorAction SilentlyContinue | Stop-Process -Force; Remove-Item -Path dist-electron-out -Recurse -Force -ErrorAction SilentlyContinue\" && next build --turbopack && electron-builder --config electron-builder.yml --dir",
+    "build:electron-release": "powershell -Command \"Get-Process 'Relay SSH*' -ErrorAction SilentlyContinue | Stop-Process -Force; Remove-Item -Path dist-electron-out -Recurse -Force -ErrorAction SilentlyContinue\" && next build --turbopack && electron-builder --config electron-builder.yml --config.compression=maximum",
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write ."
@@ -64,6 +65,7 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.38.0",
+    "iconoir-react": "^7.11.0",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.575.0",
     "next": "16.2.4",

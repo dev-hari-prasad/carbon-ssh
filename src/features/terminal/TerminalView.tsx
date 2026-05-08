@@ -168,13 +168,14 @@ export function TerminalView({ tab, conn }: Props) {
       const term = new Terminal({
         fontFamily: getTerminalFontById(terminalFontRef.current).stack,
         fontSize: 13,
-        lineHeight: 1.35,
+        lineHeight: 1.0,
         cursorBlink: terminalCursorStyleRef.current.includes("blinking"),
         cursorStyle: terminalCursorStyleRef.current.includes("block") 
           ? "block" 
           : terminalCursorStyleRef.current.includes("bar") 
             ? "bar" 
             : "underline",
+        cursorWidth: 1,
         allowProposedApi: true,
         theme: terminalThemeForTheme(getThemeById(themeRef.current)),
       });
@@ -217,12 +218,17 @@ export function TerminalView({ tab, conn }: Props) {
         `Connecting to ${connectionSnapshot.username}@${connectionSnapshot.host}`,
       );
 
+      let resizeTimer: ReturnType<typeof setTimeout> | null = null;
+      let wsResizeTimer: ReturnType<typeof setTimeout> | null = null;
       const ro = new ResizeObserver(() => {
-        try {
-          fit.fit();
-        } catch {
-          /* noop */
-        }
+        if (resizeTimer) clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          try {
+            fit.fit();
+          } catch {
+            /* noop */
+          }
+        }, 80);
       });
       ro.observe(hostRef.current);
 
@@ -607,7 +613,10 @@ export function TerminalView({ tab, conn }: Props) {
       });
 
       const resizeSub = term.onResize(({ cols, rows }) => {
-        send({ type: "resize", data: { cols, rows } });
+        if (wsResizeTimer) clearTimeout(wsResizeTimer);
+        wsResizeTimer = setTimeout(() => {
+          send({ type: "resize", data: { cols, rows } });
+        }, 100);
       });
 
       const handleTerminalInput = (e: Event) => {
@@ -619,6 +628,8 @@ export function TerminalView({ tab, conn }: Props) {
       window.addEventListener("tm:terminal-input", handleTerminalInput);
 
       cleanups.push(() => {
+        if (resizeTimer) clearTimeout(resizeTimer);
+        if (wsResizeTimer) clearTimeout(wsResizeTimer);
         window.removeEventListener("tm:terminal-input", handleTerminalInput);
         dataSub.dispose();
         resizeSub.dispose();
@@ -719,7 +730,7 @@ export function TerminalView({ tab, conn }: Props) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute top-4 right-8 z-50 flex items-center gap-2 px-2 py-1.5 rounded-[10px] bg-[var(--popover-bg)] border border-[var(--border-strong)] shadow-2xl w-[280px]"
+            className="absolute top-4 right-8 z-50 flex items-center gap-2 px-2 py-1.5 rounded-md bg-[var(--popover-bg)] border border-[var(--border-strong)] shadow-2xl w-[280px]"
           >
             <MagnifyingGlass size={14} className="text-fg-muted" />
             <input

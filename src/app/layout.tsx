@@ -3,6 +3,8 @@ import "@/styles.css";
 
 import { DEFAULT_THEME_ID, THEMES } from "@/config/themes";
 import { THEME_VARS_BY_ID } from "@/lib/theme-vars-by-id";
+import { SmoothCornersRuntime } from "@/components/SmoothCornersRuntime";
+import Script from "next/script";
 
 export const metadata = {
   title: "relay/ssh — local SSH client",
@@ -75,9 +77,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: DEFAULT_RULE }}
         />
-        <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
+        <Script
+          id="theme-bootstrap"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeBootstrap }}
+        />
       </head>
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        {children}
+        <SmoothCornersRuntime />
+      </body>
     </html>
   );
 }

@@ -1,54 +1,46 @@
-# Carbon Telemetry: The Straightforward Anonymous Usage Analytics Policy
+# Carbon Telemetry - The Straightforward Disclosure
 
-### Why Telemetry is ON by Default
-If you care about security, you know the rule: ship *less* telemetry, not more. We agree with that instinct. But Carbon ships with analytics **enabled** by default for one blunt reason: without it, we are flying completely blind. 
+Telemetry is enabled by default, but can be disabled anytime in Settings > General > Share anonymous usage data. **This policy is deliberately placed right next to the toggle in settings, so you can make an informed decision before toggling it and to put forth a different perspective on telemetry**.
 
-If we don't get these anonymous signals, we have no idea how many people are actually using the app, what is breaking in the wild, or if our recent updates actually helped. These metrics are exactly what motivates us to keep building Carbon. 
-
-If that trade-off isn't worth it for you, disable it. No lecture.
-**Settings → General → Privacy → Analytics** → toggle **Share anonymous usage analytics.**
+**If you care about security, you know the rule: ship less telemetry, not more**. 100% agreed and valid. But the reality is, without telemetry, maintainers will not be able to know where the app crashes, how users interact with the UI, which feature is the most used and how many users use the app (which are **motivating factors for the maintainers**).
 
 ---
 
-### 🛑 What we NEVER collect
-Your shell and servers are your business. We never touch:
-* Passwords, private keys, or SSH credentials.
-* Hostnames, IP addresses, or usernames.
-* Terminal commands, console output, or clipboard contents.
-* File paths or environment variables.
-* Any information about your SSH hosts not even remotely related to the SSH connection itself like metadata, labels, tags, or anything else.
-* Or anything else that could be used to identify you.
+## What we never collect
 
-### 🟢 What we DO collect
-We only track broad, anonymous actions:
-* **App actions:** When you open the app, finish initial setup, or click major UI features (e.g., "Opened Settings").
-* **Connection status:** If an SSH connection succeeds or fails. (For failures, we only see the *category* like "network error"—we don't see the server or the real error text).
-* **Crashes:** Basic error categories with sanitized text (paths and IPs stripped out).
-* **System info:** Your Carbon version and OS type (Mac/Windows/Linux/Web).
+- SSH credentials, private keys, or passwords
+- Terminal commands or output
+- Hostnames, IPs, or usernames
+- File paths, environment variables, or clipboard contents
+- Anything that identifies your servers or workflow
+- Anything that is sensitive and private
 
----
+## What we do collect
 
-### Anonymity & Under the Hood
-* **Random ID:** We use a random, anonymous ID stored locally on your device. It is not tied to your name, email, or hardware.
-* **No creepy background tracking:** We do **not** run background A/B testing trackers (`/decide` traffic is explicitly blocked).
-* **Backend:** If configured, data is sent to PostHog, but it only contains the event labels described above, the random ID, and a public ingest key. No IP addresses, hostnames, or other identifying information.
+- Basic app events (app opened, settings opened, setup completed)
+- Anonymous connection success/failure categories with only classifcation not data of the connection or failure error message
+- Crash reports with sensitive data stripped out, it contains only error classification and error code so we can fix the bug
+- App version and operating system to track the most used version and plan for the next release and to decide where to focus more development effort
 
 ---
 
-### Carbon vs. Corporate Analytics
-We deliberately avoid the bloated tracking most apps use. Here is the exact difference:
+## Privacy approach
 
-| What Most Corporate Apps Do | What Carbon Actually Does |
-| :--- | :--- |
-| **Session Replays:** Record video-style replays of you clicking around the app. | **Turned OFF.** We never record your screen or sessions. |
-| **Massive Tracking:** Log every single mouse tap, hover, and scroll. | **Not Used.** We only track intentional, broad actions (like "App Opened"). |
-| **Identity Tracking:** Link your logged-in email and account straight to their charts. | **Anonymous Local ID.** We use a random ID stored only on your machine. |
-| **Vacuuming Sensitive Data:** Mix your private workflow (like your terminal shell) into analytics streams. | **Vague Buckets Only.** Failures stop at generic labels. Terminals and hosts are totally excluded. |
+- Analytics use a random anonymous ID stored locally on your device
+- No session replay, screen recording, or invasive tracking
+- No account-based identity tracking
+- Sensitive data is filtered before anything is sent
+
+We use PostHog for analytics which is a privacy respecting, widely trusted and GDPR compliant analytics platform. You can find out more about PostHog at [posthog.com](https://posthog.com/privacy).
 
 ---
 
-### Don't take our word for it: Verify it yourself
-You don't have to trust us blindly. You can check the exact code that handles this here:
-* `src/lib/telemetry.ts` (Core logic, consent, and capture helpers)
-* `src/lib/telemetry-sanitize.ts` (The filters that explicitly strip out sensitive data)
-* `src/lib/telemetry-config.ts` (Environment setup)
+## Verify for yourself
+
+You don't have to trust us blindly. You can check the exact code that handles the telemetry services on our [GitHub repository](https://github.com/TerminalMuse/Carbon) and then navigating to:
+
+- `src/lib/telemetry.ts` (Core logic, consent, and capture helpers)
+- `src/lib/telemetry-sanitize.ts` (The filters that explicitly strip out sensitive data)
+- `src/lib/telemetry-config.ts` (Environment setup)
+
+Alternatively you can open the developer tools using `F12`, `CTRL + Shift + I` (on Windows/Linux) and `CTRL + Opt + I` (on macOS) and track the payload of telemetry API calls in the Network tab to `https://ph.carbon.trycarbon.dev/api/collect`.

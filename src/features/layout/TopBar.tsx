@@ -7,7 +7,6 @@ import {
   Trash,
   Plug,
   Gear,
-  ClockCounterClockwise,
   Lightning,
   TerminalWindow,
   SquaresFour,
@@ -15,6 +14,8 @@ import {
   MagnifyingGlass,
   LockKey,
   WarningCircle,
+  CaretLeft,
+  CaretRight,
 } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import { actions, useStore } from "@/lib/store";
@@ -175,11 +176,11 @@ export function TopBar() {
           <img
             src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTi-TGmA1kwrrCDuC7QtX3cojJb27aSXjE0Qw&s"
             alt="Logo"
-            className="w-6 h-6 rounded-[6px] object-cover"
+            className="w-6 h-6 rounded-sm object-cover"
           />
         </div>
 
-        <div className="flex-1 min-w-0 flex items-center gap-1.5 overflow-hidden">
+        <div className="flex-1 min-w-0 flex items-center gap-1 overflow-hidden">
           <FeaturePill
             icon={<HardDrives size={13} weight="duotone" />}
             label="Hosts"
@@ -264,10 +265,10 @@ export function TopBar() {
                     >
                       <div
                         onClick={() => actions.setActiveTab(t.id)}
-                        className={`group relative w-full h-8 flex items-center gap-1.5 pl-2.5 pr-2 rounded-[8px] cursor-pointer text-[12px] font-sans transition-colors border ${
+                        className={`group relative w-full h-8 flex items-center gap-1.5 pl-2.5 pr-2 rounded-sm cursor-pointer text-[12px] font-sans transition-colors duration-150 ${
                           active
-                            ? "bg-success/10 text-success border-success/30"
-                            : "bg-[var(--command-bg)] text-fg-muted hover:bg-[var(--command-active-bg)] hover:text-fg border-border"
+                            ? "bg-success/10 text-success"
+                            : "bg-[var(--command-bg)] text-fg-muted hover:bg-[var(--command-active-bg)] hover:text-fg"
                         }`}
                       >
                         <TabFavicon
@@ -292,14 +293,14 @@ export function TopBar() {
                             e.stopPropagation();
                             actions.closeTab(t.id);
                           }}
-                          className={`absolute right-1 w-5 h-5 flex items-center justify-center rounded transition-all opacity-0 group-hover:opacity-100 ${
+                          className={`absolute right-1 w-5 h-5 flex items-center justify-center rounded-sm transition-all duration-150 opacity-0 group-hover:opacity-100 bg-[var(--bg-elev)] ${
                             active
-                              ? "text-success/70 hover:text-success hover:bg-success/20"
+                              ? "text-success/70 hover:text-success hover:bg-[var(--bg-elev)]"
                               : "text-fg-dim hover:text-fg hover:bg-[var(--bg-elev)]"
                           }`}
                           aria-label="Close tab"
                         >
-                          <span className="text-[16px] leading-none mb-[1.5px]">×</span>
+                          <span className="text-[14px] leading-none">×</span>
                         </button>
                       </div>
                     </Tooltip>
@@ -317,7 +318,7 @@ export function TopBar() {
                 <PopoverTrigger asChild>
                   <button
                     aria-label="New tab"
-                    className={`w-7 h-7 grid place-items-center rounded-[8px] transition-colors ${
+                    className={`w-7 h-7 grid place-items-center rounded-sm transition-colors ${
                       open === "machines"
                         ? "text-fg bg-[var(--command-active-bg)]"
                         : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
@@ -356,25 +357,16 @@ export function TopBar() {
             <button
               onClick={() => actions.openSettingsTab("bangs")}
               aria-label="Bangs"
-              className="w-7 h-7 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+              className="w-7 h-7 grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
             >
               <Lightning size={17} weight="regular" />
-            </button>
-          </Tooltip>
-          <Tooltip label="Activity Logs" side="bottom">
-            <button
-              onClick={() => actions.toggleBottom()}
-              aria-label="Activity logs"
-              className="w-7 h-7 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
-            >
-              <ClockCounterClockwise size={17} weight="regular" />
             </button>
           </Tooltip>
           <Tooltip label="Lock" side="bottom">
             <button
               onClick={() => actions.lockApp()}
               aria-label="Lock App"
-              className="w-7 h-7 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+              className="w-7 h-7 grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
             >
               <LockKey size={17} weight="regular" />
             </button>
@@ -385,7 +377,7 @@ export function TopBar() {
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => actions.toggleSettings()}
               aria-label="Toggle settings"
-              className={`w-7 h-7 grid place-items-center rounded-[7px] transition-colors ${
+              className={`w-7 h-7 grid place-items-center rounded-sm transition-colors ${
                 settingsOpen
                   ? "text-fg bg-[var(--command-active-bg)]"
                   : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
@@ -416,7 +408,7 @@ function FeaturePill({
   return (
     <button
       onClick={onClick}
-      className={`h-8 px-3 inline-flex items-center gap-1.5 rounded-[8px] border text-[12px] font-sans transition-colors shrink-0 ${
+      className={`h-8 px-3 inline-flex items-center gap-1 rounded-sm  text-[12px] font-sans transition-colors shrink-0 ${
         active
           ? "bg-[var(--command-active-bg)] border-accent/40 text-fg"
           : "bg-[var(--command-bg)] border-border text-fg hover:bg-[var(--command-active-bg)]"
@@ -552,7 +544,7 @@ function MachinesPopover({
   ]);
 
   return (
-    <div className="bg-[var(--menu-bg)] border border-border rounded-[12px] shadow-2xl overflow-hidden flex w-[550px] h-[360px]">
+    <div className="bg-[var(--menu-bg)] border border-border rounded-lg shadow-2xl overflow-hidden flex w-[550px] h-[360px]">
       {/* Left side: Groups */}
       <div className="w-[200px] border-r border-border flex flex-col min-h-0 bg-[var(--bg-panel)]/50">
         <div className="h-9 px-3 flex items-center justify-between border-b border-border shrink-0">
@@ -595,7 +587,7 @@ function MachinesPopover({
             <button
               type="button"
               onClick={onNewConn}
-              className="min-w-0 h-8 px-2 inline-flex items-center justify-center gap-1 rounded-[8px] bg-accent text-accent-fg text-[11px] font-sans font-semibold hover:opacity-90 transition-colors"
+              className="min-w-0 h-8 px-2 inline-flex items-center justify-center gap-1 rounded-sm bg-accent text-accent-fg text-[11px] font-sans font-semibold hover:opacity-90 transition-colors"
             >
               <Plus size={12} weight="bold" className="shrink-0" />
               <span className="truncate">New host</span>
@@ -603,7 +595,7 @@ function MachinesPopover({
             <button
               type="button"
               onClick={onCancel}
-              className="min-w-0 h-8 px-2 rounded-[8px] border border-border text-[11px] font-sans font-medium text-fg-muted hover:text-fg hover:bg-[var(--bg-panel)] transition-colors truncate"
+              className="min-w-0 h-8 px-2 rounded-sm border border-border text-[11px] font-sans font-medium text-fg-muted hover:text-fg hover:bg-[var(--bg-panel)] transition-colors truncate"
             >
               Cancel
             </button>
@@ -642,7 +634,7 @@ function MachinesPopover({
                 return (
                   <div
                     key={c.id}
-                    className={`group flex items-center gap-2.5 px-2.5 py-1.5 rounded-[8px] transition-colors ${
+                    className={`group flex items-center gap-2.5 px-2.5 py-1.5 rounded-sm transition-colors ${
                       isConnecting ? "cursor-wait opacity-70" : "cursor-pointer"
                     } ${
                       i === selectedIndex
@@ -655,7 +647,7 @@ function MachinesPopover({
                     onMouseEnter={() => setSelectedIndex(i)}
                   >
                     <div className="shrink-0">
-                      <HostIcon conn={c} size={24} />
+                      <HostIcon conn={c} size={16} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-[12.5px] font-sans font-medium text-fg truncate">
@@ -696,7 +688,7 @@ function GroupItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] text-left transition-colors ${
+      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-sm text-left transition-colors ${
         focused
           ? "bg-[var(--command-active-bg)] ring-1 ring-accent/30 text-fg"
           : active
@@ -714,6 +706,397 @@ function GroupItem({
         {count}
       </span>
     </button>
+  );
+}
+
+export function VerticalTabBar() {
+  const tabs = useStore((s) => s.tabs);
+  const activeTabId = useStore((s) => s.activeTabId);
+  const connections = useStore((s) => s.connections);
+  const groups = useStore((s) => s.groups);
+  const settingsOpen = useStore((s) => s.settingsOpen);
+  const connectionStatus = useStore((s) => s.connectionStatus);
+  const sidebarCollapsed = useStore((s) => s.sidebarCollapsed);
+  const sidebarWidth = useStore((s) => s.sidebarWidth);
+  const [mounted, setMounted] = useState(false);
+  const [open, setOpen] = useState<Popover>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Connection | null>(null);
+  const resizeRef = useRef<{ startX: number; startW: number } | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const onNew = () => {
+      setEditing(null);
+      setFormOpen(true);
+      setOpen(null);
+    };
+    const onOpenMachines = () => setOpen("machines");
+    window.addEventListener("tm:new-connection", onNew);
+    window.addEventListener("tm:focus-search", onOpenMachines);
+    window.addEventListener("tm:open-history", onOpenMachines);
+    window.addEventListener("tm:check-history", onOpenMachines);
+    return () => {
+      window.removeEventListener("tm:new-connection", onNew);
+      window.removeEventListener("tm:focus-search", onOpenMachines);
+      window.removeEventListener("tm:open-history", onOpenMachines);
+      window.removeEventListener("tm:check-history", onOpenMachines);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (sidebarCollapsed) return;
+    const onMouseMove = (e: MouseEvent) => {
+      if (!resizeRef.current) return;
+      const delta = e.clientX - resizeRef.current.startX;
+      actions.setSidebarWidth(resizeRef.current.startW + delta);
+    };
+    const onMouseUp = () => {
+      resizeRef.current = null;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [sidebarCollapsed]);
+
+  function openEditConn(c: Connection) {
+    setEditing(c);
+    setFormOpen(true);
+    setOpen(null);
+  }
+  function openNewConn() {
+    setEditing(null);
+    setFormOpen(true);
+    setOpen(null);
+  }
+
+  const tooltipSide = "right";
+  const showTooltips = sidebarCollapsed;
+  const animatedWidth = sidebarCollapsed ? 44 : sidebarWidth;
+
+  if (!mounted) {
+    return (
+      <div className="border-r border-[var(--titlebar-border)] bg-[var(--titlebar-bg)] z-40 shrink-0"
+        style={{ width: animatedWidth }}
+      />
+    );
+  }
+
+  const TabButton = ({
+    icon,
+    label,
+    active,
+    onClick,
+    tooltip,
+  }: {
+    icon: React.ReactNode;
+    label: string;
+    active?: boolean;
+    onClick?: () => void;
+    tooltip?: string;
+  }) => (
+    <Tooltip label={tooltip ?? label} side={tooltipSide} disabled={!showTooltips}>
+      <button
+        onClick={onClick}
+        className={`inline-flex items-center gap-2 rounded-sm transition-all duration-200 ease-out shrink-0 ${
+          sidebarCollapsed
+            ? "w-8 h-8 justify-center"
+            : "w-full h-8 px-2.5 justify-start"
+        } ${
+          active
+            ? "bg-[var(--command-active-bg)] text-fg"
+            : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
+        }`}
+      >
+        <span className="shrink-0">{icon}</span>
+        {!sidebarCollapsed && (
+          <span className="text-[12px] font-sans truncate">{label}</span>
+        )}
+      </button>
+    </Tooltip>
+  );
+
+  return (
+    <>
+      <motion.div
+        className="border-r border-[var(--titlebar-border)] bg-[var(--titlebar-bg)] select-none relative z-40 flex flex-col shrink-0 h-full overflow-hidden"
+        animate={{ width: animatedWidth }}
+        initial={false}
+        transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+      >
+        {/* Header: Hosts + Collapse toggle */}
+        <div className={`flex items-center shrink-0 pt-2 pb-1 ${sidebarCollapsed ? "flex-col gap-1 px-1" : "flex-row gap-1 px-1.5"}`}>
+          <div className={sidebarCollapsed ? "" : "flex-1 min-w-0"}>
+            <Tooltip label="Hosts" side={tooltipSide} disabled={!showTooltips}>
+              <button
+                onClick={() => actions.goHome()}
+                className={`inline-flex items-center gap-2 rounded-sm transition-all duration-200 ease-out shrink-0 ${
+                  sidebarCollapsed
+                    ? "w-8 h-8 justify-center"
+                    : "w-full h-8 px-2.5 justify-start"
+                } ${
+                  activeTabId === null && !settingsOpen
+                    ? "bg-[var(--command-active-bg)] text-fg"
+                    : "bg-[var(--command-bg)] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
+                }`}
+              >
+                <HardDrives size={16} weight={activeTabId === null ? "duotone" : "regular"} className="shrink-0" />
+                {!sidebarCollapsed && (
+                  <span className="text-[12px] font-sans truncate">Hosts</span>
+                )}
+              </button>
+            </Tooltip>
+          </div>
+          <Tooltip label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} side={tooltipSide}>
+            <button
+              onClick={() => actions.setSidebarCollapsed(!sidebarCollapsed)}
+              className={`grid place-items-center rounded-sm bg-[var(--bg-panel)]/40 text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors shrink-0 ${
+                sidebarCollapsed ? "w-8 h-8" : "w-7 h-7"
+              }`}
+            >
+              {sidebarCollapsed ? <CaretRight size={14} weight="bold" /> : <CaretLeft size={14} weight="bold" />}
+            </button>
+          </Tooltip>
+        </div>
+
+        {tabs.length > 0 && (
+          <div className={`h-px bg-border shrink-0 ${sidebarCollapsed ? "mx-auto w-5" : "mx-2"}`} />
+        )}
+
+        {/* Session tabs */}
+        <div className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col ${sidebarCollapsed ? "items-center gap-0.5 py-1 px-1" : "gap-0.5 py-1 px-1.5"}`}>
+          <AnimatePresence initial={false}>
+            {tabs.map((t) => {
+              const active = t.id === activeTabId;
+              const c = connections.find((conn) => conn.id === t.connectionId);
+
+              return (
+                <motion.div
+                  layout
+                  initial={{ opacity: 0, x: -8, height: 0 }}
+                  animate={{ opacity: 1, x: 0, height: "auto" }}
+                  exit={{ opacity: 0, x: -8, height: 0 }}
+                  transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
+                  key={t.id}
+                  className="min-w-0 w-full overflow-hidden"
+                >
+                  <Tooltip
+                    delay={300}
+                    side={tooltipSide}
+                    disabled={!showTooltips}
+                    className={sidebarCollapsed ? undefined : "w-full"}
+                    label={(() => {
+                      if (!c) return t.title;
+                      const group = c.groupId ? groups.find((g) => g.id === c.groupId) : null;
+                      const groupName = group ? group.name : "Uncategorized";
+                      const started = t.startedAt
+                        ? new Date(t.startedAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "Unknown";
+                      return (
+                        <div className="flex flex-col gap-0.5 w-full min-w-0 text-left">
+                          <span className="font-semibold">{c.name}</span>
+                          <span className="text-fg-dim text-[10.5px]">
+                            ssh://{c.username}@{c.host}:{c.port}
+                          </span>
+                          <div className="h-px bg-border my-1" />
+                          <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
+                            <span className="text-fg-muted shrink-0">Group</span>
+                            <span className="text-fg-dim text-right truncate">{groupName}</span>
+                          </div>
+                          <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
+                            <span className="text-fg-muted shrink-0">Started</span>
+                            <span className="text-fg-dim tabular-nums">{started}</span>
+                          </div>
+                          <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
+                            <span className="text-fg-muted shrink-0">Commands</span>
+                            <span className="text-fg-dim tabular-nums">{t.commandCount || 0}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    multiline
+                    minWidth={160}
+                  >
+                    <button
+                      onClick={() => actions.setActiveTab(t.id)}
+                      className={`group relative rounded-sm transition-colors duration-150 ${
+                        sidebarCollapsed
+                          ? "w-8 h-8 grid place-items-center"
+                          : "w-full h-8 flex items-center gap-1.5 px-2.5 overflow-hidden"
+                      } ${
+                        active
+                          ? "bg-success/10 text-success"
+                          : "bg-[var(--command-bg)] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
+                      }`}
+                    >
+                      <TabFavicon
+                        conn={c}
+                        state={c ? connectionStatus[c.id]?.state : undefined}
+                        active={active}
+                      />
+                      {!sidebarCollapsed && (
+                        <span
+                          className="flex-1 text-left text-[12px] font-sans truncate min-w-0 pr-4"
+                          style={{
+                            maskImage: "linear-gradient(to right, black calc(100% - 12px), transparent 100%)",
+                            WebkitMaskImage: "linear-gradient(to right, black calc(100% - 12px), transparent 100%)",
+                          }}
+                        >
+                          {t.title}
+                        </span>
+                      )}
+                      {!sidebarCollapsed ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            actions.closeTab(t.id);
+                          }}
+                          className={`absolute right-1.5 w-5 h-5 flex items-center justify-center rounded-sm transition-all duration-150 opacity-0 group-hover:opacity-100 bg-[var(--bg-elev)] ${
+                            active
+                              ? "text-success/70 hover:text-success hover:bg-[var(--bg-elev)]"
+                              : "text-fg-dim hover:text-fg hover:bg-[var(--bg-elev)]"
+                          }`}
+                          aria-label="Close tab"
+                        >
+                          <span className="text-[14px] leading-none">×</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            actions.closeTab(t.id);
+                          }}
+                          className={`absolute inset-0 w-full h-full flex items-center justify-center rounded-sm transition-all duration-150 opacity-0 group-hover:opacity-100 z-10 ${
+                            active
+                              ? "bg-[var(--bg-elev)] text-success"
+                              : "bg-[var(--bg-elev)] text-fg hover:bg-[var(--bg-elev)]"
+                          }`}
+                          aria-label="Close tab"
+                        >
+                          <span className="text-[14px] leading-none font-bold">×</span>
+                        </button>
+                      )}
+                    </button>
+                  </Tooltip>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+
+          {/* New session button */}
+          <div className={sidebarCollapsed ? "mt-auto pt-1" : "mt-auto pt-1 w-full"}>
+            <Popover open={open === "machines"} onOpenChange={(o) => setOpen(o ? "machines" : null)}>
+              {showTooltips ? (
+                <Tooltip label="New session" side={tooltipSide}>
+                  <PopoverTrigger asChild>
+                    <button
+                      aria-label="New tab"
+                      className={`rounded-sm transition-colors duration-150 shrink-0 w-full h-8 grid place-items-center ${
+                        open === "machines"
+                          ? "text-fg bg-[var(--command-active-bg)]"
+                          : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
+                      }`}
+                    >
+                      <Plus size={14} weight="bold" className="shrink-0" />
+                    </button>
+                  </PopoverTrigger>
+                </Tooltip>
+              ) : (
+                <PopoverTrigger asChild>
+                  <button
+                    aria-label="New tab"
+                    className={`rounded-sm transition-colors duration-150 shrink-0 w-full h-8 flex items-center justify-center gap-2 px-2.5 border border-dashed border-border/50 hover:border-accent/50 ${
+                      open === "machines"
+                        ? "text-fg bg-[var(--command-active-bg)]"
+                        : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
+                    }`}
+                  >
+                    <Plus size={15} weight="bold" className="shrink-0" />
+                    {!sidebarCollapsed && (
+                      <span className="text-[12px] font-sans">New session</span>
+                    )}
+                  </button>
+                </PopoverTrigger>
+              )}
+
+              <PopoverContent
+                side="right"
+                align="start"
+                sideOffset={0}
+                collisionPadding={8}
+                className="p-0 border-none shadow-none w-auto bg-transparent z-50"
+                style={{ marginLeft: 0 }}
+              >
+                <MachinesPopover
+                  connections={connections}
+                  groups={groups}
+                  onConnect={(c) => {
+                    actions.openTab(c.id);
+                    setOpen(null);
+                  }}
+                  onEditConn={openEditConn}
+                  onNewConn={openNewConn}
+                  onCancel={() => setOpen(null)}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+
+        {/* Bottom actions */}
+        <div className={`flex ${sidebarCollapsed ? "flex-col items-center" : "flex-col"} gap-0.5 pb-2 pt-1 ${sidebarCollapsed ? "px-1" : "px-1.5"} shrink-0`}>
+          <div className={`h-px bg-border mb-0.5 ${sidebarCollapsed ? "w-5 mx-auto" : "mx-1.5"}`} />
+          
+          <TabButton
+            icon={<Lightning size={16} weight="regular" />}
+            label="Bangs"
+            tooltip="Bangs"
+            onClick={() => actions.openSettingsTab("bangs")}
+          />
+          <TabButton
+            icon={<LockKey size={16} weight="regular" />}
+            label="Lock"
+            tooltip="Lock"
+            onClick={() => actions.lockApp()}
+          />
+          <TabButton
+            icon={<Gear size={16} weight={settingsOpen ? "fill" : "regular"} />}
+            label="Settings"
+            tooltip="Settings"
+            active={settingsOpen}
+            onClick={() => actions.toggleSettings()}
+          />
+        </div>
+
+        {/* Resize handle */}
+        {!sidebarCollapsed && (
+          <div
+            className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-accent/40 active:bg-accent/60 transition-colors z-50"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              resizeRef.current = { startX: e.clientX, startW: sidebarWidth };
+              document.body.style.cursor = "col-resize";
+              document.body.style.userSelect = "none";
+            }}
+          />
+        )}
+      </motion.div>
+
+      <ConnectionForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} />
+    </>
   );
 }
 

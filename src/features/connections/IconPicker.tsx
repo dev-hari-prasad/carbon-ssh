@@ -8,17 +8,18 @@ import {
   Triangle,
   Atom,
   Cube,
-  Database,
   AppleLogo,
   WindowsLogo,
-  Cloud,
   MagnifyingGlass,
   X,
 } from "@phosphor-icons/react";
 import type { Connection } from "@/lib/types";
 import { BRAND_ICONS } from "./brandIcons";
+import { ICONOIR_ICONS } from "./iconoirIcons";
 
 type SystemKind = NonNullable<Connection["iconKind"]>;
+const ICON_INITIAL_LIMIT = 45;
+const ICON_LOAD_BATCH = 45;
 
 export const SYSTEM_ICONS: Array<{
   id: SystemKind;
@@ -34,22 +35,10 @@ export const SYSTEM_ICONS: Array<{
   { id: "windows", label: "Windows", Icon: WindowsLogo },
 ];
 
-const COLOR_SWATCHES = [
-  "#3b82f6",
-  "#0ea5b7",
-  "#22c55e",
-  "#eab308",
-  "#ef6a1d",
-  "#ef4444",
-  "#d6336c",
-  "#9b1c1c",
-  "#7c3aed",
-  "#64748b",
-];
-
 export type IconValue =
   | { kind: "system"; id: SystemKind; color?: string }
-  | { kind: "brand"; id: string };
+  | { kind: "brand"; id: string }
+  | { kind: "iconoir"; id: string };
 
 export function IconPicker({
   value,
@@ -63,8 +52,9 @@ export function IconPicker({
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0 });
   const [ready, setReady] = useState(false);
-  const [tab, setTab] = useState<"system" | "brand">(value.kind === "system" ? "system" : "brand");
+  const [tab, setTab] = useState<"brand" | "iconoir">(value.kind === "brand" ? "brand" : "iconoir");
   const [query, setQuery] = useState("");
+  const [iconTargetCount, setIconTargetCount] = useState(ICON_INITIAL_LIMIT);
   const triggerWrapRef = useRef<HTMLSpanElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
 
@@ -73,6 +63,22 @@ export function IconPicker({
     if (!q) return BRAND_ICONS;
     return BRAND_ICONS.filter((b) => b.id.includes(q) || b.label.toLowerCase().includes(q));
   }, [query]);
+
+  const filteredIconoirIcons = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return ICONOIR_ICONS;
+    return ICONOIR_ICONS.filter(
+      (item) =>
+        item.id.includes(q) ||
+        item.label.toLowerCase().includes(q) ||
+        item.exportName.toLowerCase().includes(q),
+    );
+  }, [query]);
+
+  const visibleIconoirIcons = useMemo(
+    () => filteredIconoirIcons.slice(0, iconTargetCount),
+    [filteredIconoirIcons, iconTargetCount],
+  );
 
   useLayoutEffect(() => {
     if (!open || !triggerWrapRef.current || !popRef.current) return;
@@ -98,11 +104,16 @@ export function IconPicker({
 
     setPos({ top, left });
     setReady(true);
-  }, [open, tab, filteredBrands.length]);
+  }, [open, tab, filteredBrands.length, visibleIconoirIcons.length]);
 
   useEffect(() => {
     if (!open) setReady(false);
   }, [open]);
+
+  useEffect(() => {
+    if (!open || tab !== "iconoir") return;
+    setIconTargetCount(ICON_INITIAL_LIMIT);
+  }, [open, tab, query]);
 
   useEffect(() => {
     if (!open) return;
@@ -123,7 +134,9 @@ export function IconPicker({
     };
   }, [open]);
 
-  const currentColor = value.kind === "system" ? (value.color ?? "var(--accent)") : "var(--accent)";
+  const loadMoreIcons = () => {
+    setIconTargetCount((count) => Math.min(count + ICON_LOAD_BATCH, filteredIconoirIcons.length));
+  };
 
   return (
     <>
@@ -147,102 +160,77 @@ export function IconPicker({
                 transformOrigin: "top",
                 transition: ready ? "opacity 110ms ease-out, transform 110ms ease-out" : "none",
               }}
-              className="w-[280px] max-h-[360px] flex flex-col rounded-[10px] border shadow-2xl overflow-hidden"
+              className="w-[280px] max-h-[360px] flex flex-col rounded-md border shadow-2xl overflow-hidden"
             >
               <div className="px-2 pt-2 pb-1.5 flex items-center gap-1 border-b border-border">
                 <TabBtn active={tab === "brand"} onClick={() => setTab("brand")}>
                   Brands
                 </TabBtn>
-                <TabBtn active={tab === "system"} onClick={() => setTab("system")}>
-                  Shapes
+                <TabBtn active={tab === "iconoir"} onClick={() => setTab("iconoir")}>
+                  Icons
                 </TabBtn>
                 <div className="flex-1" />
                 <button
                   onClick={() => setOpen(false)}
                   aria-label="Close"
-                  className="w-6 h-6 grid place-items-center rounded-[6px] text-fg-muted hover:text-fg hover:bg-[var(--neutral-hover-bg)]"
+                  className="w-6 h-6 grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--neutral-hover-bg)]"
                 >
                   <X size={11} weight="bold" />
                 </button>
               </div>
 
-              {tab === "brand" ? (
-                <div className="px-2 pt-2 pb-1">
-                  <div className="flex items-center gap-1.5 px-2 h-7 rounded-[7px] bg-[var(--input-bg)] border border-border focus-within:border-[var(--border-strong)]">
-                    <MagnifyingGlass size={11} className="text-fg-muted shrink-0" />
-                    <input
-                      autoFocus
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder="Search brands…"
-                      className="flex-1 min-w-0 bg-transparent text-[11.5px] font-sans text-fg placeholder:text-fg-muted focus:outline-none"
-                    />
-                  </div>
+              <div className="px-2 pt-2 pb-1">
+                <div className="flex items-center gap-1.5 px-2 h-7 rounded-sm bg-[var(--input-bg)] border border-border focus-within:border-[var(--border-strong)]">
+                  <MagnifyingGlass size={11} className="text-fg-muted shrink-0" />
+                  <input
+                    autoFocus
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder={tab === "brand" ? "Search brands…" : "Search icons…"}
+                    className="flex-1 min-w-0 bg-transparent text-[11.5px] font-sans text-fg placeholder:text-fg-muted focus:outline-none"
+                  />
                 </div>
-              ) : null}
+              </div>
 
-              <div className="flex-1 overflow-y-auto px-2 py-2">
-                {tab === "system" ? (
+              <div
+                className="flex-1 overflow-y-auto px-2 py-2"
+                onScroll={(e) => {
+                  if (tab !== "iconoir") return;
+                  const el = e.currentTarget;
+                  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 32) {
+                    loadMoreIcons();
+                  }
+                }}
+              >
+                {tab === "iconoir" ? (
                   <>
-                    <div className="grid grid-cols-5 gap-1">
-                      {SYSTEM_ICONS.map((s) => {
-                        const active = value.kind === "system" && value.id === s.id;
-                        const Icon = s.Icon;
-                        return (
-                          <button
-                            key={s.id}
-                            type="button"
-                            title={s.label}
-                            onClick={() =>
-                              onChange({
-                                kind: "system",
-                                id: s.id,
-                                color: value.kind === "system" ? value.color : undefined,
-                              })
-                            }
-                            className={`aspect-square grid place-items-center rounded-[8px] transition-colors ${
-                              active
-                                ? "bg-[var(--neutral-hover-bg)] ring-1 ring-fg/40"
-                                : "hover:bg-[var(--neutral-hover-bg)]"
-                            }`}
-                          >
-                            <span style={{ color: currentColor }}>
-                              <Icon size={18} weight="fill" />
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div className="mt-2 pt-2 border-t border-border">
-                      <div className="text-[10px] uppercase tracking-wider font-sans font-semibold text-fg-dim pb-1.5">
-                        Color
+                    {filteredIconoirIcons.length === 0 ? (
+                      <div className="py-6 text-center text-[11.5px] text-fg-muted">
+                        No matches.
                       </div>
-                      <div className="grid grid-cols-10 gap-1">
-                        {COLOR_SWATCHES.map((c) => {
-                          const active = value.kind === "system" && value.color === c;
+                    ) : (
+                      <div className="grid grid-cols-5 gap-1">
+                        {visibleIconoirIcons.map((item) => {
+                          const active = value.kind === "iconoir" && value.id === item.id;
+                          const Icon = item.Icon;
                           return (
                             <button
-                              key={c}
+                              key={item.id}
                               type="button"
-                              onClick={() =>
-                                onChange({
-                                  kind: "system",
-                                  id: value.kind === "system" ? value.id : "generic",
-                                  color: c,
-                                })
-                              }
-                              className={`aspect-square rounded-full transition-transform ${
+                              title={item.label}
+                              onClick={() => onChange({ kind: "iconoir", id: item.id })}
+                              className={`aspect-square grid place-items-center rounded-sm transition-colors ${
                                 active
-                                  ? "ring-2 ring-offset-1 ring-offset-[var(--popover-bg)] ring-fg/70 scale-110"
-                                  : "hover:scale-110"
+                                  ? "bg-[var(--neutral-hover-bg)] ring-1 ring-fg/40"
+                                  : "hover:bg-[var(--neutral-hover-bg)]"
                               }`}
-                              style={{ background: c }}
-                              aria-label={c}
-                            />
+                            >
+                              <Icon width={20} height={20} />
+                            </button>
                           );
                         })}
                       </div>
-                    </div>
+                    )}
                   </>
                 ) : (
                   <>
@@ -261,7 +249,7 @@ export function IconPicker({
                               type="button"
                               title={b.label}
                               onClick={() => onChange({ kind: "brand", id: b.id })}
-                              className={`aspect-square grid place-items-center rounded-[8px] transition-colors ${
+                              className={`aspect-square grid place-items-center rounded-sm transition-colors ${
                                 active
                                   ? "bg-[var(--neutral-hover-bg)] ring-1 ring-fg/40"
                                   : "hover:bg-[var(--neutral-hover-bg)]"
@@ -297,7 +285,7 @@ function TabBtn({
     <button
       type="button"
       onClick={onClick}
-      className={`h-7 px-2.5 rounded-[7px] text-[11.5px] font-sans transition-colors ${
+      className={`h-7 px-2.5 rounded-sm text-[11.5px] font-sans transition-colors ${
         active ? "bg-[var(--command-active-bg)] text-fg" : "text-fg-muted hover:text-fg"
       }`}
     >
@@ -305,3 +293,4 @@ function TabBtn({
     </button>
   );
 }
+

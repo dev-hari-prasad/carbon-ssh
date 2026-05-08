@@ -43,7 +43,7 @@ function PopoverButtonKbd({
 }) {
   return (
     <kbd
-      className={`px-1.5 h-[18px] inline-flex items-center justify-center rounded-[5px] text-[10px] font-mono leading-none ${
+      className={`px-1.5 h-[18px] inline-flex items-center justify-center rounded-sm text-[10px] font-mono leading-none ${
         variant === "onAccent"
           ? "border border-white/30 bg-white/15 text-accent-fg"
           : variant === "onInverse"
@@ -162,7 +162,7 @@ function AddGroupPopover({ onBeforeOpen }: { onBeforeOpen: () => void }) {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-1 px-2.5 h-7 rounded-[8px] text-[11.5px] font-sans font-medium text-accent border border-accent/40 bg-accent/10 hover:bg-accent/15 hover:border-accent/60 transition-colors shrink-0"
+          className="inline-flex items-center gap-1 px-2.5 h-7 rounded-sm text-[11.5px] font-sans font-medium text-accent border border-accent/40 bg-accent/10 hover:bg-accent/15 hover:border-accent/60 transition-colors shrink-0"
         >
           <Plus size={11} weight="bold" aria-hidden />
           Add groups
@@ -171,7 +171,7 @@ function AddGroupPopover({ onBeforeOpen }: { onBeforeOpen: () => void }) {
       <PopoverContent
         align="end"
         sideOffset={6}
-        className="w-[min(18rem,calc(100vw-1.5rem))] rounded-[10px] border border-[var(--border-strong)] p-3 shadow-xl bg-[var(--popover-bg)] text-fg"
+        className="w-[min(18rem,calc(100vw-1.5rem))] rounded-md border border-[var(--border-strong)] p-3 shadow-xl bg-[var(--popover-bg)] text-fg"
       >
         <div className="text-[13px] font-sans font-semibold text-fg mb-3">New group</div>
         <div>
@@ -187,7 +187,7 @@ function AddGroupPopover({ onBeforeOpen }: { onBeforeOpen: () => void }) {
               }
             }}
             placeholder="e.g. Staging"
-            className="w-full h-9 px-3 rounded-[8px] bg-[var(--input-bg)] border border-border text-[12.5px] font-sans text-fg placeholder:text-fg-muted box-border focus:outline-none focus:border-[var(--border-strong)]"
+            className="w-full h-9 px-3 rounded-sm bg-[var(--input-bg)] border border-border text-[12.5px] font-sans text-fg placeholder:text-fg-muted box-border focus:outline-none focus:border-[var(--border-strong)]"
           />
         </div>
         <div className="flex justify-start gap-2 mt-5">
@@ -195,7 +195,7 @@ function AddGroupPopover({ onBeforeOpen }: { onBeforeOpen: () => void }) {
             type="button"
             onClick={submit}
             disabled={!name.trim()}
-            className="h-8 px-3 rounded-[8px] text-[12px] font-sans font-semibold text-accent-fg bg-accent hover:opacity-90 disabled:opacity-40 disabled:pointer-events-none transition-opacity inline-flex items-center gap-1.5"
+            className="h-8 px-3 rounded-sm text-[12px] font-sans font-semibold text-accent-fg bg-accent hover:opacity-90 disabled:opacity-40 disabled:pointer-events-none transition-opacity inline-flex items-center gap-1.5"
           >
             Create
             <PopoverButtonKbd variant="onAccent">S</PopoverButtonKbd>
@@ -203,7 +203,7 @@ function AddGroupPopover({ onBeforeOpen }: { onBeforeOpen: () => void }) {
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="h-8 px-3 rounded-[8px] text-[12px] font-sans font-medium text-fg-muted border border-border hover:bg-[var(--neutral-hover-bg)] hover:text-fg transition-colors inline-flex items-center gap-1.5"
+            className="h-8 px-3 rounded-sm text-[12px] font-sans font-medium text-fg-muted border border-border hover:bg-[var(--neutral-hover-bg)] hover:text-fg transition-colors inline-flex items-center gap-1.5"
           >
             Cancel
             <PopoverButtonKbd>C</PopoverButtonKbd>
@@ -278,7 +278,7 @@ function EditGroupPopover({
   }, [open, canSave, name, group.id, pendingDelete]);
 
   const popoverSurfaceClassName =
-    "w-[min(18rem,calc(100vw-1.5rem))] rounded-[10px] border border-[var(--border-strong)] p-3 shadow-xl bg-[var(--popover-bg)] text-fg max-h-[min(32rem,calc(100vh-4rem))] overflow-y-auto";
+    "w-[min(18rem,calc(100vw-1.5rem))] rounded-md border border-[var(--border-strong)] p-3 shadow-xl bg-[var(--popover-bg)] text-fg max-h-[min(32rem,calc(100vh-4rem))] overflow-y-auto";
 
   return (
     <Popover
@@ -297,7 +297,7 @@ function EditGroupPopover({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="group/edit mr-2 inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-success/20 bg-success/10 text-fg-muted transition-[width,background-color,border-color,padding,gap,justify-content,color] duration-200 ease-out hover:w-[3.125rem] hover:justify-start hover:gap-0.5 hover:border-success/40 hover:bg-success/20 hover:px-1.5 hover:text-success"
+          className="group/edit mr-2 inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-success/20 bg-success/10 text-fg-muted transition-[width,background-color,border-color,padding,gap,justify-content,color] duration-200 ease-out hover:w-[3.125rem] hover:justify-start hover:gap-0.5 hover:border-success/40 hover:bg-success/20 hover:px-1.5 hover:text-success"
           aria-label="Edit group"
         >
           <PencilSimple size={11} weight="regular" className="shrink-0" />
@@ -326,7 +326,7 @@ function EditGroupPopover({
               }
             }}
             placeholder="Group name"
-            className="w-full h-9 px-3 rounded-[8px] bg-[var(--input-bg)] border border-border text-[12.5px] font-sans text-fg placeholder:text-fg-muted box-border focus:outline-none focus:border-[var(--border-strong)]"
+            className="w-full h-9 px-3 rounded-sm bg-[var(--input-bg)] border border-border text-[12.5px] font-sans text-fg placeholder:text-fg-muted box-border focus:outline-none focus:border-[var(--border-strong)]"
           />
         </div>
 
@@ -339,7 +339,7 @@ function EditGroupPopover({
           className="mt-2"
         >
           <CollapsibleTrigger
-            className="flex w-full items-center justify-between gap-2 rounded-[8px] border py-2 px-2.5 text-left transition-colors hover:opacity-95 [&[data-state=open]_svg]:rotate-90"
+            className="flex w-full items-center justify-between gap-2 rounded-sm border py-2 px-2.5 text-left transition-colors hover:opacity-95 [&[data-state=open]_svg]:rotate-90"
             style={{
               borderColor: "color-mix(in oklab, var(--danger) 45%, transparent)",
               background: "color-mix(in oklab, var(--danger) 10%, transparent)",
@@ -356,7 +356,7 @@ function EditGroupPopover({
           </CollapsibleTrigger>
           <CollapsibleContent className="overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
             <div
-              className="mt-2 rounded-[10px] border p-3"
+              className="mt-2 rounded-md border p-3"
               style={{
                 borderColor: "color-mix(in oklab, var(--danger) 45%, transparent)",
                 background: "color-mix(in oklab, var(--danger) 8%, transparent)",
@@ -377,7 +377,7 @@ function EditGroupPopover({
                     <button
                       type="button"
                       onClick={() => setPendingDelete(null)}
-                      className="h-8 px-3 rounded-[8px] border border-border text-[12px] font-sans text-fg-muted hover:text-fg hover:bg-[var(--neutral-hover-bg)] transition-colors"
+                      className="h-8 px-3 rounded-sm border border-border text-[12px] font-sans text-fg-muted hover:text-fg hover:bg-[var(--neutral-hover-bg)] transition-colors"
                     >
                       Cancel
                     </button>
@@ -387,7 +387,7 @@ function EditGroupPopover({
                         actions.removeGroupOnly(group.id);
                         handleDeleteDone();
                       }}
-                      className="flex-1 h-8 rounded-[8px] border border-danger/60 text-danger text-[12px] font-sans font-semibold hover:bg-danger/10 transition-colors inline-flex items-center justify-center gap-1.5"
+                      className="flex-1 h-8 rounded-sm border border-danger/60 text-danger text-[12px] font-sans font-semibold hover:bg-danger/10 transition-colors inline-flex items-center justify-center gap-1.5"
                     >
                       <Trash size={12} weight="bold" /> Remove group
                     </button>
@@ -406,7 +406,7 @@ function EditGroupPopover({
                     <button
                       type="button"
                       onClick={() => setPendingDelete(null)}
-                      className="h-8 px-3 rounded-[8px] border border-border text-[12px] font-sans text-fg-muted hover:text-fg hover:bg-[var(--neutral-hover-bg)] transition-colors"
+                      className="h-8 px-3 rounded-sm border border-border text-[12px] font-sans text-fg-muted hover:text-fg hover:bg-[var(--neutral-hover-bg)] transition-colors"
                     >
                       Cancel
                     </button>
@@ -416,7 +416,7 @@ function EditGroupPopover({
                         actions.removeGroupAndDeleteHosts(group.id);
                         handleDeleteDone();
                       }}
-                      className="flex-1 h-8 rounded-[8px] bg-danger text-white text-[12px] font-sans font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5"
+                      className="flex-1 h-8 rounded-sm bg-danger text-white text-[12px] font-sans font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5"
                     >
                       <Trash size={12} weight="fill" /> Confirm delete
                     </button>
@@ -427,7 +427,7 @@ function EditGroupPopover({
                   <button
                     type="button"
                     onClick={() => setPendingDelete("ungroup")}
-                    className="w-full h-8 rounded-[8px] border border-danger/50 text-danger text-[12px] font-sans font-medium hover:bg-danger/10 transition-colors inline-flex items-center justify-center gap-1.5"
+                    className="w-full h-8 rounded-sm border border-danger/50 text-danger text-[12px] font-sans font-medium hover:bg-danger/10 transition-colors inline-flex items-center justify-center gap-1.5"
                   >
                     <Trash size={12} weight="bold" /> Remove group
                   </button>
@@ -435,7 +435,7 @@ function EditGroupPopover({
                     <button
                       type="button"
                       onClick={() => setPendingDelete("delete-all")}
-                      className="w-full h-8 rounded-[8px] bg-danger text-white text-[12px] font-sans font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5"
+                      className="w-full h-8 rounded-sm bg-danger text-white text-[12px] font-sans font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5"
                     >
                       <Trash size={12} weight="fill" /> Remove group &amp; delete hosts
                     </button>
@@ -451,7 +451,7 @@ function EditGroupPopover({
             type="button"
             onClick={save}
             disabled={!canSave}
-            className="h-8 px-3 rounded-[8px] text-[12px] font-sans font-semibold text-accent-fg bg-accent hover:opacity-90 disabled:opacity-40 disabled:pointer-events-none transition-opacity inline-flex items-center gap-1.5"
+            className="h-8 px-3 rounded-sm text-[12px] font-sans font-semibold text-accent-fg bg-accent hover:opacity-90 disabled:opacity-40 disabled:pointer-events-none transition-opacity inline-flex items-center gap-1.5"
           >
             Save
             <PopoverButtonKbd variant="onAccent">S</PopoverButtonKbd>
@@ -459,7 +459,7 @@ function EditGroupPopover({
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="h-8 px-3 rounded-[8px] text-[12px] font-sans font-medium text-fg-muted border border-border hover:bg-[var(--neutral-hover-bg)] hover:text-fg transition-colors inline-flex items-center gap-1.5"
+            className="h-8 px-3 rounded-sm text-[12px] font-sans font-medium text-fg-muted border border-border hover:bg-[var(--neutral-hover-bg)] hover:text-fg transition-colors inline-flex items-center gap-1.5"
           >
             Cancel
             <PopoverButtonKbd>C</PopoverButtonKbd>
@@ -527,7 +527,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
                 setGroupFilter(null);
                 dismissSidebars();
               }}
-              className={`flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2.5 rounded-[10px] border transition-colors text-left ${
+              className={`flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2.5 rounded-md border transition-colors text-left ${
                 groupFilter === null
                   ? "bg-[var(--command-active-bg)] border-accent/50 ring-1 ring-accent/30"
                   : "bg-[var(--bg-panel)] border-border hover:border-[var(--border-strong)]"
@@ -550,7 +550,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
                 );
                 dismissSidebars();
               }}
-              className={`flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2.5 rounded-[10px] border transition-colors text-left ${
+              className={`flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2.5 rounded-md border transition-colors text-left ${
                 groupFilter === "__uncategorized__"
                   ? "bg-[var(--command-active-bg)] border-accent/50 ring-1 ring-accent/30"
                   : "bg-[var(--bg-panel)] border-border hover:border-[var(--border-strong)]"
@@ -581,7 +581,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
             return (
               <div
                 key={g.id}
-                className={`flex items-center gap-1.5 min-w-0 rounded-[10px] border transition-colors ${
+                className={`flex items-center gap-1.5 min-w-0 rounded-md border transition-colors ${
                   active
                     ? "bg-[var(--command-active-bg)] border-accent/50 ring-1 ring-accent/30"
                     : "bg-[var(--bg-panel)] border-border hover:border-[var(--border-strong)]"
@@ -593,7 +593,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
                     setGroupFilter((current) => (current === g.id ? null : g.id));
                     dismissSidebars();
                   }}
-                  className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-left"
+                  className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-md text-left"
                 >
                   <GroupIcon />
                   <div className="min-w-0 flex-1">
@@ -645,7 +645,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
                   window.dispatchEvent(new CustomEvent("tm:new-connection"));
                 }
               }}
-              className="inline-flex items-center gap-1 px-2.5 h-7 rounded-[8px] text-[11.5px] font-sans font-medium text-accent border border-accent/40 bg-accent/10 hover:bg-accent/15 hover:border-accent/60 transition-colors"
+              className="inline-flex items-center gap-1 px-2.5 h-7 rounded-sm text-[11.5px] font-sans font-medium text-accent border border-accent/40 bg-accent/10 hover:bg-accent/15 hover:border-accent/60 transition-colors"
             >
               <Plus size={11} weight="bold" aria-hidden />
               Add hosts
@@ -684,7 +684,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: "100%", opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="absolute z-20 top-4 right-4 bottom-4 w-[320px] max-w-[min(320px,calc(100%-2rem))] flex flex-col rounded-[14px] border border-[var(--border-strong)] shadow-2xl overflow-hidden"
+            className="absolute z-20 top-4 right-4 bottom-4 w-[320px] max-w-[min(320px,calc(100%-2rem))] flex flex-col rounded-xl border border-[var(--border-strong)] shadow-2xl overflow-hidden"
             style={{ background: "var(--sidebar-bg)" }}
           >
             <div className="flex-1 min-h-0 overflow-y-auto">
@@ -699,7 +699,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
 
 function GroupIcon() {
   return (
-    <div className="w-9 h-9 shrink-0 rounded-[10px] bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8] grid place-items-center text-white shadow-inner">
+    <div className="w-9 h-9 shrink-0 rounded-md bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8] grid place-items-center text-white shadow-inner">
       <HardDrives size={16} weight="fill" />
     </div>
   );
@@ -707,7 +707,7 @@ function GroupIcon() {
 
 function UncategorizedGroupIcon() {
   return (
-    <div className="w-9 h-9 shrink-0 rounded-[10px] bg-[var(--input-bg)] border border-dashed border-[var(--border-strong)] grid place-items-center text-fg-muted">
+    <div className="w-9 h-9 shrink-0 rounded-md bg-[var(--input-bg)] border border-dashed border-[var(--border-strong)] grid place-items-center text-fg-muted">
       <FolderDashed size={16} weight="regular" className="text-fg-muted" />
     </div>
   );
@@ -715,7 +715,7 @@ function UncategorizedGroupIcon() {
 
 function AllGroupIcon() {
   return (
-    <div className="w-9 h-9 shrink-0 rounded-[10px] bg-[var(--input-bg)] border border-[var(--border-strong)] grid place-items-center text-fg-muted shadow-inner">
+    <div className="w-9 h-9 shrink-0 rounded-md bg-[var(--input-bg)] border border-[var(--border-strong)] grid place-items-center text-fg-muted shadow-inner">
       <SquaresFour size={16} weight="fill" className="text-fg" />
     </div>
   );
@@ -738,13 +738,13 @@ function HostCard({
 
   return (
     <div
-      className={`flex items-center gap-3 px-3 py-3 rounded-[10px] border transition-colors ${
+      className={`flex items-center gap-3 px-3 py-3 rounded-md border transition-colors ${
         active
           ? "border-[var(--border-strong)] bg-[var(--neutral-hover-bg)]"
           : "bg-[var(--bg-panel)] border-border hover:border-[var(--border-strong)]"
       }`}
     >
-      <HostIcon conn={conn} size={36} />
+      <HostIcon conn={conn} size={32} />
       <div className="min-w-0 flex-1">
         <div className="text-[12.5px] font-sans font-semibold text-fg truncate">{conn.name}</div>
         <div className="text-[11px] font-sans text-fg-muted truncate">
@@ -756,7 +756,7 @@ function HostCard({
           type="button"
           onClick={onShowDetails}
           aria-label="Edit host"
-          className="group/edit inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-success/20 bg-success/10 text-fg-muted transition-[width,background-color,border-color,padding,gap,justify-content,color] duration-200 ease-out hover:w-[3.125rem] hover:justify-start hover:gap-0.5 hover:border-success/40 hover:bg-success/20 hover:px-1.5 hover:text-success"
+          className="group/edit inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-success/20 bg-success/10 text-fg-muted transition-[width,background-color,border-color,padding,gap,justify-content,color] duration-200 ease-out hover:w-[3.125rem] hover:justify-start hover:gap-0.5 hover:border-success/40 hover:bg-success/20 hover:px-1.5 hover:text-success"
         >
           <PencilSimple size={11} weight="regular" className="shrink-0" />
           <span className="max-w-0 overflow-hidden whitespace-nowrap text-[11px] font-sans font-medium opacity-0 transition-[max-width,opacity] duration-200 ease-out group-hover/edit:max-w-[2rem] group-hover/edit:opacity-100">
@@ -768,7 +768,7 @@ function HostCard({
           onClick={onConnect}
           disabled={isConnecting}
           aria-label="Connect"
-          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-[6px] border border-border bg-[var(--command-bg)] text-fg hover:bg-[var(--command-active-bg)] hover:border-[var(--border-strong)] disabled:opacity-55 disabled:pointer-events-none transition-colors text-[11px] font-sans font-medium"
+          className="inline-flex items-center gap-1 h-7 px-2.5 rounded-sm border border-border bg-[var(--command-bg)] text-fg hover:bg-[var(--command-active-bg)] hover:border-[var(--border-strong)] disabled:opacity-55 disabled:pointer-events-none transition-colors text-[11px] font-sans font-medium"
         >
           <Lightning size={11} weight="fill" />
           {isConnecting ? "Connecting" : "Connect"}
@@ -788,7 +788,7 @@ function EmptyHosts() {
             window.dispatchEvent(new CustomEvent("tm:new-connection"));
           }
         }}
-        className="group relative flex items-center gap-4 px-5 py-4 rounded-[12px] border border-dashed border-[var(--border-strong)] max-w-[480px] w-full overflow-hidden transition-all duration-300 hover:border-accent hover:border-solid hover:bg-[var(--bg-panel)]/40 active:scale-[0.995]"
+        className="group relative flex items-center gap-4 px-5 py-4 rounded-lg border border-dashed border-[var(--border-strong)] max-w-[480px] w-full overflow-hidden transition-all duration-300 hover:border-accent hover:border-solid hover:bg-[var(--bg-panel)]/40 active:scale-[0.995]"
         style={{
           background: `linear-gradient(155deg, 
             color-mix(in oklab, var(--bg-panel) 94%, var(--accent)), 
@@ -796,7 +796,7 @@ function EmptyHosts() {
             color-mix(in oklab, var(--bg-panel) 96%, var(--accent)) 100%)`,
         }}
       >
-        <div className="w-10 h-10 shrink-0 rounded-[9px] flex items-center justify-center bg-accent/8 text-accent border border-accent/20 transition-transform duration-300 group-hover:scale-105 shadow-sm">
+        <div className="w-10 h-10 shrink-0 rounded-sm flex items-center justify-center bg-accent/8 text-accent border border-accent/20 transition-transform duration-300 group-hover:scale-105 shadow-sm">
           <HardDrives size={20} weight="duotone" />
         </div>
 
@@ -810,7 +810,7 @@ function EmptyHosts() {
         </div>
 
         <div className="shrink-0 ml-2">
-          <span className="inline-flex items-center gap-1 px-4 h-8 ml-3 rounded-[8px] text-[11.5px] font-sans font-medium text-accent border border-accent/40 bg-accent/10 transition-colors group-hover:bg-accent/15 group-hover:border-accent/60">
+          <span className="inline-flex items-center gap-1 px-4 h-8 ml-3 rounded-sm text-[11.5px] font-sans font-medium text-accent border border-accent/40 bg-accent/10 transition-colors group-hover:bg-accent/15 group-hover:border-accent/60">
             <Plus size={11} weight="bold" aria-hidden />
             Add host
           </span>
@@ -870,6 +870,7 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
       iconColor: conn.iconColor,
       iconKind: conn.iconKind,
       iconBrand: conn.iconBrand,
+      iconIconoir: conn.iconIconoir,
       aiFeaturesEnabled: conn.aiFeaturesEnabled,
       ...patch,
     });
@@ -877,14 +878,20 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
 
   const iconValue: IconValue = conn.iconBrand
     ? { kind: "brand", id: conn.iconBrand }
-    : { kind: "system", id: conn.iconKind ?? "generic", color: conn.iconColor };
+    : conn.iconIconoir
+      ? { kind: "iconoir", id: conn.iconIconoir }
+      : { kind: "system", id: conn.iconKind ?? "generic", color: conn.iconColor };
 
   const handleIconChange = (v: IconValue) => {
     if (v.kind === "brand") {
-      persist({ iconBrand: v.id });
+      persist({ iconBrand: v.id, iconIconoir: undefined, iconIconoirStyle: undefined });
+    } else if (v.kind === "iconoir") {
+      persist({ iconBrand: undefined, iconIconoir: v.id, iconIconoirStyle: undefined });
     } else {
       persist({
         iconBrand: undefined,
+        iconIconoir: undefined,
+        iconIconoirStyle: undefined,
         iconKind: v.id,
         iconColor: v.color ?? conn.iconColor,
       });
@@ -900,7 +907,7 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
             type="button"
             onClick={onClose}
             aria-label="Close host details"
-            className="w-7 h-7 -mt-1 -mr-1 grid place-items-center rounded-[7px] text-fg-muted hover:text-fg hover:bg-[var(--neutral-hover-bg)] transition-colors"
+            className="w-7 h-7 -mt-1 -mr-1 grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--neutral-hover-bg)] transition-colors"
           >
             <X size={13} weight="bold" />
           </button>
@@ -910,7 +917,7 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
       <div>
         <FieldLabel>Address</FieldLabel>
         <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-2 pl-1.5 pr-2 h-10 rounded-[10px] bg-[var(--input-bg)] border border-border focus-within:border-[var(--border-strong)]">
+          <div className="flex items-center gap-2 pl-1.5 pr-2 h-10 rounded-md bg-[var(--input-bg)] border border-border focus-within:border-[var(--border-strong)]">
             <IconPicker value={iconValue} onChange={handleIconChange}>
               {(open) => (
                 <button
@@ -933,7 +940,7 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
               className="min-w-0 flex-1 bg-transparent text-[12.5px] font-mono text-fg placeholder:text-fg-muted focus:outline-none"
             />
           </div>
-          <div className="flex items-center gap-2 px-2 h-9 rounded-[8px] bg-[var(--input-bg)] border border-border focus-within:border-[var(--border-strong)]">
+          <div className="flex items-center gap-2 px-2 h-9 rounded-sm bg-[var(--input-bg)] border border-border focus-within:border-[var(--border-strong)]">
             <span className="text-[10.5px] uppercase tracking-wider font-sans font-semibold text-fg-dim shrink-0 pl-1">
               Port
             </span>
@@ -957,7 +964,7 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="My machine"
-            className="w-full h-9 px-3 rounded-[8px] bg-[var(--input-bg)] border border-border focus:border-[var(--border-strong)] text-[12.5px] font-sans text-fg placeholder:text-fg-muted focus:outline-none"
+            className="w-full h-9 px-3 rounded-sm bg-[var(--input-bg)] border border-border focus:border-[var(--border-strong)] text-[12.5px] font-sans text-fg placeholder:text-fg-muted focus:outline-none"
           />
         </div>
 
@@ -971,7 +978,7 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
 
         <div>
           <SubLabel>Tags</SubLabel>
-          <div className="flex items-start gap-2 px-2 py-1.5 rounded-[8px] bg-[var(--input-bg)] border border-border focus-within:border-[var(--border-strong)] min-h-9">
+          <div className="flex items-start gap-2 px-2 py-1.5 rounded-sm bg-[var(--input-bg)] border border-border focus-within:border-[var(--border-strong)] min-h-9">
             <Tag size={12} weight="bold" className="text-fg-muted shrink-0 mt-1" />
             <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1">
               {(conn.tags ?? []).map((t) => (
@@ -1033,7 +1040,7 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
               const on = hostAllowsAiFeatures(conn);
               persist({ aiFeaturesEnabled: !on });
             }}
-            className="w-full flex items-start justify-between gap-3 px-2 py-2.5 rounded-[8px] text-left hover:bg-[var(--menu-hover-bg)] transition-colors"
+            className="w-full flex items-start justify-between gap-3 px-2 py-2.5 rounded-sm text-left hover:bg-[var(--menu-hover-bg)] transition-colors"
           >
             <div className="min-w-0 flex-1">
               <div className="text-[12.5px] font-sans font-medium text-fg">
@@ -1099,7 +1106,7 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
                 placeholder={"-----BEGIN OPENSSH PRIVATE KEY-----\n"}
                 spellCheck={false}
                 wrap="off"
-                className="w-full min-h-[80px] max-h-[100px] resize-y overflow-auto px-3 py-2.5 rounded-[8px] bg-[var(--input-bg)] border border-border focus:border-[var(--border-strong)] text-[12px] leading-relaxed font-mono text-fg placeholder:text-fg-muted focus:outline-none whitespace-pre"
+                className="w-full min-h-[80px] max-h-[100px] resize-y overflow-auto px-3 py-2.5 rounded-sm bg-[var(--input-bg)] border border-border focus:border-[var(--border-strong)] text-[12px] leading-relaxed font-mono text-fg placeholder:text-fg-muted focus:outline-none whitespace-pre"
               />
             </div>
             <div>
@@ -1244,7 +1251,7 @@ function ActionsAndDanger({
             type="button"
             onClick={onSave}
             disabled={!canSave}
-            className="flex-1 h-9 rounded-[10px] bg-fg text-bg text-[12.5px] font-sans font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity inline-flex items-center justify-center gap-2"
+            className="flex-1 h-9 rounded-md bg-fg text-bg text-[12.5px] font-sans font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity inline-flex items-center justify-center gap-2"
           >
             <FloppyDisk size={13} weight="fill" /> Save
             <PopoverButtonKbd variant="onInverse">S</PopoverButtonKbd>
@@ -1252,7 +1259,7 @@ function ActionsAndDanger({
           <button
             type="button"
             onClick={onCancel}
-            className="h-9 px-3 rounded-[10px] border border-border text-[12.5px] font-sans text-fg-muted hover:text-fg hover:bg-[var(--neutral-hover-bg)] transition-colors inline-flex items-center gap-1.5 shrink-0"
+            className="h-9 px-3 rounded-md border border-border text-[12.5px] font-sans text-fg-muted hover:text-fg hover:bg-[var(--neutral-hover-bg)] transition-colors inline-flex items-center gap-1.5 shrink-0"
           >
             Cancel
             <PopoverButtonKbd>C</PopoverButtonKbd>
@@ -1266,7 +1273,7 @@ function ActionsAndDanger({
           actions.openTab(conn.id);
         }}
         disabled={isConnecting}
-        className="h-10 rounded-[10px] bg-accent text-accent-fg text-[13px] font-sans font-semibold hover:opacity-90 disabled:opacity-55 disabled:pointer-events-none transition-opacity inline-flex items-center justify-center gap-2"
+        className="h-10 rounded-md bg-accent text-accent-fg text-[13px] font-sans font-semibold hover:opacity-90 disabled:opacity-55 disabled:pointer-events-none transition-opacity inline-flex items-center justify-center gap-2"
       >
         <Lightning size={13} weight="fill" /> {isConnecting ? "Connecting" : "Connect"}
       </button>
@@ -1282,7 +1289,7 @@ function ActionsAndDanger({
       ) : null}
 
       <div
-        className="mt-2 rounded-[10px] border p-3"
+        className="mt-2 rounded-md border p-3"
         style={{
           borderColor: "color-mix(in oklab, var(--danger) 45%, transparent)",
           background: "color-mix(in oklab, var(--danger) 8%, transparent)",
@@ -1299,7 +1306,7 @@ function ActionsAndDanger({
             <button
               type="button"
               onClick={() => setConfirmDelete(false)}
-              className="h-8 px-3 rounded-[8px] border border-border text-[12px] font-sans text-fg-muted hover:text-fg hover:bg-[var(--neutral-hover-bg)] transition-colors"
+              className="h-8 px-3 rounded-sm border border-border text-[12px] font-sans text-fg-muted hover:text-fg hover:bg-[var(--neutral-hover-bg)] transition-colors"
             >
               Cancel
             </button>
@@ -1309,7 +1316,7 @@ function ActionsAndDanger({
                 setConfirmDelete(false);
                 actions.deleteConnection(conn.id);
               }}
-              className="flex-1 h-8 rounded-[8px] bg-danger text-white text-[12px] font-sans font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5"
+              className="flex-1 h-8 rounded-sm bg-danger text-white text-[12px] font-sans font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5"
             >
               <Trash size={12} weight="fill" /> Confirm remove
             </button>
@@ -1318,7 +1325,7 @@ function ActionsAndDanger({
           <button
             type="button"
             onClick={() => setConfirmDelete(true)}
-            className="w-full h-8 rounded-[8px] border border-danger/50 text-danger text-[12px] font-sans font-medium hover:bg-danger/10 transition-colors inline-flex items-center justify-center gap-1.5"
+            className="w-full h-8 rounded-sm border border-danger/50 text-danger text-[12px] font-sans font-medium hover:bg-danger/10 transition-colors inline-flex items-center justify-center gap-1.5"
           >
             <Trash size={12} weight="bold" /> Remove host
           </button>
@@ -1365,7 +1372,7 @@ function EditableInputRow({
   type?: "text" | "password";
 }) {
   return (
-    <div className="flex items-center gap-2 px-2.5 h-9 rounded-[8px] bg-[var(--input-bg)] border border-border focus-within:border-[var(--border-strong)]">
+    <div className="flex items-center gap-2 px-2.5 h-9 rounded-sm bg-[var(--input-bg)] border border-border focus-within:border-[var(--border-strong)]">
       <span className="text-fg-muted shrink-0">{icon}</span>
       <input
         type={type}
@@ -1405,7 +1412,7 @@ function GroupSelect({ value, onChange }: { value: string; onChange: (v: string)
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full h-9 px-3 flex items-center justify-between gap-2 rounded-[8px] bg-[var(--input-bg)] border border-border hover:border-[var(--border-strong)] text-[12.5px] font-sans text-fg"
+        className="w-full h-9 px-3 flex items-center justify-between gap-2 rounded-sm bg-[var(--input-bg)] border border-border hover:border-[var(--border-strong)] text-[12.5px] font-sans text-fg"
       >
         <span className={current ? "text-fg" : "text-fg-muted"}>
           {current ? current.name : "No group"}
@@ -1414,7 +1421,7 @@ function GroupSelect({ value, onChange }: { value: string; onChange: (v: string)
       </button>
       {open ? (
         <div
-          className="absolute left-0 right-0 top-full mt-1 z-30 rounded-[10px] border shadow-xl overflow-hidden p-1"
+          className="absolute left-0 right-0 top-full mt-1 z-30 rounded-md border shadow-xl overflow-hidden p-1"
           style={{
             background: "var(--popover-bg)",
             borderColor: "var(--border-strong)",
@@ -1426,7 +1433,7 @@ function GroupSelect({ value, onChange }: { value: string; onChange: (v: string)
               onChange("");
               setOpen(false);
             }}
-            className={`w-full text-left px-2.5 h-8 rounded-[7px] text-[12.5px] font-sans hover:bg-[var(--neutral-hover-bg)] ${
+            className={`w-full text-left px-2.5 h-8 rounded-sm text-[12.5px] font-sans hover:bg-[var(--neutral-hover-bg)] ${
               !current ? "text-fg" : "text-fg-muted"
             }`}
           >
@@ -1440,7 +1447,7 @@ function GroupSelect({ value, onChange }: { value: string; onChange: (v: string)
                 onChange(g.id);
                 setOpen(false);
               }}
-              className={`w-full text-left px-2.5 h-8 rounded-[7px] text-[12.5px] font-sans hover:bg-[var(--neutral-hover-bg)] ${
+              className={`w-full text-left px-2.5 h-8 rounded-sm text-[12.5px] font-sans hover:bg-[var(--neutral-hover-bg)] ${
                 g.id === value
                   ? "text-fg bg-[var(--neutral-hover-bg)] font-medium"
                   : "text-fg-muted"

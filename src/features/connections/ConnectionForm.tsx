@@ -6,8 +6,9 @@ import { Input, Textarea, Field } from "@/components/Input";
 import { Kbd } from "@/components/Kbd";
 import type { AuthType, Connection } from "@/lib/types";
 import { actions } from "@/lib/store";
-import { IconPicker, type IconValue, SYSTEM_ICONS } from "./IconPicker";
+import { IconPicker, type IconValue } from "./IconPicker";
 import { BRAND_ICONS } from "./brandIcons";
+import { ICONOIR_ICONS } from "./iconoirIcons";
 import { AuthMethodToggle } from "./AuthMethodToggle";
 
 export function ConnectionForm({
@@ -27,7 +28,7 @@ export function ConnectionForm({
   const [password, setPassword] = useState("");
   const [privateKey, setPrivateKey] = useState("");
   const [passphrase, setPassphrase] = useState("");
-  const [icon, setIcon] = useState<IconValue>({ kind: "system", id: "generic" });
+  const [icon, setIcon] = useState<IconValue>({ kind: "iconoir", id: "server" });
 
   useEffect(() => {
     if (!open) return;
@@ -42,7 +43,9 @@ export function ConnectionForm({
     setIcon(
       initial?.iconBrand
         ? { kind: "brand", id: initial.iconBrand }
-        : { kind: "system", id: initial?.iconKind ?? "generic", color: initial?.iconColor },
+        : initial?.iconIconoir
+          ? { kind: "iconoir", id: initial.iconIconoir }
+          : { kind: "iconoir", id: "server" },
     );
   }, [open, initial]);
 
@@ -62,6 +65,8 @@ export function ConnectionForm({
       iconKind: icon.kind === "system" ? icon.id : undefined,
       iconColor: icon.kind === "system" ? icon.color : undefined,
       iconBrand: icon.kind === "brand" ? icon.id : undefined,
+      iconIconoir: icon.kind === "iconoir" ? icon.id : undefined,
+      iconIconoirStyle: undefined,
       aiFeaturesEnabled: initial?.aiFeaturesEnabled,
     });
 
@@ -109,7 +114,7 @@ export function ConnectionForm({
       title={initial ? "Edit connection" : "New connection"}
       icon={<HardDrives size={18} weight="duotone" className="text-accent" />}
       footerAlign="start"
-      panelClassName="max-w-lg"
+      panelClassName="max-w-md"
       showFooterSeparator
       footer={
         <>
@@ -136,23 +141,22 @@ export function ConnectionForm({
               <IconPicker value={icon} onChange={setIcon}>
                 {(openPicker) => {
                   const Icon =
-                    icon.kind === "system"
-                      ? (SYSTEM_ICONS.find((item) => item.id === icon.id)?.Icon ?? HardDrives)
-                      : (BRAND_ICONS.find((item) => item.id === icon.id)?.Icon ?? HardDrives);
+                    icon.kind === "brand"
+                      ? (BRAND_ICONS.find((item) => item.id === icon.id)?.Icon ?? HardDrives)
+                      : icon.kind === "iconoir"
+                        ? (ICONOIR_ICONS.find((item) => item.id === icon.id)?.Icon ?? HardDrives)
+                        : HardDrives;
 
                   return (
                     <button
                       type="button"
                       onClick={openPicker}
-                      className="w-7 h-7 flex items-center justify-center rounded-[6px] hover:bg-bg-elev border border-transparent hover:border-border transition-all"
-                      style={{
-                        color: icon.kind === "system" ? (icon.color ?? "var(--accent)") : undefined,
-                      }}
+                      className="w-7 h-7 flex items-center justify-center rounded-sm hover:bg-bg-elev border border-transparent hover:border-border transition-all"
                     >
-                      {icon.kind === "system" ? (
-                        <Icon size={16} weight="fill" />
-                      ) : (
+                      {icon.kind === "iconoir" || icon.kind === "brand" ? (
                         <Icon width={16} height={16} />
+                      ) : (
+                        <Icon size={16} weight="fill" />
                       )}
                     </button>
                   );

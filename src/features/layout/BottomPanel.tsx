@@ -14,6 +14,7 @@ import {
   X,
   ArrowsDownUp,
 } from "@phosphor-icons/react";
+import { GitHubDark } from "@ridemountainpig/svgl-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { HostIcon } from "@/components/HostIcon";
 import { Tooltip } from "@/components/Tooltip";
@@ -232,7 +233,7 @@ function LogsSourcePicker({
           aria-expanded={menuOpen}
           aria-labelledby="logs-source-label"
           title={value === "__all__" ? "Show all logs" : `Source: ${value}`}
-          className="inline-flex items-center gap-1.5 h-6 max-w-[10.5rem] pl-1.5 pr-1 rounded-[8px] border border-border bg-bg text-[10px] font-mono text-fg-muted hover:text-fg hover:border-[var(--border-strong)] focus:outline-none focus:ring-1 focus:ring-border transition-colors"
+          className="relative inline-flex items-center gap-1.5 h-6 max-w-[10.5rem] pl-1.5 pr-1 rounded-sm bg-transparent border-none shadow-none text-[10px] text-fg-muted hover:text-fg focus:outline-none focus:ring-1 focus:ring-border transition-colors after:content-[''] after:absolute after:left-0 after:right-0 after:bottom-[3px] after:h-px after:bg-[var(--border-strong)]"
         >
           <LogSourceGlyph source={value} conn={activeConn} />
           <span className="truncate flex-1 min-w-0 text-left">{label}</span>
@@ -243,7 +244,7 @@ function LogsSourcePicker({
         align="end"
         side="top"
         sideOffset={6}
-        className="p-1 min-w-[11rem] max-w-[16rem] max-h-52 overflow-y-auto rounded-[10px] border border-border bg-[var(--menu-bg)] shadow-2xl scrollbar-thin"
+        className="p-1 min-w-[11rem] max-w-[16rem] max-h-52 overflow-y-auto rounded-md border border-border bg-[var(--menu-bg)] shadow-2xl scrollbar-thin"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <div role="listbox" aria-label="Log source">
@@ -255,7 +256,7 @@ function LogsSourcePicker({
               onChange("__all__");
               setMenuOpen(false);
             }}
-            className={`w-full flex items-center gap-2 px-2 h-7 rounded-[7px] text-left transition-colors ${
+            className={`w-full flex items-center gap-2 px-2 h-7 rounded-sm text-left transition-colors ${
               value === "__all__"
                 ? "bg-[var(--command-active-bg)] text-fg"
                 : "text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg"
@@ -280,7 +281,7 @@ function LogsSourcePicker({
                   onChange(s);
                   setMenuOpen(false);
                 }}
-                className={`w-full flex items-center gap-2 px-2 h-7 rounded-[7px] text-left transition-colors ${
+                className={`w-full flex items-center gap-2 px-2 h-7 rounded-sm text-left transition-colors ${
                   active
                     ? "bg-[var(--command-active-bg)] text-fg"
                     : "text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg"
@@ -371,7 +372,7 @@ function ClearLogsButton() {
           align="end"
           side="top"
           sideOffset={6}
-          className="z-[60] w-[min(calc(100vw-2rem),18rem)] p-0 rounded-[10px] border border-border bg-[var(--menu-bg)] shadow-2xl"
+          className="z-[60] w-[min(calc(100vw-2rem),18rem)] p-0 rounded-md border border-border bg-[var(--menu-bg)] shadow-2xl"
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
           <div className="p-3 pb-2">
@@ -391,7 +392,7 @@ function ClearLogsButton() {
           <div className="p-3 pl-10 flex gap-2 items-center w-full min-w-0">
             <button
               type="button"
-              className="h-8 px-2.5 rounded-[8px] bg-danger text-white text-[12px] font-sans font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5 shrink-0"
+              className="h-8 px-2.5 rounded-sm bg-danger text-white text-[12px] font-sans font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5 shrink-0"
               onClick={() => {
                 actions.clearLogs();
                 setWarnOpen(false);
@@ -402,7 +403,7 @@ function ClearLogsButton() {
             </button>
             <button
               type="button"
-              className="h-8 px-2.5 rounded-[8px] text-[11.5px] font-sans font-medium text-fg-muted hover:bg-[var(--menu-hover-bg)] bg-[var(--menu-hover-bg)]/50 hover:text-fg inline-flex items-center gap-1 shrink-0"
+              className="h-8 px-2.5 rounded-sm text-[11.5px] font-sans font-medium text-fg-muted hover:bg-[var(--menu-hover-bg)] bg-[var(--menu-hover-bg)]/50 hover:text-fg inline-flex items-center gap-1 shrink-0"
               onClick={() => setWarnOpen(false)}
             >
               <X size={12} weight="bold" aria-hidden />
@@ -411,6 +412,21 @@ function ClearLogsButton() {
           </div>
         </PopoverContent>
       </Popover>
+    </Tooltip>
+  );
+}
+
+function GithubLink() {
+  return (
+    <Tooltip label="Star or contribute on GitHub" side="top" delay={400}>
+      <a
+        href="https://github.com/dev-hari-prasad/terminal-muse"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center w-6 h-6 rounded-md text-fg-dim hover:text-fg hover:bg-[var(--menu-hover-bg)]/50 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-border"
+      >
+        <GitHubDark className="w-3.5 h-3.5" fill="currentColor" />
+      </a>
     </Tooltip>
   );
 }
@@ -573,7 +589,8 @@ export function BottomPanel() {
         }`}
       >
         {!open ? (
-          <button
+          <>
+            <button
             type="button"
             aria-expanded={open}
             aria-controls="logs-scroll-region"
@@ -587,6 +604,10 @@ export function BottomPanel() {
               {showTotalInHeader ? `/${logs.length > 99 ? "99+" : logs.length}` : null})
             </span>
           </button>
+          <div className="flex items-center gap-1.5 border-l border-border/60 pl-2 pr-1 h-full bg-bg-panel shrink-0">
+            <GithubLink />
+          </div>
+        </>
         ) : (
           <>
             <button
@@ -597,7 +618,7 @@ export function BottomPanel() {
                 filteredLogs.length === 1 ? "y" : "ies"
               } visible${showTotalInHeader ? ` of ${logs.length} total.` : "."}`}
               onClick={() => actions.toggleBottom()}
-              className="col-span-full row-start-1 z-[1] -m-px min-h-7 h-full rounded-none bg-transparent hover:bg-[var(--menu-hover-bg)]/50 transition-colors border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-inset"
+              className="col-span-full row-start-1 z-[1] m-0 min-h-7 h-full rounded-none bg-transparent hover:bg-[var(--menu-hover-bg)]/50 transition-colors border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-inset"
             />
 
             <div
@@ -638,6 +659,7 @@ export function BottomPanel() {
                 onChange={setSourceFilter}
               />
               <ClearLogsButton />
+              <GithubLink />
             </div>
           </>
         )}

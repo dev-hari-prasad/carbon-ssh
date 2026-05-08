@@ -150,7 +150,7 @@ export function Tooltip({
                 transition: ready ? "opacity 90ms ease-out, transform 90ms ease-out" : "none",
                 transform: ready ? "scale(1)" : "scale(0.96)",
               }}
-              className={`pointer-events-none px-2 py-[6px] rounded-[6px] text-[11px] font-sans border shadow-lg ${
+              className={`pointer-events-none px-2 py-[6px] rounded-sm text-[11px] font-sans border shadow-lg ${
                 multiline
                   ? `${matchAnchorWidth ? "max-w-none" : "max-w-[min(288px,calc(100vw-1.5rem))]"} whitespace-normal text-left leading-snug`
                   : "py-[3px] whitespace-nowrap"

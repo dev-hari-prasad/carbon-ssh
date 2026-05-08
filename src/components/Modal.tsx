@@ -50,7 +50,7 @@ export function Modal({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.98, opacity: 0, y: 4 }}
             transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
-            className={`relative w-full ${panelClassName} bg-bg-elev border border-border rounded-[10px] shadow-2xl overflow-hidden !mb-10`}
+            className={`relative w-full ${panelClassName} bg-bg-elev border border-border rounded-md shadow-2xl overflow-hidden !mb-10`}
           >
             <div className="flex items-center justify-between px-4 h-10 border-b border-border bg-bg-panel">
               <div className="flex items-center gap-2">
