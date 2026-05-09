@@ -534,7 +534,7 @@ function GeneralPanel() {
             <div className="flex flex-col min-w-0 flex-1">
               <span className="text-[13px] font-sans font-medium text-fg">Interface Scale</span>
               <span className="text-[11px] font-sans text-fg-muted leading-tight">
-                Adjust the zoom level of the UI.
+                Adjust the zoom level.
               </span>
             </div>
 
@@ -567,9 +567,9 @@ function GeneralPanel() {
           <div className="flex flex-col gap-2 mt-6 px-0">
             <div className="flex flex-col min-w-0">
               <span className="text-[13px] font-sans font-medium text-fg">Tab Bar</span>
-              <span className="text-[11px] font-sans text-fg-muted leading-tight">
+              {/* <span className="text-[11px] font-sans text-fg-muted leading-tight">
                 Switch between horizontal and vertical tab layouts.
-              </span>
+              </span> */}
             </div>
             <TabBarOrientationSelect
               value={tabBarOrientation}
@@ -580,9 +580,9 @@ function GeneralPanel() {
           <div className="flex flex-col gap-2 mt-5 px-0">
             <div className="flex flex-col min-w-0">
               <span className="text-[13px] font-sans font-medium text-fg">Terminal Cursor</span>
-              <span className="text-[11px] font-sans text-fg-muted leading-tight">
+              {/* <span className="text-[11px] font-sans text-fg-muted leading-tight">
                 Choose the shape and behavior of the terminal cursor.
-              </span>
+              </span> */}
             </div>
             <TerminalCursorSelect
               value={terminalCursorStyle}
@@ -808,7 +808,7 @@ function GeneralPanel() {
           {privacySubTab === "analytics" ? (
             <ToggleRow
               label="Share anonymous usage analytics"
-              description="Carbon collects anonymous app usage data only. No private information related to your SSH hosts or terminal are ever collected."
+              description="Carbon collects anonymous app usage data only. No private information is collected."
               value={telemetryEnabled}
               onChange={actions.setTelemetryEnabled}
             />
@@ -1062,7 +1062,7 @@ function LogSettingsGroup() {
           </div>
           <p className="text-[11px] text-fg-muted mt-1 leading-relaxed">
             Drop <strong> local activity log entries older than this window </strong> in the
-            activity panel. Choosing{" "}
+            activity panel. {" "}
           </p>
         </div>
         <LogRetentionSelect value={logRetention} onChange={(id) => actions.setLogRetention(id)} />
@@ -1545,7 +1545,7 @@ function ThemePreview({ theme }: { theme: AppTheme }) {
 }
 
 /** Public source; used in AI & privacy FAQ (keep in sync if the repo moves). */
-const SOURCE_CODE_URL = "https://github.com/dev-hari-prasad/terminal-muse";
+const SOURCE_CODE_URL = "https://github.com/CarbonSSH/carbon";
 
 const AI_PANEL_FAQ: { q: string; a: ReactNode }[] = [
   {

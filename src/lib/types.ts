@@ -53,6 +53,16 @@ export interface Tab {
   commandCount: number;
 }
 
+/** Split view layout preset. */
+export type SplitLayout = "two-columns" | "two-rows" | "grid-4" | "left-main";
+
+export const SPLIT_LAYOUT_SLOTS: Record<SplitLayout, number> = {
+  "two-columns": 2,
+  "two-rows": 2,
+  "grid-4": 4,
+  "left-main": 3,
+};
+
 export interface LogEntry {
   id: string;
   ts: number;

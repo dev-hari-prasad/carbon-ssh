@@ -4,7 +4,7 @@
 > **Author:** Security Architecture
 > **Last updated:** 2026-05-08
 > **Status:** Pre-implementation planning
-> **Product:** Carbon (Terminal Muse) — AI-powered SSH terminal platform
+> **Product:** Carbon — AI-powered SSH terminal platform
 
 ---
 

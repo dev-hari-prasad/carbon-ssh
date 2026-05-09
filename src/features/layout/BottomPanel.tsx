@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { actions, useStore } from "@/lib/store";
 import type { Connection } from "@/lib/types";
 
-const LOGS_HEIGHT_STORAGE_KEY = "terminal-muse.logs-panel-height.v1";
+const LOGS_HEIGHT_STORAGE_KEY = "carbon.logs-panel-height.v1";
 const DEFAULT_LOGS_BODY_PX = 160;
 /** Area above logs used as drag resize target (excluding bottom strip). */
 const LOGS_RESIZE_HANDLE_PX = 6;
@@ -233,7 +233,7 @@ function LogsSourcePicker({
           aria-expanded={menuOpen}
           aria-labelledby="logs-source-label"
           title={value === "__all__" ? "Show all logs" : `Source: ${value}`}
-          className="relative inline-flex items-center gap-1.5 h-6 max-w-[10.5rem] pl-1.5 pr-1 rounded-sm bg-transparent border-none shadow-none text-[10px] text-fg-muted hover:text-fg focus:outline-none focus:ring-1 focus:ring-border transition-colors after:content-[''] after:absolute after:left-0 after:right-0 after:bottom-[3px] after:h-px after:bg-[var(--border-strong)]"
+          className="relative inline-flex items-center gap-1.5 h-6 max-w-[10.5rem] pl-1.5 pr-1 rounded-sm bg-transparent shadow-none text-[10px] text-fg-muted hover:text-fg focus:outline-none !border-none transition-colors after:content-[''] after:absolute after:left-0 after:right-0 after:bottom-[3px] after:h-px after:bg-[var(--border-strong)]"
         >
           <LogSourceGlyph source={value} conn={activeConn} />
           <span className="truncate flex-1 min-w-0 text-left">{label}</span>
@@ -420,7 +420,7 @@ function GithubLink() {
   return (
     <Tooltip label="Star or contribute on GitHub" side="top" delay={400}>
       <a
-        href="https://github.com/dev-hari-prasad/terminal-muse"
+        href="https://github.com/CarbonSSH/carbon"
         target="_blank"
         rel="noopener noreferrer"
         className="flex items-center justify-center w-6 h-6 rounded-md text-fg-dim hover:text-fg hover:bg-[var(--menu-hover-bg)]/50 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-border"
@@ -595,7 +595,7 @@ export function BottomPanel() {
             aria-expanded={open}
             aria-controls="logs-scroll-region"
             onClick={() => actions.toggleBottom()}
-            className="flex-1 min-w-0 pl-3 pr-3 flex items-center gap-1.5 text-xxs uppercase font-sans font-semibold text-fg-muted hover:text-fg hover:bg-[var(--menu-hover-bg)]/50 tracking-wider transition-colors rounded-none text-left"
+            className="flex-1 min-w-0 pl-3 pr-3 flex items-center gap-1.5 text-xxs uppercase font-sans font-semibold text-fg-muted hover:text-fg hover:bg-[var(--menu-hover-bg)]/50 tracking-wider transition-colors rounded-none text-left !transform-none"
           >
             <CaretUp size={11} weight="bold" />
             Activity Logs
@@ -618,7 +618,7 @@ export function BottomPanel() {
                 filteredLogs.length === 1 ? "y" : "ies"
               } visible${showTotalInHeader ? ` of ${logs.length} total.` : "."}`}
               onClick={() => actions.toggleBottom()}
-              className="col-span-full row-start-1 z-[1] m-0 min-h-7 h-full rounded-none bg-transparent hover:bg-[var(--menu-hover-bg)]/50 transition-colors border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-inset"
+              className="col-span-full row-start-1 z-[1] m-0 min-h-7 h-full rounded-none bg-transparent hover:bg-[var(--menu-hover-bg)]/50 transition-colors border-0 p-0 cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-border focus-visible:ring-inset !transform-none"
             />
 
             <div

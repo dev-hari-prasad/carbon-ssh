@@ -60,7 +60,7 @@ export async function createWebAuthnPasskey() {
     throw new Error("Passkeys are not available in this app window.");
   }
 
-  const rp: PublicKeyCredentialRpEntity = { name: "Terminal Muse" };
+  const rp: PublicKeyCredentialRpEntity = { name: "Carbon SSH" };
   if (window.location.hostname) {
     rp.id = window.location.hostname;
   }

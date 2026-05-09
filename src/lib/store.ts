@@ -21,9 +21,11 @@ import type {
   ConnectionRuntimeStatus,
   HostGroup,
   LogEntry,
+  SplitLayout,
   Tab,
   ThemeId,
 } from "./types";
+import { SPLIT_LAYOUT_SLOTS } from "./types";
 import {
   applyTelemetryPreference,
   trackFeatureUsed,
@@ -93,6 +95,10 @@ interface State {
   tabBarOrientation: TabBarOrientation;
   sidebarCollapsed: boolean;
   sidebarWidth: number;
+  splitTabIds: string[];
+  splitLayout: SplitLayout;
+  splitColRatio: number;
+  splitRowRatio: number;
 }
 
 /** Default UI scale: 100% in Electron; 110% in the browser. */
@@ -129,6 +135,10 @@ let state: State = {
   tabBarOrientation: "horizontal",
   sidebarCollapsed: false,
   sidebarWidth: 200,
+  splitTabIds: [],
+  splitLayout: "two-columns" as SplitLayout,
+  splitColRatio: 0.5,
+  splitRowRatio: 0.5,
 };
 
 const SETTINGS_OPEN_COUNT_KEY = "ssh.settings-open-count.v1";
@@ -425,11 +435,16 @@ export const actions = {
     if (!stillOpenForConn) {
       delete connectionStatus[connectionId];
     }
+    const splitTabIds = state.splitTabIds.filter((sid) => sid !== id);
     setState({
       tabs,
       activeTabId,
+      splitTabIds,
       closedTabs: [tab.connectionId, ...state.closedTabs].slice(0, 20),
       connectionStatus,
+      ...(splitTabIds.length < 2
+        ? { splitLayout: "two-columns" as SplitLayout, splitColRatio: 0.5, splitRowRatio: 0.5 }
+        : {}),
     });
   },
 
@@ -699,5 +714,104 @@ export const actions = {
     const clamped = Math.max(minW, Math.min(400, Math.round(w)));
     saveSidebarWidth(clamped);
     setState({ sidebarWidth: clamped });
+  },
+
+  /** Browser-style reorder: move one tab to a new index. Split membership is preserved — tabs stay in/out of the split group regardless of where they move. */
+  moveTab(tabId: string, rawInsertIndex: number) {
+    ensureInit();
+    const oldTabs = state.tabs;
+    const fromIdx = oldTabs.findIndex((t) => t.id === tabId);
+    if (fromIdx === -1) return;
+
+    const tabs = [...oldTabs];
+    const [moved] = tabs.splice(fromIdx, 1);
+    const clampedRaw = Math.max(0, Math.min(rawInsertIndex, tabs.length));
+    const insertAt = fromIdx < clampedRaw ? clampedRaw - 1 : clampedRaw;
+    tabs.splice(insertAt, 0, moved);
+
+    // Keep split membership for tabs that were already in the split — just in their new positions.
+    // If a non-split tab is dragged between two split tabs it doesn't join.
+    const splitSet = new Set(state.splitTabIds);
+    const nextSplitIds = tabs.map((t) => t.id).filter((id) => splitSet.has(id));
+    if (nextSplitIds.length < 2) {
+      setState({
+        tabs,
+        splitTabIds: [],
+        splitLayout: "two-columns",
+        splitColRatio: 0.5,
+        splitRowRatio: 0.5,
+      });
+    } else {
+      setState({ tabs, splitTabIds: nextSplitIds });
+    }
+  },
+
+  addToSplit(tabId: string) {
+    if (state.splitTabIds.includes(tabId)) return;
+    const ids = [...state.splitTabIds, tabId];
+    setState({ splitTabIds: ids, activeTabId: tabId });
+  },
+
+  removeFromSplit(tabId: string) {
+    const ids = state.splitTabIds.filter((id) => id !== tabId);
+    let activeTabId = state.activeTabId;
+    if (activeTabId === tabId) {
+      activeTabId = ids[0] ?? state.tabs[0]?.id ?? null;
+    }
+    const exitingSplit = ids.length < 2;
+    setState({
+      splitTabIds: ids,
+      activeTabId,
+      ...(exitingSplit
+        ? { splitLayout: "two-columns" as SplitLayout, splitColRatio: 0.5, splitRowRatio: 0.5 }
+        : {}),
+    });
+  },
+
+  toggleSplit(tabId: string) {
+    if (state.splitTabIds.includes(tabId)) {
+      actions.removeFromSplit(tabId);
+    } else {
+      actions.addToSplit(tabId);
+    }
+  },
+
+  splitAllTabs() {
+    actions.applySplitLayout("two-columns");
+  },
+
+  applySplitLayout(layout: SplitLayout) {
+    ensureInit();
+    const slots = SPLIT_LAYOUT_SLOTS[layout];
+    const ids = state.tabs.slice(0, slots).map((t) => t.id);
+    if (ids.length < 2) return;
+    setState({
+      splitTabIds: ids,
+      splitLayout: layout,
+      splitColRatio: 0.5,
+      splitRowRatio: 0.5,
+      activeTabId: state.activeTabId ?? ids[0],
+    });
+  },
+
+  clearSplit() {
+    setState({
+      splitTabIds: [],
+      splitLayout: "two-columns" as SplitLayout,
+      splitColRatio: 0.5,
+      splitRowRatio: 0.5,
+    });
+  },
+
+  setSplitLayout(layout: SplitLayout) {
+    setState({ splitLayout: layout });
+  },
+
+  setSplitColRatio(ratio: number) {
+    setState({ splitColRatio: Math.max(0.15, Math.min(0.85, ratio)) });
+  },
+
+  setSplitRowRatio(ratio: number) {
+    setState({ splitRowRatio: Math.max(0.15, Math.min(0.85, ratio)) });
   },
 };

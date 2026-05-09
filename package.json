@@ -1,5 +1,5 @@
 {
-  "name": "relay-ssh",
+  "name": "carbon-ssh",
   "version": "0.1.0",
   "private": true,
   "sideEffects": false,
@@ -10,8 +10,8 @@
     "dev": "set NODE_OPTIONS=--max-old-space-size=4096 && tsx server.ts",
     "dev:electron": "concurrently -k -n server,electron -c cyan,green \"tsx server.ts\" \"wait-on -t 60000 -i 3000 http://localhost:3000 && electron .\"",
     "build": "next build",
-    "build:electron": "powershell -Command \"Get-Process 'Relay SSH*' -ErrorAction SilentlyContinue | Stop-Process -Force; Remove-Item -Path dist-electron-out -Recurse -Force -ErrorAction SilentlyContinue\" && next build --turbopack && electron-builder --config electron-builder.yml --dir",
-    "build:electron-release": "powershell -Command \"Get-Process 'Relay SSH*' -ErrorAction SilentlyContinue | Stop-Process -Force; Remove-Item -Path dist-electron-out -Recurse -Force -ErrorAction SilentlyContinue\" && next build --turbopack && electron-builder --config electron-builder.yml --config.compression=maximum",
+    "build:electron": "powershell -Command \"Get-Process 'Carbon SSH*' -ErrorAction SilentlyContinue | Stop-Process -Force; Remove-Item -Path dist-electron-out -Recurse -Force -ErrorAction SilentlyContinue\" && next build --turbopack && electron-builder --config electron-builder.yml --dir",
+    "build:electron-release": "powershell -Command \"Get-Process 'Carbon SSH*' -ErrorAction SilentlyContinue | Stop-Process -Force; Remove-Item -Path dist-electron-out -Recurse -Force -ErrorAction SilentlyContinue\" && next build --turbopack && electron-builder --config electron-builder.yml --config.compression=maximum",
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write ."

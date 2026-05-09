@@ -77,6 +77,79 @@ if (!isDev) {
 let mainWindow = null;
 let nextProcess = null;
 
+function renderSplashHtml() {
+  const logoDir = isDev
+    ? path.join(__dirname, "..", "public", "logo")
+    : path.join(process.resourcesPath, "standalone", "public", "logo");
+
+  let logoB64 = "";
+  try {
+    const logoPath = path.join(logoDir, "Carbon logo light.png");
+    logoB64 = fs.readFileSync(logoPath).toString("base64");
+  } catch {
+    // If logo can't be read, splash still works without it
+  }
+
+  const logoTag = logoB64
+    ? `<img src="data:image/png;base64,${logoB64}" alt="" class="logo" />`
+    : "";
+
+  return `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Loading</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #0d1117;
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+      -webkit-app-region: drag;
+    }
+    .logo {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      margin-bottom: 28px;
+      opacity: 0.92;
+    }
+    .track {
+      width: 120px;
+      height: 2px;
+      border-radius: 1px;
+      background: rgba(255, 255, 255, 0.06);
+      position: relative;
+      overflow: hidden;
+    }
+    .dash {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 36px;
+      height: 100%;
+      border-radius: 1px;
+      background: rgba(255, 255, 255, 0.28);
+      animation: bounce 1.2s ease-in-out infinite alternate;
+    }
+    @keyframes bounce {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(84px); }
+    }
+  </style>
+</head>
+<body>
+  ${logoTag}
+  <div class="track"><div class="dash"></div></div>
+</body>
+</html>`;
+}
+
 function renderFatalHtml(title, details, logs = "") {
   const safeTitle = String(title || "Failed to start");
   const safeDetails = String(details || "");
@@ -130,12 +203,16 @@ function createWindow() {
     },
   });
 
-  mainWindow.once("ready-to-show", () => mainWindow.show());
-
-  // If the UI never becomes "ready", still show the window so users aren't stuck with a background process.
-  setTimeout(() => {
-    if (mainWindow && !mainWindow.isVisible()) mainWindow.show();
-  }, 3000);
+  // Show splash screen immediately
+  const splashHtml = renderSplashHtml();
+  mainWindow
+    .loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(splashHtml)}`)
+    .then(() => {
+      if (mainWindow && !mainWindow.isVisible()) mainWindow.show();
+    })
+    .catch(() => {
+      if (mainWindow) mainWindow.show();
+    });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);

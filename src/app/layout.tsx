@@ -7,7 +7,7 @@ import { SmoothCornersRuntime } from "@/components/SmoothCornersRuntime";
 import Script from "next/script";
 
 export const metadata = {
-  title: "relay/ssh — local SSH client",
+  title: "Carbon SSH — local SSH client",
   description: "A fast, minimal, local-first SSH client for developers.",
 };
 

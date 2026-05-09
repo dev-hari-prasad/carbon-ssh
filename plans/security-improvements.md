@@ -562,7 +562,7 @@ The SQLite database used for logs is stored as a plain file:
 const dbPath =
   process.env.NODE_ENV === "production"
     ? path.join(process.cwd(), "database.sqlite")
-    : path.join(os.tmpdir(), "terminal-muse-database.sqlite");
+    : path.join(os.tmpdir(), "carbon-database.sqlite");
 ```
 
 If log sanitization (Finding 5) fails, this file could contain sensitive data unencrypted on disk.

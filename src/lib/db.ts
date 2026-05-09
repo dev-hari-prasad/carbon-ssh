@@ -7,7 +7,7 @@ import { PHASE_PRODUCTION_BUILD } from "next/constants";
 const dbPath =
   process.env.NODE_ENV === "production"
     ? path.join(process.cwd(), "database.sqlite")
-    : path.join(os.tmpdir(), "terminal-muse-database.sqlite");
+    : path.join(os.tmpdir(), "carbon-database.sqlite");
 
 let dbInstance: ReturnType<typeof Database> | null = null;
 

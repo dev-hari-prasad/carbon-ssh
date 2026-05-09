@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Plus,
   X,
@@ -20,10 +20,11 @@ import {
   FloppyDisk,
   SquaresFour,
   FolderDashed,
+  ArrowsOutSimple,
 } from "@phosphor-icons/react";
 import { actions, useStore } from "@/lib/store";
 import { TerminalView } from "@/features/terminal/TerminalView";
-import type { AuthType, Connection, ConnectionRuntimeStatus, HostGroup } from "@/lib/types";
+import type { AuthType, Connection, ConnectionRuntimeStatus, HostGroup, SplitLayout, Tab } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { IconPicker, type IconValue } from "@/features/connections/IconPicker";
@@ -31,6 +32,7 @@ import { BRAND_ICON_MAP } from "@/features/connections/brandIcons";
 import { AuthMethodToggle } from "@/features/connections/AuthMethodToggle";
 import { Tooltip } from "@/components/Tooltip";
 import { HostIcon } from "@/components/HostIcon";
+import { TabIcon } from "@/components/TabIcon";
 import { hostAllowsAiFeatures } from "@/lib/ai";
 import { AnimatePresence, motion } from "framer-motion";
 
@@ -56,10 +58,153 @@ function PopoverButtonKbd({
   );
 }
 
+function ResizeHandle({
+  direction,
+  containerRef,
+  onRatioChange,
+}: {
+  direction: "col" | "row";
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  onRatioChange: (ratio: number) => void;
+}) {
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const container = containerRef.current;
+      if (!container) return;
+
+      document.body.style.cursor = direction === "col" ? "col-resize" : "row-resize";
+      document.body.style.userSelect = "none";
+
+      const onMove = (ev: MouseEvent) => {
+        const rect = container.getBoundingClientRect();
+        const ratio =
+          direction === "col"
+            ? (ev.clientX - rect.left) / rect.width
+            : (ev.clientY - rect.top) / rect.height;
+        onRatioChange(Math.max(0.15, Math.min(0.85, ratio)));
+      };
+
+      const onUp = () => {
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
+    },
+    [direction, containerRef, onRatioChange],
+  );
+
+  return (
+    <div
+      onMouseDown={handleMouseDown}
+      onDoubleClick={() => onRatioChange(0.5)}
+      className={`shrink-0 bg-border/30 transition-colors hover:bg-accent/40 active:bg-accent/60 z-20 ${
+        direction === "col" ? "w-[4px] cursor-col-resize" : "h-[4px] cursor-row-resize"
+      }`}
+    />
+  );
+}
+
+function SplitPane({
+  tab,
+  conn,
+  isFocused,
+  status,
+}: {
+  tab: Tab;
+  conn: Connection;
+  isFocused: boolean;
+  status?: ConnectionRuntimeStatus;
+}) {
+  return (
+    <div
+      className={`relative overflow-hidden bg-bg w-full h-full ${
+        isFocused ? "ring-1 ring-accent/50 ring-inset" : ""
+      }`}
+      onClick={() => actions.setActiveTab(tab.id)}
+    >
+      {/* Thin accent line at top of focused pane */}
+      {isFocused && (
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent z-20" />
+      )}
+      <div className={`absolute top-0 left-0 right-0 z-10 flex items-center justify-between h-7 px-2 backdrop-blur-sm border-b ${
+        isFocused
+          ? "bg-accent/10 border-accent/25"
+          : "bg-[var(--titlebar-bg)]/80 border-border/30"
+      }`}>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <TabIcon conn={conn} size={14} />
+          <span className={`text-[11px] font-sans font-medium truncate ${
+            isFocused ? "text-fg" : "text-fg-muted"
+          }`}>{tab.title}</span>
+          {status?.state === "connected" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
+          )}
+          {status?.state === "error" && (
+            <span className="w-1.5 h-1.5 rounded-full bg-danger shrink-0" />
+          )}
+        </div>
+        <div className="flex items-center gap-0.5 shrink-0">
+          <Tooltip label="Focus this pane" side="bottom">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                actions.clearSplit();
+                actions.setActiveTab(tab.id);
+              }}
+              className={`w-5 h-5 grid place-items-center rounded-sm transition-colors ${
+                isFocused
+                  ? "text-accent/70 hover:text-accent hover:bg-accent/15"
+                  : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
+              }`}
+              aria-label="Focus pane"
+            >
+              <ArrowsOutSimple size={11} weight="bold" />
+            </button>
+          </Tooltip>
+          <Tooltip label="Remove from split" side="bottom">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                actions.removeFromSplit(tab.id);
+              }}
+              className={`w-5 h-5 grid place-items-center rounded-sm transition-colors ${
+                isFocused
+                  ? "text-accent/70 hover:text-accent hover:bg-accent/15"
+                  : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
+              }`}
+              aria-label="Remove from split"
+            >
+              <X size={10} weight="bold" />
+            </button>
+          </Tooltip>
+        </div>
+      </div>
+      <div className="absolute inset-0 pt-7">
+        <TerminalView tab={tab} conn={conn} />
+      </div>
+    </div>
+  );
+}
+
 export function MainArea() {
   const tabs = useStore((s) => s.tabs);
   const activeTabId = useStore((s) => s.activeTabId);
   const connections = useStore((s) => s.connections);
+  const splitTabIds = useStore((s) => s.splitTabIds);
+  const splitLayout = useStore((s) => s.splitLayout);
+  const splitColRatio = useStore((s) => s.splitColRatio);
+  const splitRowRatio = useStore((s) => s.splitRowRatio);
+  const connectionStatus = useStore((s) => s.connectionStatus);
+  const outerSplitRef = useRef<HTMLDivElement>(null);
+  const rightColRef = useRef<HTMLDivElement>(null);
+  const topRowRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -74,9 +219,134 @@ export function MainArea() {
   const activeConn = activeTab ? connections.find((c) => c.id === activeTab.connectionId) ?? null : null;
   const showTerminalSurface = Boolean(activeTabId && activeTab && activeConn);
 
+  const validSplitTabs = splitTabIds
+    .map((id) => tabs.find((t) => t.id === id))
+    .filter((t): t is typeof tabs[number] => t != null);
+
+  const isSplitMode = validSplitTabs.length >= 2;
+
   return (
     <div className="flex-1 min-h-0 relative bg-bg overflow-hidden">
-      {tabs.length > 0 ? (
+      {isSplitMode ? (
+        (() => {
+          const paneFor = (idx: number) => {
+            const t = validSplitTabs[idx];
+            if (!t) return null;
+            const c = connections.find((x) => x.id === t.connectionId);
+            if (!c) return null;
+            return (
+              <SplitPane
+                key={t.id}
+                tab={t}
+                conn={c}
+                isFocused={t.id === activeTabId}
+                status={connectionStatus[c.id]}
+              />
+            );
+          };
+
+          const count = validSplitTabs.length;
+
+          if (splitLayout === "two-columns" && count === 2) {
+            return (
+              <div ref={outerSplitRef} className="absolute inset-0 flex flex-row">
+                <div style={{ width: `${splitColRatio * 100}%` }} className="min-w-0 min-h-0 overflow-hidden">
+                  {paneFor(0)}
+                </div>
+                <ResizeHandle direction="col" containerRef={outerSplitRef} onRatioChange={actions.setSplitColRatio} />
+                <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
+                  {paneFor(1)}
+                </div>
+              </div>
+            );
+          }
+
+          if (splitLayout === "two-rows" && count === 2) {
+            return (
+              <div ref={outerSplitRef} className="absolute inset-0 flex flex-col">
+                <div style={{ height: `${splitRowRatio * 100}%` }} className="min-w-0 min-h-0 overflow-hidden">
+                  {paneFor(0)}
+                </div>
+                <ResizeHandle direction="row" containerRef={outerSplitRef} onRatioChange={actions.setSplitRowRatio} />
+                <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
+                  {paneFor(1)}
+                </div>
+              </div>
+            );
+          }
+
+          if (splitLayout === "grid-4" && count >= 4) {
+            return (
+              <div ref={outerSplitRef} className="absolute inset-0 flex flex-col">
+                <div ref={topRowRef} style={{ height: `${splitRowRatio * 100}%` }} className="flex flex-row min-h-0 overflow-hidden">
+                  <div style={{ width: `${splitColRatio * 100}%` }} className="min-w-0 min-h-0 overflow-hidden">
+                    {paneFor(0)}
+                  </div>
+                  <ResizeHandle direction="col" containerRef={topRowRef} onRatioChange={actions.setSplitColRatio} />
+                  <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
+                    {paneFor(1)}
+                  </div>
+                </div>
+                <ResizeHandle direction="row" containerRef={outerSplitRef} onRatioChange={actions.setSplitRowRatio} />
+                <div className="flex-1 flex flex-row min-h-0 overflow-hidden">
+                  <div style={{ width: `${splitColRatio * 100}%` }} className="min-w-0 min-h-0 overflow-hidden">
+                    {paneFor(2)}
+                  </div>
+                  <ResizeHandle direction="col" containerRef={topRowRef} onRatioChange={actions.setSplitColRatio} />
+                  <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
+                    {paneFor(3)}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          if (splitLayout === "left-main" && count >= 3) {
+            return (
+              <div ref={outerSplitRef} className="absolute inset-0 flex flex-row">
+                <div style={{ width: `${splitColRatio * 100}%` }} className="min-w-0 min-h-0 overflow-hidden">
+                  {paneFor(0)}
+                </div>
+                <ResizeHandle direction="col" containerRef={outerSplitRef} onRatioChange={actions.setSplitColRatio} />
+                <div ref={rightColRef} className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+                  <div style={{ height: `${splitRowRatio * 100}%` }} className="min-w-0 min-h-0 overflow-hidden">
+                    {paneFor(1)}
+                  </div>
+                  <ResizeHandle direction="row" containerRef={rightColRef} onRatioChange={actions.setSplitRowRatio} />
+                  <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
+                    {paneFor(2)}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          /* Fallback: auto-grid for any other tab count */
+          return (
+            <div className="absolute inset-0 grid gap-[2px] bg-border/30" style={
+              count === 2
+                ? { gridTemplateColumns: "1fr 1fr" }
+                : count <= 4
+                  ? { gridTemplateColumns: "1fr 1fr", gridTemplateRows: `repeat(${Math.ceil(count / 2)}, 1fr)` }
+                  : { gridTemplateColumns: `repeat(${Math.ceil(Math.sqrt(count))}, 1fr)` }
+            }>
+              {validSplitTabs.map((t, i) => {
+                const c = connections.find((x) => x.id === t.connectionId);
+                if (!c) return null;
+                return (
+                  <SplitPane
+                    key={t.id}
+                    tab={t}
+                    conn={c}
+                    isFocused={t.id === activeTabId}
+                    status={connectionStatus[c.id]}
+                  />
+                );
+              })}
+            </div>
+          );
+        })()
+      ) : tabs.length > 0 ? (
         <div
           className="absolute inset-0"
           aria-hidden={!showTerminalSurface}
@@ -102,7 +372,7 @@ export function MainArea() {
         </div>
       ) : null}
 
-      {!showTerminalSurface ? (
+      {!showTerminalSurface && !isSplitMode ? (
         <div className="absolute inset-0 z-10 min-h-0 flex flex-col">
           <HostsView connections={connections} />
         </div>

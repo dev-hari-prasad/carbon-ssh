@@ -198,7 +198,7 @@ export function TerminalView({ tab, conn }: Props) {
         }
       });
 
-      term.writeln("relay/ssh — live session shell");
+      term.writeln("Carbon SSH — live session shell");
       const baseMsg = `connecting to ${connectionSnapshot.username}@${connectionSnapshot.host}:${connectionSnapshot.port}…`;
       let spinnerIdx = 0;
       let spinnerActive = true;

@@ -10,7 +10,7 @@ import { UnlockVault } from "@/components/UnlockVault";
 import { useStore } from "@/lib/store";
 import { AnimatePresence, motion } from "framer-motion";
 
-const transition = { duration: 0.25, ease: [0.25, 0.1, 0.25, 1] };
+const transition = { duration: 0.25, ease: [0.25, 0.1, 0.25, 1] as const };
 
 export default function Page() {
   const isUnlocked = useStore((s) => s.isUnlocked);
@@ -23,7 +23,8 @@ export default function Page() {
       {!isUnlocked ? (
         <UnlockVault />
       ) : (
-        <div className="h-screen w-screen flex overflow-hidden bg-bg text-fg">
+        <div className="h-screen w-screen bg-[var(--titlebar-bg)]">
+        <div className="w-full h-full flex overflow-hidden text-fg">
           <AnimatePresence initial={false}>
             {tabBarOrientation === "vertical" && (
               <motion.div
@@ -53,13 +54,18 @@ export default function Page() {
                 </motion.div>
               )}
             </AnimatePresence>
-            <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
-              <MainArea />
-              <SettingsSidebar />
+            <div className={`flex-1 min-h-0 ${tabBarOrientation === "horizontal" ? "px-2 pb-2" : "p-2"}`}>
+              <div className="h-full flex flex-col bg-bg rounded-md overflow-hidden border border-border/30">
+                <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
+                  <MainArea />
+                  <SettingsSidebar />
+                </div>
+                <BottomPanel />
+              </div>
             </div>
-            <BottomPanel />
           </div>
           <KeyboardShortcuts />
+        </div>
         </div>
       )}
     </>

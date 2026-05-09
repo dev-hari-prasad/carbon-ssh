@@ -4,7 +4,7 @@
 > **Author:** Architecture Team
 > **Last updated:** 2026-05-08
 > **Status:** Pre-implementation planning
-> **Product:** Terminal Muse — AI-powered SSH terminal platform
+> **Product:** Carbon — AI-powered SSH terminal platform
 
 ---
 
@@ -32,7 +32,7 @@
 
 ### What Security Guard Is
 
-Security Guard is an integrated security auditing and hardening engine built directly into Terminal Muse. It connects to any Linux VPS over SSH, runs a deterministic battery of security checks, scores the machine, and offers one-click (or selective) hardening — with full rollback support.
+Security Guard is an integrated security auditing and hardening engine built directly into Carbon. It connects to any Linux VPS over SSH, runs a deterministic battery of security checks, scores the machine, and offers one-click (or selective) hardening — with full rollback support.
 
 It is **not** a chatbot that tells you about security. It is a purpose-built tool that **does** security work on your server, with AI layered in only where it genuinely helps (explanations, prioritization, natural-language queries about findings).
 
@@ -131,7 +131,7 @@ We earn it by:
 ### MVP Definition
 
 The first usable version of Security Guard must:
-1. Connect to a Linux machine over SSH (already handled by Terminal Muse)
+1. Connect to a Linux machine over SSH (already handled by Carbon)
 2. Run a comprehensive security audit in under 60 seconds
 3. Present findings with severity scores
 4. Offer one-click fixes for critical/high issues
@@ -386,8 +386,8 @@ Lockdown protocols are **preset bundles of hardening actions** tailored to commo
 **Ports affected:** SSH port changes, incoming ports restricted to SSH + 80 + 443
 
 **Rollback strategy:**
-1. All original configs backed up to `/var/lib/terminal-muse/backups/<timestamp>/`
-2. Rollback script generated at `/var/lib/terminal-muse/rollback-<timestamp>.sh`
+1. All original configs backed up to `/var/lib/carbon/backups/<timestamp>/`
+2. Rollback script generated at `/var/lib/carbon/rollback-<timestamp>.sh`
 3. Single command restores all configs and reloads services
 4. If SSH config change fails, auto-rollback triggers within 30 seconds via background watchdog
 
@@ -510,7 +510,7 @@ Automated security hardening can brick a server. If we lock a user out of their 
 Before ANY modification, the system creates:
 
 ```
-/var/lib/terminal-muse/backups/<session-id>/
+/var/lib/carbon/backups/<session-id>/
 ├── manifest.json          # What was changed, when, why
 ├── configs/
 │   ├── etc-ssh-sshd_config
@@ -545,7 +545,7 @@ Before ANY modification, the system creates:
         "systemctl reload sshd"
       ],
       "rollback_commands": [
-        "cp /var/lib/terminal-muse/backups/sg-20260508-143022/configs/etc-ssh-sshd_config /etc/ssh/sshd_config",
+        "cp /var/lib/carbon/backups/sg-20260508-143022/configs/etc-ssh-sshd_config /etc/ssh/sshd_config",
         "systemctl reload sshd"
       ],
       "status": "applied",
@@ -569,8 +569,8 @@ Before ANY modification, the system creates:
 - Any other file about to be modified
 
 **Backup storage:**
-- Stored locally on the target machine at `/var/lib/terminal-muse/backups/`
-- Optionally synced to Terminal Muse client for offline access
+- Stored locally on the target machine at `/var/lib/carbon/backups/`
+- Optionally synced to Carbon client for offline access
 - Retained for 30 days by default (configurable)
 - Never deleted automatically during a session
 
@@ -753,7 +753,7 @@ Priority factors:
 
 ```
 ┌──────────────────────────────────────────────────┐
-│                Terminal Muse Client               │
+│                Carbon Client               │
 │  ┌────────────────────────────────────────────┐  │
 │  │          Security Guard UI                  │  │
 │  │  (React components in Electron app)         │  │
@@ -777,7 +777,7 @@ Priority factors:
 │                    │                              │
 │  ┌─────────────────▼──────────────────────────┐  │
 │  │       SSH Execution Layer                   │  │
-│  │  (Uses existing Terminal Muse SSH conn)     │  │
+│  │  (Uses existing Carbon SSH conn)     │  │
 │  └────────────────────────────────────────────┘  │
 │                                                  │
 └──────────────────────────────────────────────────┘
@@ -853,7 +853,7 @@ scannerRegistry.register(new DockerExposureScanner());
    - Apply global scan timeout (60s default)
 
 3. Commands execute over existing SSH connection:
-   - Reuse Terminal Muse's SSH session (no new auth needed)
+   - Reuse Carbon's SSH session (no new auth needed)
    - Execute via non-interactive shell
    - Capture stdout, stderr, exit code
 
@@ -1019,7 +1019,7 @@ interface PreflightCheck {
 Generates human-readable and machine-readable reports:
 
 **Formats:**
-- **Dashboard view** (primary) — rendered in Terminal Muse UI
+- **Dashboard view** (primary) — rendered in Carbon UI
 - **Markdown report** — exportable, shareable
 - **JSON report** — machine-readable, for integration with other tools
 - **PDF report** — for compliance/audit documentation (future)
@@ -1038,7 +1038,7 @@ Generates human-readable and machine-readable reports:
 
 ### 8.1 Architecture
 
-Since Terminal Muse already manages multiple SSH connections, Security Guard extends this with:
+Since Carbon already manages multiple SSH connections, Security Guard extends this with:
 
 ```
 ┌──────────────────────────────────────────┐
@@ -1349,7 +1349,7 @@ These are non-blocking suggestions, never interrupting workflow.
 | Scanner engine | TypeScript | Already the codebase language. Scanner modules are data-processing logic, no need for lower-level language |
 | Config parsers | TypeScript | Custom parsers for each config format. Can use `nearley` or hand-written recursive descent for complex ones (sshd_config, sudoers) |
 | Remediation scripts | Shell (bash) | Commands must be shell commands. Templates stored as strings in TypeScript modules |
-| UI | React + TypeScript | Existing Terminal Muse stack |
+| UI | React + TypeScript | Existing Carbon stack |
 | AI layer | TypeScript | API calls to LLM provider |
 
 ### 10.2 Scanning Libraries & Tools (Executed on Remote Machine)
@@ -1381,14 +1381,14 @@ These are non-blocking suggestions, never interrupting workflow.
 
 ### 10.4 SSH Libraries
 
-Terminal Muse already has SSH connectivity. Security Guard should reuse the existing SSH session.
+Carbon already has SSH connectivity. Security Guard should reuse the existing SSH session.
 
 **Execution model:**
 ```
 Security Guard Engine
     │
     ▼
-Terminal Muse SSH Session (already authenticated)
+Carbon SSH Session (already authenticated)
     │
     ▼
 Execute commands via SSH channel
@@ -1408,7 +1408,7 @@ If background scanning is needed (scanning without an active terminal), consider
 | Operation | Where | Why |
 |-----------|-------|-----|
 | Running scan commands | Remote (target machine) | Commands must run where the OS is |
-| Parsing command output | Local (Terminal Muse client) | Keeps parser logic in TypeScript, no agent installation required |
+| Parsing command output | Local (Carbon client) | Keeps parser logic in TypeScript, no agent installation required |
 | CVE database lookup | Local (with caching) | No need to install anything on the target |
 | AI analysis | Local → cloud LLM API | Scan results sent to LLM for explanation (with user consent) |
 | Remediation execution | Remote (target machine) | Commands must run where the OS is |
@@ -1416,7 +1416,7 @@ If background scanning is needed (scanning without an active terminal), consider
 | Backup storage | Remote + local cache | Backups live on the target, optionally cached locally |
 
 **Key decision: No remote agent installation.** Security Guard runs entirely over SSH commands. This means:
-- Zero footprint on the target machine (except backups in `/var/lib/terminal-muse/`)
+- Zero footprint on the target machine (except backups in `/var/lib/carbon/`)
 - Works with any SSH-accessible Linux machine
 - No daemon to maintain, update, or secure
 - Slightly slower than a local agent (SSH round-trip per command batch), but fast enough (~30s for full scan)
@@ -1497,7 +1497,7 @@ shutdown / reboot            # Unless explicitly requested
 
 ### 12.1 Comparison Matrix
 
-| Feature | Terminal Muse Security Guard | Warp | Termius | Cockpit | Lynis | CrowdSec | Fail2ban |
+| Feature | Carbon Security Guard | Warp | Termius | Cockpit | Lynis | CrowdSec | Fail2ban |
 |---------|------------------------------|------|---------|---------|-------|----------|----------|
 | **SSH security audit** | ✓ Comprehensive | ✗ | ✗ | Partial | ✓ Comprehensive | ✗ | ✗ |
 | **One-click hardening** | ✓ With rollback | ✗ | ✗ | ✗ | ✗ (report only) | ✗ | ✗ |
@@ -1557,7 +1557,7 @@ shutdown / reboot            # Unless explicitly requested
 
 ### 12.3 Differentiation Strategy
 
-Terminal Muse Security Guard occupies a unique position:
+Carbon Security Guard occupies a unique position:
 
 1. **Integrated into the workflow.** You're already connected via SSH. Security is one click away, not a separate tool to install and learn.
 2. **Action-oriented.** Lynis tells you what's wrong. We fix it.
@@ -1814,7 +1814,7 @@ Terminal Muse Security Guard occupies a unique position:
 Security Guard has root SSH access to user machines. It is itself a high-value target.
 
 **Threats to mitigate:**
-- Compromised Terminal Muse client sending malicious commands → all commands are hardcoded, not dynamically generated
+- Compromised Carbon client sending malicious commands → all commands are hardcoded, not dynamically generated
 - Man-in-the-middle on SSH → use SSH host key verification (already handled by SSH protocol)
 - Scan data exfiltration → scan data stays local unless user opts into AI analysis
 - Supply chain attack on scanner modules → code review, signing, no dynamic module loading from external sources

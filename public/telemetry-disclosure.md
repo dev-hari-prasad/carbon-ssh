@@ -37,10 +37,8 @@ We use PostHog for analytics which is a privacy respecting, widely trusted and G
 
 ## Verify for yourself
 
-You don't have to trust us blindly. You can check the exact code that handles the telemetry services on our [GitHub repository](https://github.com/TerminalMuse/Carbon) and then navigating to:
+You don't have to trust us blindly. You can check the exact code that handles the telemetry services on our [GitHub repository](https://github.com/CarbonSSH/carbon) and then navigating to:
 
 - `src/lib/telemetry.ts` (Core logic, consent, and capture helpers)
 - `src/lib/telemetry-sanitize.ts` (The filters that explicitly strip out sensitive data)
 - `src/lib/telemetry-config.ts` (Environment setup)
-
-Alternatively you can open the developer tools using `F12`, `CTRL + Shift + I` (on Windows/Linux) and `CTRL + Opt + I` (on macOS) and track the payload of telemetry API calls in the Network tab to `https://ph.carbon.trycarbon.dev/api/collect`.

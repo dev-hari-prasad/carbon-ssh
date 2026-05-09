@@ -1,5 +1,5 @@
-appId: com.relay.ssh
-productName: Relay SSH
+appId: com.carbon.ssh
+productName: Carbon SSH
 copyright: Copyright © 2026
 
 beforeBuild: electron/before-build.cjs

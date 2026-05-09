@@ -365,8 +365,8 @@ export function UnlockVault() {
             <div className="space-y-4 w-full">
               {isPasswordMode ? (
                 <div className="space-y-4 text-left">
-                  <div className="space-y-2 text-center mb-6">
-                    <p className="text-xs font-medium text-fg text-center border-2 border-dashed rounded-md p-2">
+                  <div className="space-y-2 text-center mb-4">
+                    <p className="text-xs font-medium text-fg text-center border-1 border-dashed rounded-md p-2">
                       Use password to unlock Carbon
                     </p>
                   </div>
