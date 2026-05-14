@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import type { Tab } from "@/lib/types";
 import { actions } from "@/lib/store";
 
-export const TAB_STRIP_DRAG_MIME = "application/x-terminal-muse-tab";
+export const TAB_STRIP_DRAG_MIME = "application/x-carbon-ssh-tab";
 
 export function tabStripRawInsertIndex(
   container: HTMLElement,

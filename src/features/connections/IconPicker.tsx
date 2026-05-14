@@ -1,38 +1,47 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 import {
-  HardDrives,
-  LinuxLogo,
-  Triangle,
-  Atom,
-  Cube,
-  AppleLogo,
-  WindowsLogo,
-  MagnifyingGlass,
-  X,
-} from "@phosphor-icons/react";
+  CommandLineIcon,
+  ComputerDesktopIcon,
+  CpuChipIcon,
+  CubeIcon,
+  MagnifyingGlassIcon,
+  PlayIcon,
+  ServerStackIcon,
+  WindowIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/solid";
 import type { Connection } from "@/lib/types";
 import { BRAND_ICONS } from "./brandIcons";
 import { ICONOIR_ICONS } from "./iconoirIcons";
+import { Tooltip } from "@/components/Tooltip";
 
 type SystemKind = NonNullable<Connection["iconKind"]>;
 const ICON_INITIAL_LIMIT = 45;
 const ICON_LOAD_BATCH = 45;
 
+function wrapSystemIcon(
+  Icon: typeof ServerStackIcon,
+): ComponentType<{ size?: number; weight?: "fill" | "regular" }> {
+  return function SystemIcon({ size = 24 }: { size?: number; weight?: "fill" | "regular" }) {
+    return <Icon width={size} height={size} />;
+  };
+}
+
 export const SYSTEM_ICONS: Array<{
   id: SystemKind;
   label: string;
-  Icon: React.ComponentType<{ size?: number; weight?: "fill" | "regular" }>;
+  Icon: ComponentType<{ size?: number; weight?: "fill" | "regular" }>;
 }> = [
-  { id: "generic", label: "Generic", Icon: HardDrives },
-  { id: "linux", label: "Linux", Icon: LinuxLogo },
-  { id: "debian", label: "Debian", Icon: Atom },
-  { id: "centos", label: "CentOS", Icon: Cube },
-  { id: "alpine", label: "Alpine", Icon: Triangle },
-  { id: "macos", label: "macOS", Icon: AppleLogo },
-  { id: "windows", label: "Windows", Icon: WindowsLogo },
+  { id: "generic", label: "Generic", Icon: wrapSystemIcon(ServerStackIcon) },
+  { id: "linux", label: "Linux", Icon: wrapSystemIcon(CommandLineIcon) },
+  { id: "debian", label: "Debian", Icon: wrapSystemIcon(CpuChipIcon) },
+  { id: "centos", label: "CentOS", Icon: wrapSystemIcon(CubeIcon) },
+  { id: "alpine", label: "Alpine", Icon: wrapSystemIcon(PlayIcon) },
+  { id: "macos", label: "macOS", Icon: wrapSystemIcon(ComputerDesktopIcon) },
+  { id: "windows", label: "Windows", Icon: wrapSystemIcon(WindowIcon) },
 ];
 
 export type IconValue =
@@ -156,9 +165,11 @@ export function IconPicker({
                 background: "var(--popover-bg)",
                 borderColor: "var(--border-strong)",
                 opacity: ready ? 1 : 0,
-                transform: ready ? "scale(1)" : "scale(0.96)",
+                transform: ready ? "scale(1) translateY(0)" : "scale(0.98) translateY(2px)",
                 transformOrigin: "top",
-                transition: ready ? "opacity 110ms ease-out, transform 110ms ease-out" : "none",
+                transition: ready
+                  ? "opacity 140ms cubic-bezier(0.32, 0.72, 0, 1), transform 140ms cubic-bezier(0.32, 0.72, 0, 1)"
+                  : "none",
               }}
               className="w-[280px] max-h-[360px] flex flex-col rounded-md border shadow-2xl overflow-hidden"
             >
@@ -175,13 +186,13 @@ export function IconPicker({
                   aria-label="Close"
                   className="w-6 h-6 grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--neutral-hover-bg)]"
                 >
-                  <X size={11} weight="bold" />
+                  <XMarkIcon className="w-[11px] h-[11px]" strokeWidth={2.5} />
                 </button>
               </div>
 
               <div className="px-2 pt-2 pb-1">
-                <div className="flex items-center gap-1.5 px-2 h-7 rounded-sm bg-[var(--input-bg)] border border-border focus-within:border-[var(--border-strong)]">
-                  <MagnifyingGlass size={11} className="text-fg-muted shrink-0" />
+                <div className="flex items-center gap-1.5 px-2 h-7 rounded-sm bg-[var(--input-bg)] border border-border transition-all focus-within:border-accent/50 focus-within:ring-2 focus-within:ring-accent/20 group/search">
+                  <MagnifyingGlassIcon className="w-[11px] h-[11px] text-fg-muted shrink-0 transition-colors group-focus-within/search:text-accent" />
                   <input
                     autoFocus
                     value={query}
@@ -214,19 +225,24 @@ export function IconPicker({
                           const active = value.kind === "iconoir" && value.id === item.id;
                           const Icon = item.Icon;
                           return (
-                            <button
+                            <Tooltip
                               key={item.id}
-                              type="button"
-                              title={item.label}
-                              onClick={() => onChange({ kind: "iconoir", id: item.id })}
-                              className={`aspect-square grid place-items-center rounded-sm transition-colors ${
-                                active
-                                  ? "bg-[var(--neutral-hover-bg)] ring-1 ring-fg/40"
-                                  : "hover:bg-[var(--neutral-hover-bg)]"
-                              }`}
+                              label={item.label}
+                              side="top"
+                              className="aspect-square"
                             >
-                              <Icon width={20} height={20} />
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => onChange({ kind: "iconoir", id: item.id })}
+                                className={`w-full h-full grid place-items-center rounded-sm transition-colors ${
+                                  active
+                                    ? "bg-[var(--neutral-hover-bg)] ring-1 ring-fg/40"
+                                    : "hover:bg-[var(--neutral-hover-bg)]"
+                                }`}
+                              >
+                                <Icon width={20} height={20} />
+                              </button>
+                            </Tooltip>
                           );
                         })}
                       </div>
@@ -244,19 +260,24 @@ export function IconPicker({
                           const active = value.kind === "brand" && value.id === b.id;
                           const Icon = b.Icon;
                           return (
-                            <button
+                            <Tooltip
                               key={b.id}
-                              type="button"
-                              title={b.label}
-                              onClick={() => onChange({ kind: "brand", id: b.id })}
-                              className={`aspect-square grid place-items-center rounded-sm transition-colors ${
-                                active
-                                  ? "bg-[var(--neutral-hover-bg)] ring-1 ring-fg/40"
-                                  : "hover:bg-[var(--neutral-hover-bg)]"
-                              }`}
+                              label={b.label}
+                              side="top"
+                              className="aspect-square"
                             >
-                              <Icon width={20} height={20} />
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => onChange({ kind: "brand", id: b.id })}
+                                className={`w-full h-full grid place-items-center rounded-sm transition-colors ${
+                                  active
+                                    ? "bg-[var(--neutral-hover-bg)] ring-1 ring-fg/40"
+                                    : "hover:bg-[var(--neutral-hover-bg)]"
+                                }`}
+                              >
+                                <Icon width={20} height={20} />
+                              </button>
+                            </Tooltip>
                           );
                         })}
                       </div>

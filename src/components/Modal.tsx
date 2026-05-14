@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { X } from "@phosphor-icons/react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 import { AnimatePresence, motion } from "framer-motion";
 
 export function Modal({
@@ -40,16 +40,19 @@ export function Modal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="absolute inset-0 bg-black/55"
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
             onClick={onClose}
             aria-hidden
           />
           <motion.div
-            initial={{ scale: 0.98, opacity: 0, y: 4 }}
+            initial={{ scale: 0.97, opacity: 0, y: 6 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.98, opacity: 0, y: 4 }}
-            transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
+            transition={{
+              duration: 0.22,
+              ease: [0.32, 0.72, 0, 1],
+            }}
             className={`relative w-full ${panelClassName} bg-bg-elev border border-border rounded-md shadow-2xl overflow-hidden !mb-10`}
           >
             <div className="flex items-center justify-between px-4 h-10 border-b border-border bg-bg-panel">
@@ -62,7 +65,7 @@ export function Modal({
                 className="text-fg-muted hover:text-fg transition-colors"
                 aria-label="Close"
               >
-                <X size={16} weight="bold" />
+                <XMarkIcon className="w-4 h-4" />
               </button>
             </div>
             <div className="px-4 py-4 max-h-[70vh] overflow-y-auto">{children}</div>

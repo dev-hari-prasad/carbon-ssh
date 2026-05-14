@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { DotsThree, PencilSimple, Trash, Plug } from "@phosphor-icons/react";
+import {
+  BoltIcon,
+  EllipsisHorizontalIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
+import { PencilSimple } from "@phosphor-icons/react";
 import type { Connection } from "@/lib/types";
 import { actions } from "@/lib/store";
 
@@ -33,7 +38,7 @@ export function ConnectionItem({
         className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 text-fg-muted hover:text-fg p-1 rounded"
         aria-label="More"
       >
-        <DotsThree size={16} weight="bold" />
+        <EllipsisHorizontalIcon className="w-4 h-4" strokeWidth={2} />
       </button>
       {menu ? (
         <>
@@ -46,7 +51,7 @@ export function ConnectionItem({
                 actions.openTab(conn.id);
               }}
             >
-              <Plug size={13} /> Connect
+              <BoltIcon className="w-[13px] h-[13px]" /> Connect
             </button>
             <button
               className="w-full px-2.5 py-1.5 text-left text-fg hover:bg-bg-panel flex items-center gap-2"
@@ -55,7 +60,7 @@ export function ConnectionItem({
                 onEdit(conn);
               }}
             >
-              <PencilSimple size={13} /> Edit
+              <PencilSimple className="w-[13px] h-[13px]" /> Edit
             </button>
             <button
               className="w-full px-2.5 py-1.5 text-left text-danger hover:bg-bg-panel flex items-center gap-2"
@@ -64,7 +69,7 @@ export function ConnectionItem({
                 actions.deleteConnection(conn.id);
               }}
             >
-              <Trash size={13} /> Delete
+              <TrashIcon className="w-[13px] h-[13px]" /> Delete
             </button>
           </div>
         </>

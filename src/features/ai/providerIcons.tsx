@@ -1,5 +1,5 @@
 import { AmazonWebServicesDark, AnthropicDark, OpenAIDark, OpenRouterDark, VercelDark } from "@ridemountainpig/svgl-react";
-import { Plugs } from "@phosphor-icons/react";
+import { PuzzlePieceIcon } from "@heroicons/react/24/outline";
 import type { AIProviderId } from "@/lib/ai";
 
 type IconProps = { size?: number; className?: string };
@@ -18,6 +18,6 @@ export function ProviderIcon({ id, size = 14, className = "" }: IconProps & { id
     case "bedrock":
       return <AmazonWebServicesDark style={style} className={className} />;
     case "custom":
-      return <Plugs size={size} className={className} weight="bold" />;
+      return <PuzzlePieceIcon className={className} style={style} strokeWidth={2} />;
   }
 }

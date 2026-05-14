@@ -1,19 +1,19 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
-  CaretDown,
-  CaretUp,
-  Check,
-  Folders,
-  MagnifyingGlass,
-  PlugsConnected,
-  SquaresFour,
-  TerminalWindow,
-  Trash,
-  WarningCircle,
-  ClockCounterClockwise,
-  X,
-  ArrowsDownUp,
-} from "@phosphor-icons/react";
+  ArrowsUpDownIcon,
+  CheckIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ClockIcon,
+  CommandLineIcon,
+  FolderIcon,
+  LinkIcon,
+  MagnifyingGlassIcon,
+  Squares2X2Icon,
+  TrashIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+import { ExclamationTriangleIcon, TrashIcon as TrashIconSolid } from "@heroicons/react/24/solid";
 import { GitHubDark } from "@ridemountainpig/svgl-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { HostIcon } from "@/components/HostIcon";
@@ -173,7 +173,7 @@ function LogSourceGlyph({ source, conn }: { source: string; conn: Connection | n
   if (source === "__all__") {
     return (
       <span className="shrink-0 w-3.5 h-3.5 grid place-items-center text-fg-muted">
-        <SquaresFour size={12} weight="bold" />
+        <Squares2X2Icon className="w-3 h-3" strokeWidth={2} />
       </span>
     );
   }
@@ -183,27 +183,27 @@ function LogSourceGlyph({ source, conn }: { source: string; conn: Connection | n
   if (source === "connections") {
     return (
       <span className="shrink-0 w-3.5 h-3.5 grid place-items-center text-fg-muted">
-        <PlugsConnected size={12} weight="bold" />
+        <LinkIcon className="w-3 h-3" strokeWidth={2} />
       </span>
     );
   }
   if (source === "groups") {
     return (
       <span className="shrink-0 w-3.5 h-3.5 grid place-items-center text-fg-muted">
-        <Folders size={12} weight="bold" />
+        <FolderIcon className="w-3 h-3" strokeWidth={2} />
       </span>
     );
   }
   if (source === "session") {
     return (
       <span className="shrink-0 w-3.5 h-3.5 grid place-items-center text-fg-muted">
-        <TerminalWindow size={12} weight="bold" />
+        <CommandLineIcon className="w-3 h-3" strokeWidth={2} />
       </span>
     );
   }
   return (
     <span className="shrink-0 w-3.5 h-3.5 grid place-items-center text-fg-muted">
-      <TerminalWindow size={12} weight="regular" />
+      <CommandLineIcon className="w-3 h-3" strokeWidth={1.75} />
     </span>
   );
 }
@@ -225,21 +225,21 @@ function LogsSourcePicker({
   const activeConn = value === "__all__" ? null : connectionForSource(connections, value);
 
   return (
-    <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-haspopup="dialog"
-          aria-expanded={menuOpen}
-          aria-labelledby="logs-source-label"
-          title={value === "__all__" ? "Show all logs" : `Source: ${value}`}
-          className="relative inline-flex items-center gap-1.5 h-6 max-w-[10.5rem] pl-1.5 pr-1 rounded-sm bg-transparent shadow-none text-[10px] text-fg-muted hover:text-fg focus:outline-none !border-none transition-colors after:content-[''] after:absolute after:left-0 after:right-0 after:bottom-[3px] after:h-px after:bg-[var(--border-strong)]"
-        >
-          <LogSourceGlyph source={value} conn={activeConn} />
-          <span className="truncate flex-1 min-w-0 text-left">{label}</span>
-          <CaretDown size={10} weight="bold" className="shrink-0 opacity-70" />
-        </button>
-      </PopoverTrigger>
+    <Tooltip label={value === "__all__" ? "Show all logs" : `Source: ${value}`} side="top" delay={500}>
+      <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded={menuOpen}
+            aria-labelledby="logs-source-label"
+            className="relative inline-flex items-center gap-1.5 h-6 max-w-[10.5rem] pl-1.5 pr-1 rounded-sm bg-transparent shadow-none text-[10px] text-fg-muted hover:text-fg focus:outline-none !border-none transition-colors after:content-[''] after:absolute after:left-0 after:right-0 after:bottom-[3px] after:h-px after:bg-[var(--border-strong)]"
+          >
+            <LogSourceGlyph source={value} conn={activeConn} />
+            <span className="truncate flex-1 min-w-0 text-left">{label}</span>
+            <ChevronDownIcon className="w-2.5 h-2.5 shrink-0 opacity-70" strokeWidth={2.5} />
+          </button>
+        </PopoverTrigger>
       <PopoverContent
         align="end"
         side="top"
@@ -265,7 +265,7 @@ function LogsSourcePicker({
             <LogSourceGlyph source="__all__" conn={null} />
             <span className="flex-1 min-w-0 truncate text-[11px] font-mono">All sources</span>
             {value === "__all__" ? (
-              <Check size={11} weight="bold" className="text-accent shrink-0" />
+              <CheckIcon className="w-[11px] h-[11px] text-accent shrink-0" strokeWidth={2.5} />
             ) : null}
           </button>
           {sources.map((s) => {
@@ -289,13 +289,14 @@ function LogsSourcePicker({
               >
                 <LogSourceGlyph source={s} conn={conn} />
                 <span className="flex-1 min-w-0 truncate text-[11px] font-mono">{s}</span>
-                {active ? <Check size={11} weight="bold" className="text-accent shrink-0" /> : null}
+                {active ? <CheckIcon className="w-[11px] h-[11px] text-accent shrink-0" strokeWidth={2.5} /> : null}
               </button>
             );
           })}
         </div>
       </PopoverContent>
-    </Popover>
+      </Popover>
+    </Tooltip>
   );
 }
 
@@ -304,13 +305,12 @@ function LogsSearchBar({ value, onChange }: { value: string; onChange: (v: strin
   return (
     <div
       role="search"
-      className="inline-flex items-center gap-0.5 h-6 w-full pl-1.5 pr-1 rounded-md border border-border bg-bg text-[10px] font-mono text-fg-muted hover:text-fg hover:border-[var(--border-strong)] focus-within:outline-none focus-within:ring-1 focus-within:ring-border transition-colors"
+      className="inline-flex items-center gap-0.5 h-6 w-full pl-1.5 pr-1 rounded-md border border-border bg-bg text-[10px] font-mono text-fg-muted hover:text-fg hover:border-[var(--border-strong)] transition-all focus-within:border-accent/50 focus-within:ring-2 focus-within:ring-accent/20 group/search"
     >
       <label htmlFor={inputId} className="flex flex-1 min-w-0 items-center gap-1.5 cursor-text">
-        <MagnifyingGlass
-          size={11}
-          weight="bold"
-          className="shrink-0 opacity-70 pointer-events-none"
+        <MagnifyingGlassIcon
+          className="w-[11px] h-[11px] shrink-0 opacity-70 pointer-events-none transition-colors group-focus-within/search:text-accent group-focus-within/search:opacity-100"
+          strokeWidth={2.25}
           aria-hidden
         />
         <input
@@ -333,7 +333,7 @@ function LogsSearchBar({ value, onChange }: { value: string; onChange: (v: strin
           onClick={() => onChange("")}
           className="shrink-0 grid place-items-center w-6 h-[22px] rounded hover:bg-[var(--menu-hover-bg)] text-fg-dim hover:text-fg focus:outline-none focus-visible:ring-1 focus-visible:ring-border transition-colors"
         >
-          <X size={11} weight="bold" aria-hidden />
+          <XMarkIcon className="w-[11px] h-[11px]" aria-hidden strokeWidth={2.5} />
         </button>
       ) : null}
     </div>
@@ -365,7 +365,7 @@ function ClearLogsButton() {
             aria-expanded={warnOpen}
             className="text-fg-dim hover:text-danger p-1 rounded shrink-0 hover:bg-danger/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-border transition-colors data-[state=open]:text-danger data-[state=open]:bg-danger/10"
           >
-            <Trash size={12} />
+            <TrashIcon className="w-3 h-3" />
           </button>
         </PopoverTrigger>
         <PopoverContent
@@ -377,7 +377,7 @@ function ClearLogsButton() {
         >
           <div className="p-3 pb-2">
             <div className="flex items-start gap-2">
-              <WarningCircle size={22} weight="fill" className="text-warning shrink-0 mt-0.5" />
+              <ExclamationTriangleIcon className="w-[22px] h-[22px] text-warning shrink-0 mt-0.5" />
               <div className="min-w-0">
                 <p className="text-[13px] font-semibold font-sans text-fg leading-tight">
                   Clear all logs?
@@ -398,7 +398,7 @@ function ClearLogsButton() {
                 setWarnOpen(false);
               }}
             >
-              <Trash size={12} weight="bold" aria-hidden />
+              <TrashIconSolid className="w-3 h-3 text-white" aria-hidden />
               Clear all
             </button>
             <button
@@ -406,7 +406,7 @@ function ClearLogsButton() {
               className="h-8 px-2.5 rounded-sm text-[11.5px] font-sans font-medium text-fg-muted hover:bg-[var(--menu-hover-bg)] bg-[var(--menu-hover-bg)]/50 hover:text-fg inline-flex items-center gap-1 shrink-0"
               onClick={() => setWarnOpen(false)}
             >
-              <X size={12} weight="bold" aria-hidden />
+              <XMarkIcon className="w-3 h-3" aria-hidden strokeWidth={2.5} />
               Cancel
             </button>
           </div>
@@ -435,6 +435,8 @@ export function BottomPanel() {
   const reduceMotion = useReducedMotion();
   const open = useStore((s) => s.bottomOpen);
   const logs = useStore((s) => s.logs);
+  /** Matches "99+" in header — suppress centered resize chrome above a busy log list. */
+  const manyLogs = logs.length > 99;
   const connections = useStore((s) => s.connections);
   const [sourceFilter, setSourceFilter] = useState<string>("__all__");
   const [logSearchQuery, setLogSearchQuery] = useState("");
@@ -461,19 +463,23 @@ export function BottomPanel() {
   const skipHeightPersist = useRef(true);
 
   useEffect(() => {
-    if (open) {
+    if (open && !manyLogs) {
       triggerHint();
     }
-  }, [open, triggerHint]);
+  }, [open, triggerHint, manyLogs]);
+
+  useEffect(() => {
+    if (manyLogs) setShowResizeHint(false);
+  }, [manyLogs]);
 
   useEffect(() => {
     if (resizeActive) {
-      setShowResizeHint(true);
+      setShowResizeHint(!manyLogs);
       if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
-    } else {
+    } else if (!manyLogs) {
       triggerHint();
     }
-  }, [resizeActive, triggerHint]);
+  }, [resizeActive, triggerHint, manyLogs]);
 
   useEffect(() => {
     skipHeightPersist.current = true;
@@ -597,7 +603,7 @@ export function BottomPanel() {
             onClick={() => actions.toggleBottom()}
             className="flex-1 min-w-0 pl-3 pr-3 flex items-center gap-1.5 text-xxs uppercase font-sans font-semibold text-fg-muted hover:text-fg hover:bg-[var(--menu-hover-bg)]/50 tracking-wider transition-colors rounded-none text-left !transform-none"
           >
-            <CaretUp size={11} weight="bold" />
+            <ChevronUpIcon className="w-[11px] h-[11px]" strokeWidth={2.5} />
             Activity Logs
             <span className="text-fg-dim font-mono normal-case tracking-normal">
               ({filteredLogs.length > 99 ? "99+" : filteredLogs.length}
@@ -625,7 +631,7 @@ export function BottomPanel() {
               className="col-start-1 row-start-1 z-[2] flex items-center gap-1.5 min-w-0 text-xxs uppercase font-sans font-semibold text-fg-muted tracking-wider pointer-events-none justify-self-start h-full max-w-fit pl-3"
               aria-hidden={true}
             >
-              <CaretDown size={11} weight="bold" className="shrink-0" aria-hidden />
+              <ChevronDownIcon className="w-[11px] h-[11px] shrink-0" aria-hidden strokeWidth={2.5} />
               <span>Activity Logs</span>
               <span className="text-fg-dim font-mono normal-case tracking-normal">
                 ({filteredLogs.length > 99 ? "99+" : filteredLogs.length}
@@ -684,8 +690,8 @@ export function BottomPanel() {
             <Tooltip
               label={
                 <>
-                  <span className="font-semibold">Resize log panel</span>
-                  <span className="block mt-1 text-[10px] text-fg-muted font-normal opacity-95">
+                  {/* <span className="font-semibold">Resize log panel</span> */}
+                  <span className="block mt-0 text-center text-[10px] text-fg-muted font-normal opacity-95">
                     Drag up or down to resize.
                   </span>
                 </>
@@ -693,7 +699,7 @@ export function BottomPanel() {
               side="top"
               delay={200}
               multiline
-              disabled={resizeActive}
+              disabled={resizeActive || manyLogs}
               className="block w-full shrink-0"
             >
               <div
@@ -712,7 +718,9 @@ export function BottomPanel() {
                   if (e.button !== 0) return;
                   onResizePointerDown(e);
                 }}
-                onMouseEnter={triggerHint}
+                onMouseEnter={() => {
+                  if (!manyLogs) triggerHint();
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "ArrowUp" || e.key === "ArrowDown") {
                     e.preventDefault();
@@ -722,15 +730,16 @@ export function BottomPanel() {
                 }}
               >
                 <AnimatePresence>
-                  {showResizeHint && (
+                  {showResizeHint && !manyLogs && (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.8, y: 4 }}
+                      initial={{ opacity: 0, scale: 0.95, y: 2 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.8, y: 4 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 2 }}
+                      transition={{ duration: 0.16, ease: [0.32, 0.72, 0, 1] }}
                       className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none"
                     >
-                      <div className="px-2 py-0.5 rounded-full bg-accent/90 text-[9px] font-bold text-white uppercase tracking-wider shadow-lg border border-white/10 whitespace-nowrap flex items-center gap-1">
-                        <ArrowsDownUp size={10} weight="bold" />
+                      <div className="px-2 py-0.5 rounded-full bg-accent/70 text-[9px] text-white tracking-wider shadow-lg border border-white/10 whitespace-nowrap flex items-center gap-1">
+                        <ArrowsUpDownIcon className="w-2.5 h-2.5" strokeWidth={2.5} />
                         Resize
                       </div>
                     </motion.div>
@@ -746,11 +755,7 @@ export function BottomPanel() {
             >
               {logs.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center min-h-[10rem] w-full px-4 py-8 text-center gap-3">
-                  <ClockCounterClockwise
-                    size={32}
-                    weight="duotone"
-                    className="text-fg-dim opacity-60"
-                  />
+                  <ClockIcon className="w-8 h-8 text-fg-dim opacity-60" />
                   <p className="text-fg-dim text-[13px] font-sans leading-normal">
                     No log entries yet. <br /> Actions, connections, and commands <br /> will appear
                     here.
@@ -760,11 +765,10 @@ export function BottomPanel() {
                 <div className="text-fg-dim py-2">no entries for this source.</div>
               ) : filteredLogs.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center gap-3 min-h-[10rem] w-full px-4 py-8 text-center">
-                  <MagnifyingGlass
-                    size={36}
-                    weight="duotone"
-                    className="text-fg-dim shrink-0 opacity-[0.88]"
+                  <MagnifyingGlassIcon
+                    className="w-9 h-9 text-fg-dim shrink-0 opacity-[0.88]"
                     aria-hidden={true}
+                    strokeWidth={1.25}
                   />
                   <p className="text-fg-dim text-[13px] font-sans leading-normal">
                     no logs match your search.
@@ -821,16 +825,18 @@ export function BottomPanel() {
                         >
                           {actionKind}
                         </div>
-                        <div
-                          className={`${LOG_ROW_CELL} text-fg-dim font-mono truncate`}
-                          title={sessionAddr || undefined}
+                        <Tooltip
+                          label={sessionAddr}
+                          disabled={!sessionAddr}
+                          side="top"
+                          className={`${LOG_ROW_CELL} text-fg-dim font-mono truncate block`}
                         >
                           {sessionAddr || (
                             <span className="text-fg-muted/55 select-none" aria-hidden="true">
                               —
                             </span>
                           )}
-                        </div>
+                        </Tooltip>
                         <div className={`${LOG_ROW_CELL} min-w-0 text-fg font-mono text-[11.5px] sm:text-[12px] break-words`}>
                           {cmdDetail}
                         </div>

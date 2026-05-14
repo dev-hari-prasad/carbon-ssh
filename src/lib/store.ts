@@ -64,7 +64,12 @@ import {
   saveSidebarCollapsed,
   loadSidebarWidth,
   saveSidebarWidth,
+  loadClosedTabs,
+  saveClosedTabs,
+  wipeAllCarbonLocalData,
   type TabBarOrientation,
+  loadOnboardingCompleted,
+  saveOnboardingCompleted,
 } from "./storage";
 
 interface State {
@@ -82,7 +87,7 @@ interface State {
   settingsOpen: boolean;
   ai: AISettings;
   logRetention: LogRetention;
-  settingsTab: "general" | "shortcuts" | "logs" | "bangs" | "display" | "ai";
+  settingsTab: "general" | "shortcuts" | "logs" | "bangs" | "display" | "ai" | "security";
   settingsOpenCount: number;
   selectedHostId: string | null;
   closedTabs: string[];
@@ -99,12 +104,13 @@ interface State {
   splitLayout: SplitLayout;
   splitColRatio: number;
   splitRowRatio: number;
+  onboardingCompleted: boolean;
 }
 
 /** Default UI scale: 100% in Electron; 110% in the browser. */
 export function getDefaultInterfaceZoom(): number {
   if (typeof window === "undefined") return 110;
-  return (window as any).electron?.setZoomLevel ? 100 : 110;
+  return (window as any).electron?.setZoomLevel ? 105 : 110;
 }
 
 let state: State = {
@@ -126,7 +132,7 @@ let state: State = {
   settingsOpenCount: 0,
   selectedHostId: null,
   closedTabs: [],
-  zoomLevel: 110,
+  zoomLevel: 105,
   autoOpenTabs: true,
   terminalCursorStyle: "blinking-underline",
   isUnlocked: false,
@@ -134,11 +140,12 @@ let state: State = {
   telemetryEnabled: true,
   tabBarOrientation: "horizontal",
   sidebarCollapsed: false,
-  sidebarWidth: 200,
+  sidebarWidth: 140,
   splitTabIds: [],
   splitLayout: "two-columns" as SplitLayout,
   splitColRatio: 0.5,
   splitRowRatio: 0.5,
+  onboardingCompleted: false,
 };
 
 const SETTINGS_OPEN_COUNT_KEY = "ssh.settings-open-count.v1";
@@ -237,6 +244,8 @@ function ensureInit() {
     tabBarOrientation,
     sidebarCollapsed: loadSidebarCollapsed(),
     sidebarWidth: loadSidebarWidth(tabBarOrientation),
+    closedTabs: loadClosedTabs(),
+    onboardingCompleted: loadOnboardingCompleted(),
   };
   applyTheme(theme);
   applyFont(font);
@@ -278,6 +287,11 @@ export const actions = {
   },
   lockApp() {
     setState({ isUnlocked: false });
+  },
+  completeOnboarding() {
+    ensureInit();
+    saveOnboardingCompleted(true);
+    setState({ onboardingCompleted: true });
   },
   setAccessSettings(access: AccessSettings) {
     ensureInit();
@@ -436,16 +450,18 @@ export const actions = {
       delete connectionStatus[connectionId];
     }
     const splitTabIds = state.splitTabIds.filter((sid) => sid !== id);
+    const closedTabs = [tab.connectionId, ...state.closedTabs].slice(0, 20);
     setState({
       tabs,
       activeTabId,
       splitTabIds,
-      closedTabs: [tab.connectionId, ...state.closedTabs].slice(0, 20),
+      closedTabs,
       connectionStatus,
       ...(splitTabIds.length < 2
         ? { splitLayout: "two-columns" as SplitLayout, splitColRatio: 0.5, splitRowRatio: 0.5 }
         : {}),
     });
+    saveClosedTabs(closedTabs);
   },
 
   restoreTab() {
@@ -454,6 +470,7 @@ export const actions = {
     if (!lastId) return;
     actions.openTab(lastId);
     setState({ closedTabs: rest });
+    saveClosedTabs(rest);
   },
 
   setZoomLevel(level: number) {
@@ -707,10 +724,17 @@ export const actions = {
     setState({ sidebarCollapsed: v });
   },
 
+  toggleSidebarCollapsed() {
+    ensureInit();
+    const next = !state.sidebarCollapsed;
+    saveSidebarCollapsed(next);
+    setState({ sidebarCollapsed: next });
+  },
+
   setSidebarWidth(w: number) {
     ensureInit();
     const isVertical = state.tabBarOrientation === "vertical";
-    const minW = isVertical ? 200 : 60;
+    const minW = isVertical ? 160 : 60;
     const clamped = Math.max(minW, Math.min(400, Math.round(w)));
     saveSidebarWidth(clamped);
     setState({ sidebarWidth: clamped });
@@ -813,5 +837,17 @@ export const actions = {
 
   setSplitRowRatio(ratio: number) {
     setState({ splitRowRatio: Math.max(0.15, Math.min(0.85, ratio)) });
+  },
+
+  /** Full local wipe + server activity logs, then reload (fresh onboarding). */
+  async fullFactoryResetAndReload() {
+    if (typeof window === "undefined") return;
+    try {
+      await fetch("/api/logs", { method: "DELETE" }).catch(() => {});
+    } catch {
+      /* ignore */
+    }
+    wipeAllCarbonLocalData();
+    window.location.reload();
   },
 };

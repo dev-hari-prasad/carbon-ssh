@@ -1,20 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  HardDrives,
-  Plus,
-  PencilSimple,
-  Trash,
-  Gear,
-  Lightning,
-  TerminalWindow,
-  SquaresFour,
-  FolderDashed,
-  MagnifyingGlass,
-  LockKey,
-  WarningCircle,
-  CaretLeft,
-  CaretRight,
-} from "@phosphor-icons/react";
+  BoltIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  Cog6ToothIcon,
+  CommandLineIcon,
+  FolderIcon,
+  LockClosedIcon,
+  MagnifyingGlassIcon,
+  PlusIcon,
+  ServerStackIcon,
+  Squares2X2Icon,
+} from "@heroicons/react/24/outline";
+import {
+  Cog6ToothIcon as Cog6ToothIconSolid,
+  ExclamationTriangleIcon,
+  ServerStackIcon as ServerStackIconSolid,
+  Squares2X2Icon as Squares2X2IconSolid,
+} from "@heroicons/react/24/solid";
 import { getThemeById } from "@/config/themes";
 import { actions, useStore } from "@/lib/store";
 import type { Connection, SplitLayout } from "@/lib/types";
@@ -29,6 +32,7 @@ import type { ConnectionRuntimeState } from "@/lib/types";
 import { TabContextMenu } from "./TabContextMenu";
 import { SplitLayoutPicker } from "./SplitLayoutPicker";
 import { useTabStripDnD } from "./tabStripDnD";
+import { Kbd } from "@/components/Kbd";
 
 type Popover = "machines" | null;
 
@@ -46,10 +50,8 @@ function TabFavicon({
 
   if (!conn) {
     return (
-      <TerminalWindow
-        size={14}
-        weight={active ? "duotone" : "regular"}
-        className="shrink-0 text-fg-muted"
+      <CommandLineIcon
+        className={`shrink-0 w-3.5 h-3.5 ${active ? "text-fg" : "text-fg-muted"}`}
       />
     );
   }
@@ -57,11 +59,12 @@ function TabFavicon({
   if (isError) {
     return (
       <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
+        initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
         className="relative w-4 h-4 shrink-0 flex items-center justify-center text-danger"
       >
-        <WarningCircle size={14} weight="fill" />
+        <ExclamationTriangleIcon className="w-3.5 h-3.5" />
       </motion.div>
     );
   }
@@ -71,9 +74,10 @@ function TabFavicon({
       <AnimatePresence>
         {isConnecting && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
             className="absolute inset-0 z-10"
           >
             <svg
@@ -101,7 +105,7 @@ function TabFavicon({
         animate={{
           scale: isConnecting ? 0.6 : 1,
         }}
-        transition={{ duration: 0.2, ease: "easeInOut" }}
+        transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
       >
         <TabIcon conn={conn} size={16} />
       </motion.div>
@@ -109,7 +113,7 @@ function TabFavicon({
   );
 }
 
-export function TopBar() {
+export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
   const tabs = useStore((s) => s.tabs);
   const activeTabId = useStore((s) => s.activeTabId);
   const connections = useStore((s) => s.connections);
@@ -176,17 +180,17 @@ export function TopBar() {
 
   if (!mounted) {
     return (
-      <div className="bg-[var(--titlebar-bg)] h-[45px] z-40" />
+      <div className="bg-[var(--titlebar-bg)] h-[40px] z-40" />
     );
   }
 
   return (
     <div
-      className="bg-[var(--titlebar-bg)] select-none relative z-40"
+      className={`${isTitleBar ? "" : "bg-[var(--titlebar-bg)]"} select-none relative z-40`}
       ref={wrapRef}
     >
-      <div className="h-[44px] pl-3 pr-2 flex items-stretch gap-2">
-        <div className="flex items-center pl-0 shrink-0">
+      <div className="h-[40px] pl-3 pr-2 flex items-stretch gap-2">
+        <div className="flex items-center pl-0 shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           <Tooltip label="This is just a logo, click on it for a surprise" side="bottom">
             <a
               href="https://github.com/CarbonSSH/carbon"
@@ -204,21 +208,23 @@ export function TopBar() {
         </div>
 
         <div className="flex-1 min-w-0 flex items-center gap-1 overflow-hidden">
-          <FeaturePill
-            icon={<HardDrives size={13} weight="duotone" />}
-            label="Hosts"
-            active={activeTabId === null}
-            onClick={() => actions.goHome()}
-          />
+          <div style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+            <FeaturePill
+              icon={<ServerStackIcon className="w-[13px] h-[13px]" />}
+              label="Hosts"
+              active={activeTabId === null}
+              onClick={() => actions.goHome()}
+            />
+          </div>
 
           <AnimatePresence initial={false}>
             {tabs.length > 0 && (
               <motion.div
                 key="separator"
                 initial={{ opacity: 0, width: 0, marginLeft: 0, marginRight: 0 }}
-                animate={{ opacity: 1, width: 1, marginLeft: 4, marginRight: 4 }}
+                animate={{ opacity: 0.6, width: 1, marginLeft: 4, marginRight: 4 }}
                 exit={{ opacity: 0, width: 0, marginLeft: 0, marginRight: 0 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+                transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                 className="h-4 bg-border shrink-0"
               />
             )}
@@ -226,10 +232,12 @@ export function TopBar() {
 
           <div
             ref={tabDnD.stripRef}
-            className="flex items-center gap-1 shrink min-w-0"
+            className="flex items-center shrink min-w-0"
             onDragOver={tabDnD.handleDragOver}
             onDrop={tabDnD.handleDrop}
+            style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
+            <AnimatePresence initial={false}>
             {(() => {
               type Seg = { kind: "tab"; tab: typeof tabs[number] } | { kind: "group"; tabs: typeof tabs };
               const segs: Seg[] = [];
@@ -254,13 +262,13 @@ export function TopBar() {
                 return (
                   <motion.div
                     layout
-                    initial={{ opacity: 0, scale: 0.8, maxWidth: 0 }}
-                    animate={{ opacity: 1, scale: 1, maxWidth: inGroup ? 160 : 200 }}
-                    exit={{ opacity: 0, scale: 0.8, maxWidth: 0 }}
-                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    initial={{ opacity: 0, scale: 0.85, width: 0, minWidth: 0, marginRight: 0 }}
+                    animate={{ opacity: 1, scale: 1, width: inGroup ? 160 : 200, minWidth: inGroup ? 40 : 48, marginRight: inGroup ? 0 : 4 }}
+                    exit={{ opacity: 0, scale: 0.85, width: 0, minWidth: 0, paddingLeft: 0, paddingRight: 0, marginLeft: 0, marginRight: 0 }}
+                    transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
                     style={{ overflow: "hidden" }}
                     key={t.id}
-                    className={`shrink flex ${inGroup ? "min-w-[40px] w-[160px]" : "min-w-[48px] w-[200px]"} ${tabDnD.draggingId === t.id ? "opacity-45" : ""}`}
+                    className={`shrink flex ${tabDnD.draggingId === t.id ? "opacity-45" : ""}`}
                   >
                     <TabContextMenu tabId={t.id}>
                       <Tooltip
@@ -304,7 +312,7 @@ export function TopBar() {
                           onDragStart={(e) => tabDnD.handleDragStart(e, t.id)}
                           onDragEnd={tabDnD.handleDragEnd}
                           onClick={() => actions.setActiveTab(t.id)}
-                          className={`group relative w-full ${inGroup ? "h-7" : "h-8"} flex items-center gap-1.5 pl-2.5 pr-2 rounded-sm cursor-grab active:cursor-grabbing text-[12px] font-sans transition-colors duration-150 ${
+                          className={`group relative w-full ${inGroup ? "h-7" : "h-8"} flex items-center gap-1.5 pl-2.5 pr-2 rounded-sm cursor-default text-[12px] font-sans transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                             active
                               ? "bg-success/10 text-success"
                               : "bg-[var(--command-bg)] text-fg-muted hover:bg-[var(--command-active-bg)] hover:text-fg"
@@ -350,11 +358,11 @@ export function TopBar() {
                     <motion.div
                       key={`split-group-${seg.tabs[0].id}`}
                       layout
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
-                      className="shrink flex items-center gap-1 rounded-md bg-[var(--command-active-bg)] px-1 py-1"
+                      initial={{ opacity: 0, scale: 0.97, marginRight: 0 }}
+                      animate={{ opacity: 1, scale: 1, marginRight: 4 }}
+                      exit={{ opacity: 0, scale: 0.97, marginRight: 0, paddingLeft: 0, paddingRight: 0 }}
+                      transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                      className="shrink flex items-center rounded-md bg-[var(--command-active-bg)] px-1 py-1 gap-1"
                     >
                       <AnimatePresence initial={false}>
                         {seg.tabs.map((t) => renderTab(t, true))}
@@ -365,12 +373,13 @@ export function TopBar() {
                 return renderTab(seg.tab, false);
               });
             })()}
+            </AnimatePresence>
           </div>
 
           <div className="h-4 w-px shrink-0 self-center mx-1 bg-border" aria-hidden />
 
           <Popover open={open === "machines"} onOpenChange={(o) => setOpen(o ? "machines" : null)}>
-            <div className="relative flex items-center shrink-0">
+            <div className="relative flex items-center shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
               <Tooltip label="New session" side="bottom">
                 <PopoverTrigger asChild>
                   <button
@@ -381,7 +390,7 @@ export function TopBar() {
                         : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
                     }`}
                   >
-                    <Plus size={14} weight="bold" />
+              <PlusIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
                   </button>
                 </PopoverTrigger>
               </Tooltip>
@@ -390,6 +399,7 @@ export function TopBar() {
                 align="start"
                 sideOffset={6}
                 collisionPadding={16}
+                onCloseAutoFocus={(e) => e.preventDefault()}
                 className="p-0 border-none shadow-none w-auto bg-transparent z-50"
               >
                 <MachinesPopover
@@ -408,7 +418,7 @@ export function TopBar() {
           </Popover>
         </div>
 
-        <div className="flex items-center shrink-0 relative h-8 self-center">
+        <div className="flex items-center shrink-0 relative h-8 self-center" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           <div className="w-px h-4 bg-border ml-1 mr-0.5 opacity-60" />
           <SplitLayoutPicker
             variant="top-bar"
@@ -421,7 +431,7 @@ export function TopBar() {
               aria-label="Bangs"
               className="w-7 h-7 grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
             >
-              <Lightning size={17} weight="regular" />
+              <BoltIcon className="w-[17px] h-[17px]" />
             </button>
           </Tooltip>
           <Tooltip label="Lock" side="bottom">
@@ -430,7 +440,7 @@ export function TopBar() {
               aria-label="Lock App"
               className="w-7 h-7 grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
             >
-              <LockKey size={17} weight="regular" />
+              <LockClosedIcon className="w-[17px] h-[17px]" />
             </button>
           </Tooltip>
           <Tooltip label="Settings" side="bottom">
@@ -445,7 +455,11 @@ export function TopBar() {
                   : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
               }`}
             >
-              <Gear size={17} weight={settingsOpen ? "fill" : "regular"} />
+              {settingsOpen ? (
+                <Cog6ToothIconSolid className="w-[17px] h-[17px]" />
+              ) : (
+                <Cog6ToothIcon className="w-[17px] h-[17px]" />
+              )}
             </button>
           </Tooltip>
         </div>
@@ -627,11 +641,11 @@ function MachinesPopover({
               }}
               icon={
                 g.id === null ? (
-                  <SquaresFour size={14} weight="fill" className="text-fg" />
+                  <Squares2X2IconSolid className="w-3.5 h-3.5 text-fg" />
                 ) : g.id === "__uncategorized__" ? (
-                  <FolderDashed size={14} weight="regular" className="text-fg-muted" />
+                  <FolderIcon className="w-3.5 h-3.5 text-fg-muted" />
                 ) : (
-                  <HardDrives size={13} weight="fill" className="text-white" />
+                  <ServerStackIconSolid className="w-[13px] h-[13px] text-white" />
                 )
               }
               iconContainerClass={
@@ -651,7 +665,7 @@ function MachinesPopover({
               onClick={onNewConn}
               className="min-w-0 h-8 px-2 inline-flex items-center justify-center gap-1 rounded-sm bg-accent text-accent-fg text-[11px] font-sans font-semibold hover:opacity-90 transition-colors"
             >
-              <Plus size={12} weight="bold" className="shrink-0" />
+              <PlusIcon className="w-3 h-3 shrink-0" strokeWidth={2.5} />
               <span className="truncate">New host</span>
             </button>
             <button
@@ -667,9 +681,9 @@ function MachinesPopover({
 
       {/* Right side: Hosts */}
       <div className="flex-1 flex flex-col min-h-0 bg-bg">
-        <div className="h-9 px-2 flex items-center border-b border-border bg-[var(--bg-panel)]/50 shrink-0 gap-2">
-          <div className="flex items-center flex-1 gap-1.5 px-1">
-            <MagnifyingGlass size={13} className="text-fg-muted shrink-0" weight="bold" />
+        <div className="h-9 px-2 flex items-center border-b border-border bg-[var(--bg-panel)]/50 shrink-0">
+          <div className="flex items-center flex-1 gap-2 h-7 px-2.5 rounded-md bg-bg/40 border border-transparent transition-all focus-within:border-accent/50 focus-within:bg-bg focus-within:ring-2 focus-within:ring-accent/20 group/search">
+            <MagnifyingGlassIcon className="w-[13px] h-[13px] text-fg-muted group-focus-within/search:text-accent transition-colors" strokeWidth={2.25} />
             <input
               ref={inputRef}
               autoFocus
@@ -677,7 +691,7 @@ function MachinesPopover({
               placeholder="Search hosts..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-transparent outline-none text-[11.5px] font-sans text-fg placeholder:text-fg-muted"
+              className="flex-1 bg-transparent border-none outline-none ring-0 focus:ring-0 text-[12px] font-sans text-fg placeholder:text-fg-muted h-full"
             />
           </div>
         </div>
@@ -696,7 +710,7 @@ function MachinesPopover({
                 return (
                   <div
                     key={c.id}
-                    className={`group flex items-center gap-2.5 px-2.5 py-1.5 rounded-sm transition-colors ${
+                    className={`group flex items-center gap-2.5 px-2.5 py-1.5 rounded-sm transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                       isConnecting ? "cursor-wait opacity-70" : "cursor-pointer"
                     } ${
                       i === selectedIndex
@@ -750,7 +764,7 @@ function GroupItem({
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-sm text-left transition-colors ${
+      className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-sm text-left transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
         focused
           ? "bg-[var(--command-active-bg)] ring-1 ring-accent/30 text-fg"
           : active
@@ -903,24 +917,10 @@ export function VerticalTabBar() {
         className="bg-[var(--titlebar-bg)] select-none relative z-40 flex flex-col shrink-0 h-full overflow-hidden"
         animate={{ width: animatedWidth }}
         initial={false}
-        transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+        transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
       >
         {/* Logo + Hosts + Collapse toggle */}
-        <div className={`flex items-center shrink-0 pt-2 pb-1 ${sidebarCollapsed ? "flex-col gap-1.5 px-1" : "flex-row gap-2 px-1.5"}`}>
-          <Tooltip label="This is just a logo, click on it for a surprise" side={tooltipSide}>
-            <a
-              href="https://github.com/CarbonSSH/carbon"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block shrink-0"
-            >
-              <img
-                src={logoSrc}
-                alt="Logo"
-                className="w-6 h-6 rounded-sm object-contain"
-              />
-            </a>
-          </Tooltip>
+        <div className={`flex items-center shrink-0 pt-0 pb-1 ${sidebarCollapsed ? "flex-col gap-1.5 px-1" : "flex-row gap-2 px-1.5"}`}>
           <div className={sidebarCollapsed ? "" : "flex-1 min-w-0"}>
             <Tooltip label="Hosts" side={tooltipSide} disabled={!showTooltips}>
               <button
@@ -935,21 +935,40 @@ export function VerticalTabBar() {
                     : "bg-[var(--command-bg)] text-fg hover:bg-[var(--command-active-bg)]"
                 }`}
               >
-                <HardDrives size={16} weight={activeTabId === null ? "duotone" : "regular"} className="shrink-0" />
+                {activeTabId === null ? (
+                  <ServerStackIconSolid className="w-4 h-4 shrink-0" />
+                ) : (
+                  <ServerStackIcon className="w-4 h-4 shrink-0" />
+                )}
                 {!sidebarCollapsed && (
                   <span className="text-[12px] font-sans truncate">Hosts</span>
                 )}
               </button>
             </Tooltip>
           </div>
-          <Tooltip label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"} side={tooltipSide}>
+          <Tooltip 
+            label={
+              <div className="flex items-center gap-2">
+                <span>{sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}</span>
+                <Kbd>
+                  {typeof window !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl"}
+                  +B
+                </Kbd>
+              </div>
+            } 
+            side={tooltipSide}
+          >
             <button
-              onClick={() => actions.setSidebarCollapsed(!sidebarCollapsed)}
+              onClick={() => actions.toggleSidebarCollapsed()}
               className={`grid place-items-center rounded-sm bg-[var(--bg-panel)]/40 text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors shrink-0 ${
                 sidebarCollapsed ? "w-8 h-8" : "w-7 h-7"
               }`}
             >
-              {sidebarCollapsed ? <CaretRight size={14} weight="bold" /> : <CaretLeft size={14} weight="bold" />}
+              {sidebarCollapsed ? (
+                <ChevronRightIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
+              ) : (
+                <ChevronLeftIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
+              )}
             </button>
           </Tooltip>
         </div>
@@ -959,10 +978,11 @@ export function VerticalTabBar() {
         {/* Session tabs */}
         <div
           ref={sidebarTabDnD.stripRef}
-          className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col ${sidebarCollapsed ? "items-center gap-0.5 py-1 px-1" : "gap-0.5 py-1 px-1.5"}`}
+          className={`flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col ${sidebarCollapsed ? "items-center py-1 px-1" : "py-1 px-1.5 mt-1 mx-0.5"}`}
           onDragOver={sidebarTabDnD.handleDragOver}
           onDrop={sidebarTabDnD.handleDrop}
         >
+          <AnimatePresence initial={false}>
           {(() => {
             type Seg = { kind: "tab"; tab: typeof tabs[number] } | { kind: "group"; tabs: typeof tabs };
             const segs: Seg[] = [];
@@ -987,12 +1007,12 @@ export function VerticalTabBar() {
               return (
                 <motion.div
                   layout
-                  initial={{ opacity: 0, x: -8, height: 0 }}
-                  animate={{ opacity: 1, x: 0, height: "auto" }}
-                  exit={{ opacity: 0, x: -8, height: 0 }}
-                  transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
+                  initial={{ opacity: 0, x: -4, height: 0, marginBottom: 0 }}
+                  animate={{ opacity: 1, x: 0, height: "auto", marginBottom: sidebarCollapsed ? 2 : 4 }}
+                  exit={{ opacity: 0, x: -4, height: 0, marginBottom: 0 }}
+                  transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
                   key={t.id}
-                  className={`min-w-0 w-full overflow-hidden ${sidebarTabDnD.draggingId === t.id ? "opacity-45" : ""}`}
+                  className={`min-w-0 w-full overflow-hidden ${sidebarCollapsed ? "flex justify-center" : ""} ${sidebarTabDnD.draggingId === t.id ? "opacity-45" : ""}`}
                 >
                   <TabContextMenu tabId={t.id}>
                     <Tooltip
@@ -1030,14 +1050,21 @@ export function VerticalTabBar() {
                       multiline
                       minWidth={160}
                     >
-                      <button
-                        type="button"
+                      <div
+                        role="button"
+                        tabIndex={0}
                         draggable
                         data-tab-strip-item={t.id}
                         onDragStart={(e) => sidebarTabDnD.handleDragStart(e, t.id)}
                         onDragEnd={sidebarTabDnD.handleDragEnd}
                         onClick={() => actions.setActiveTab(t.id)}
-                        className={`group relative rounded-sm cursor-grab active:cursor-grabbing transition-colors duration-150 ${
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            actions.setActiveTab(t.id);
+                          }
+                        }}
+                        className={`group relative rounded-sm cursor-default transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                           sidebarCollapsed
                             ? "w-8 h-8 grid place-items-center"
                             : "w-full h-8 flex items-center gap-1.5 px-2.5 overflow-hidden"
@@ -1092,7 +1119,7 @@ export function VerticalTabBar() {
                             <span className="text-[14px] leading-none font-bold">×</span>
                           </button>
                         )}
-                      </button>
+                      </div>
                     </Tooltip>
                   </TabContextMenu>
                 </motion.div>
@@ -1105,12 +1132,12 @@ export function VerticalTabBar() {
                   <motion.div
                     key={`split-group-${seg.tabs[0].id}`}
                     layout
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -8 }}
-                    transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
-                    className={`rounded-md bg-[var(--command-active-bg)] w-full ${
-                      sidebarCollapsed ? "p-0.5 flex flex-col items-center gap-0.5" : "p-1 flex flex-col gap-0.5"
+                    initial={{ opacity: 0, x: -4, marginBottom: 0 }}
+                    animate={{ opacity: 1, x: 0, marginBottom: sidebarCollapsed ? 2 : 4 }}
+                    exit={{ opacity: 0, x: -4, height: 0, marginBottom: 0, paddingTop: 0, paddingBottom: 0 }}
+                    transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                    className={`rounded-md bg-[var(--command-active-bg)] w-full overflow-hidden ${
+                      sidebarCollapsed ? "p-0.5 flex flex-col items-center" : "p-1 flex flex-col"
                     }`}
                   >
                     <AnimatePresence initial={false}>
@@ -1122,6 +1149,7 @@ export function VerticalTabBar() {
               return renderSidebarTab(seg.tab);
             });
           })()}
+          </AnimatePresence>
 
           {/* New session button */}
           <div className={sidebarCollapsed ? "mt-auto pt-1" : "mt-auto pt-1 w-full"}>
@@ -1131,13 +1159,13 @@ export function VerticalTabBar() {
                   <PopoverTrigger asChild>
                     <button
                       aria-label="New tab"
-                      className={`rounded-sm transition-colors duration-150 shrink-0 w-full h-8 grid place-items-center ${
+                      className={`rounded-sm transition-colors duration-150 shrink-0 h-8 ${sidebarCollapsed ? "w-8" : "w-full"} grid place-items-center ${
                         open === "machines"
                           ? "text-fg bg-[var(--command-active-bg)]"
                           : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
                       }`}
                     >
-                      <Plus size={14} weight="bold" className="shrink-0" />
+                      <PlusIcon className="w-3.5 h-3.5 shrink-0" strokeWidth={2.5} />
                     </button>
                   </PopoverTrigger>
                 </Tooltip>
@@ -1151,7 +1179,7 @@ export function VerticalTabBar() {
                         : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
                     }`}
                   >
-                    <Plus size={15} weight="bold" className="shrink-0" />
+                    <PlusIcon className="w-[15px] h-[15px] shrink-0" strokeWidth={2.5} />
                     {!sidebarCollapsed && (
                       <span className="text-[12px] font-sans">New session</span>
                     )}
@@ -1164,6 +1192,7 @@ export function VerticalTabBar() {
                 align="start"
                 sideOffset={0}
                 collisionPadding={8}
+                onCloseAutoFocus={(e) => e.preventDefault()}
                 className="p-0 border-none shadow-none w-auto bg-transparent z-50"
                 style={{ marginLeft: 0 }}
               >
@@ -1193,19 +1222,25 @@ export function VerticalTabBar() {
             splitActive={splitTabIds.length >= 2}
           />
           <TabButton
-            icon={<Lightning size={16} weight="regular" />}
+            icon={<BoltIcon className="w-4 h-4" />}
             label="Bangs"
             tooltip="Bangs"
             onClick={() => actions.openSettingsTab("bangs")}
           />
           <TabButton
-            icon={<LockKey size={16} weight="regular" />}
+            icon={<LockClosedIcon className="w-4 h-4" />}
             label="Lock"
             tooltip="Lock"
             onClick={() => actions.lockApp()}
           />
           <TabButton
-            icon={<Gear size={16} weight={settingsOpen ? "fill" : "regular"} />}
+            icon={
+              settingsOpen ? (
+                <Cog6ToothIconSolid className="w-4 h-4" />
+              ) : (
+                <Cog6ToothIcon className="w-4 h-4" />
+              )
+            }
             label="Settings"
             tooltip="Settings"
             active={settingsOpen}

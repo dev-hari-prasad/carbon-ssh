@@ -1,9 +1,11 @@
 import "./fonts.css";
 import "@/styles.css";
+import "@/lib/defense-renderer";
 
 import { DEFAULT_THEME_ID, THEMES } from "@/config/themes";
 import { THEME_VARS_BY_ID } from "@/lib/theme-vars-by-id";
 import { SmoothCornersRuntime } from "@/components/SmoothCornersRuntime";
+import { Toaster } from "@/components/ui/sonner";
 import Script from "next/script";
 
 export const metadata = {
@@ -77,14 +79,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: DEFAULT_RULE }}
         />
-        <Script
-          id="theme-bootstrap"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: themeBootstrap }}
-        />
+        <Script id="theme-bootstrap" strategy="beforeInteractive">
+          {themeBootstrap}
+        </Script>
       </head>
       <body suppressHydrationWarning>
         {children}
+        <Toaster />
         <SmoothCornersRuntime />
       </body>
     </html>

@@ -41,6 +41,7 @@ export function applyThemeToDocument(t: ThemeId) {
   root.classList.toggle("dark", theme.type === "dark");
   root.setAttribute("data-theme", theme.id);
 
+  const isOnboarding = root.getAttribute("data-onboarding") === "true";
   const el = window as Window & {
     electron?: { platform?: string; setTitleBarOverlay?: (o: { color: string; symbolColor: string; height?: number }) => void };
   };
@@ -50,9 +51,9 @@ export function applyThemeToDocument(t: ThemeId) {
     (electron.platform === "win32" || electron.platform === "linux")
   ) {
     electron.setTitleBarOverlay({
-      color: vars["--titlebar-bg"],
+      color: isOnboarding ? "#00000000" : vars["--titlebar-bg"],
       symbolColor: vars["--titlebar-fg"],
-      height: 36,
+      height: 40,
     });
   }
 }

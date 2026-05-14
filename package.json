@@ -1,11 +1,21 @@
 {
   "name": "carbon-ssh",
+  "productName": "Carbon",
   "version": "0.1.0",
   "private": true,
   "sideEffects": false,
   "type": "module",
   "main": "electron/main.cjs",
   "packageManager": "pnpm@10.33.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "electron"
+    ],
+    "overrides": {
+      "postcss": "8.5.12"
+    }
+  },
   "scripts": {
     "dev": "set NODE_OPTIONS=--max-old-space-size=4096 && tsx server.ts",
     "dev:electron": "concurrently -k -n server,electron -c cyan,green \"tsx server.ts\" \"wait-on -t 60000 -i 3000 http://localhost:3000 && electron .\"",
@@ -14,6 +24,8 @@
     "build:electron-release": "powershell -Command \"Get-Process 'Carbon SSH*' -ErrorAction SilentlyContinue | Stop-Process -Force; Remove-Item -Path dist-electron-out -Recurse -Force -ErrorAction SilentlyContinue\" && next build --turbopack && electron-builder --config electron-builder.yml --config.compression=maximum",
     "start": "next start",
     "lint": "next lint",
+    "audit": "pnpm audit --audit-level=high",
+    "sbom": "cdxgen -o sbom.json .",
     "format": "prettier --write ."
   },
   "dependencies": {
@@ -22,8 +34,18 @@
     "@ai-sdk/gateway": "^3.0.105",
     "@ai-sdk/openai": "^3.0.54",
     "@ai-sdk/openai-compatible": "^2.0.42",
+    "@fontsource-variable/cascadia-code": "5.2.2",
+    "@fontsource-variable/fira-code": "5.2.7",
+    "@fontsource-variable/geist": "5.2.8",
+    "@fontsource-variable/geist-mono": "5.2.7",
+    "@fontsource-variable/inter": "5.2.8",
+    "@fontsource-variable/jetbrains-mono": "5.2.8",
+    "@fontsource-variable/manrope": "5.2.8",
+    "@fontsource-variable/source-code-pro": "5.2.7",
+    "@fontsource-variable/space-grotesk": "5.2.10",
+    "@heroicons/react": "2.2.0",
     "@hookform/resolvers": "^5.2.2",
-    "@phosphor-icons/react": "^2.1.10",
+    "@phosphor-icons/react": "2.1.10",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.8",
@@ -67,8 +89,7 @@
     "framer-motion": "^12.38.0",
     "iconoir-react": "^7.11.0",
     "input-otp": "^1.4.2",
-    "lucide-react": "^0.575.0",
-    "next": "16.2.4",
+    "next": "16.2.6",
     "postcss": "^8.5.12",
     "posthog-js": "^1.372.9",
     "react": "^19.2.0",
@@ -89,6 +110,8 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@cyclonedx/cdxgen": "12.3.3",
+    "@electron/fuses": "^1.8.0",
     "@eslint/js": "^9.32.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.16.5",
@@ -99,6 +122,7 @@
     "concurrently": "^9.2.1",
     "electron": "^41.4.0",
     "electron-builder": "^26.8.1",
+    "electron-builder-squirrel-windows": "26.8.1",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",

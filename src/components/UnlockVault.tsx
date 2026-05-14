@@ -13,15 +13,15 @@ import {
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import {
-  LockKeyhole,
-  Trash2,
-  Fingerprint,
-  Key,
-  TriangleAlert,
-  UnlockKeyhole,
-  Eye,
-  EyeOff,
-} from "lucide-react";
+  ExclamationTriangleIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  FingerPrintIcon,
+  KeyIcon,
+  LockClosedIcon,
+  LockOpenIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -162,13 +162,7 @@ export function UnlockVault() {
 
   const handleDestroy = () => {
     if (confirmText === "DESTROY") {
-      window.localStorage.removeItem("ssh.connections.v2");
-      window.localStorage.removeItem("ssh.groups.v2");
-      window.localStorage.removeItem("ssh.vault-setup");
-      window.localStorage.removeItem("ssh.temp-pwd");
-      window.localStorage.removeItem("ssh.vault-passkey-id");
-      window.localStorage.removeItem("ssh.vault-passkey-provider");
-      window.location.reload();
+      void actions.fullFactoryResetAndReload();
     }
   };
 
@@ -201,10 +195,10 @@ export function UnlockVault() {
           <div className="flex-1 flex flex-col justify-center space-y-6 shrink-0">
             <div className="space-y-4">
               <div className="h-16 w-16 rounded-full bg-primary/5 flex items-center justify-center">
-                <LockKeyhole className="h-8 w-8 text-primary" />
+                <LockClosedIcon className="h-10 w-10 text-primary" />
               </div>
               <div className="space-y-2 text-left">
-                <h1 className="text-2xl font-bold tracking-tight">Lock Carbon</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Lock Carbon</h1>
                 <p className="text-muted-foreground text-sm  leading-tight">
                   <b>Carbon locks your data.</b>
                   <br /> Choose how you want to unlock it.
@@ -219,10 +213,10 @@ export function UnlockVault() {
             <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="biometric">
-                  <Fingerprint className="w-4 h-4 mr-2" /> Passkeys
+                  <FingerPrintIcon className="w-4 h-4 mr-2" /> Passkeys
                 </TabsTrigger>
                 <TabsTrigger value="password">
-                  <Key className="w-4 h-4 mr-2" /> Password
+                  <KeyIcon className="w-4 h-4 mr-2" /> Password
                 </TabsTrigger>
               </TabsList>
 
@@ -241,7 +235,17 @@ export function UnlockVault() {
                   size="lg"
                   className="w-full"
                 >
-                  {loading ? "Waiting..." : "Use Biometrics"}
+                  {loading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-4 w-4 text-current" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>Setting up...</span>
+                    </div>
+                  ) : (
+                    "Use Biometrics"
+                  )}
                 </Button>
               </TabsContent>
 
@@ -249,7 +253,7 @@ export function UnlockVault() {
                 {passwordWarningTime > 0 && activeTab === "password" ? (
                   <div className="bg-destructive/10 border border-destructive/20 text-destructive text-xs px-3 py-2 rounded-lg w-full mb-2">
                     <p className="font-semibold flex items-center gap-1">
-                      <TriangleAlert className="h-3 w-3" /> Unsafe Method
+                      <ExclamationTriangleIcon className="h-3 w-3" /> Unsafe Method
                     </p>
                     <p className="mt-1">
                       Passwords are stored locally and don't provide strong security.
@@ -275,14 +279,28 @@ export function UnlockVault() {
                           onClick={() => setShowPassword(!showPassword)}
                           className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                         >
-                          {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                          {showPassword ? (
+                          <EyeSlashIcon className="h-[15px] w-[15px]" />
+                        ) : (
+                          <EyeIcon className="h-[15px] w-[15px]" />
+                        )}
                         </button>
                       </div>
                       {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
                     </div>
 
-                    <Button onClick={attemptPasswordSetup} size="lg" className="w-full">
-                      Set Password
+                    <Button onClick={attemptPasswordSetup} disabled={loading} size="lg" className="w-full">
+                      {loading ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-4 w-4 text-current" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                          <span>Setting up...</span>
+                        </div>
+                      ) : (
+                        "Set Password"
+                      )}
                     </Button>
                   </>
                 )}
@@ -337,14 +355,14 @@ export function UnlockVault() {
           <div className="space-y-4">
             <div className="h-16 w-16 rounded-full bg-primary/5 flex items-center justify-center">
               {isPasswordMode ? (
-                <Key className="h-8 w-8 text-primary" />
+                <KeyIcon className="h-10 w-10 text-primary" />
               ) : (
-                <Fingerprint className="h-8 w-8 text-primary" />
+                <FingerPrintIcon className="h-10 w-10 text-primary" />
               )}
             </div>
 
             <div className="space-y-2 text-left">
-              <h1 className="text-2xl font-bold tracking-tight">
+              <h1 className="text-3xl font-bold tracking-tight">
                 Let's decrypt <br /> Carbon!
               </h1>
             </div>
@@ -385,7 +403,11 @@ export function UnlockVault() {
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                        {showPassword ? (
+                          <EyeSlashIcon className="h-[15px] w-[15px]" />
+                        ) : (
+                          <EyeIcon className="h-[15px] w-[15px]" />
+                        )}
                       </button>
                     </div>
                     {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
@@ -396,8 +418,20 @@ export function UnlockVault() {
                     size="lg"
                     className="w-full"
                   >
-                    <UnlockKeyhole className="h-4 w-4" />
-                    Unlock Vault
+                    {loading ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-4 w-4 text-current" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        <span>Decrypting...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <LockOpenIcon className="h-4 w-4" />
+                        Unlock Vault
+                      </>
+                    )}
                   </Button>
                 </div>
               ) : (
@@ -411,17 +445,29 @@ export function UnlockVault() {
                     size="lg"
                     className="w-full"
                   >
-                    <UnlockKeyhole className="h-4 w-4" />
-                    Unlock
+                    {loading ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-4 w-4 text-current" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        <span>Decrypting...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <LockOpenIcon className="h-4 w-4" />
+                        Unlock
+                      </>
+                    )}
                   </Button>
                 </div>
               )}
             </div>
           ) : (
-            <div className="w-full space-y-4 text-left animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-full space-y-4 text-left animate-in fade-in zoom-in-[0.98] duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]">
               <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 space-y-2">
                 <h3 className="text-destructive font-semibold flex items-center gap-2">
-                  <Trash2 className="h-4 w-4" /> Danger Zone
+                  <TrashIcon className="h-4 w-4" /> Danger Zone
                 </h3>
                 <p className="text-xs text-muted-foreground">
                   This will delete all your Carbon data. This action cannot be undone.
@@ -466,7 +512,7 @@ export function UnlockVault() {
       </div>
 
       {error && !destroyMode && (
-        <div className="mt-4 max-w-2xl w-full flex justify-center animate-in fade-in duration-300">
+        <div className="mt-4 max-w-2xl w-full flex justify-center gap-4 animate-in fade-in duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]">
           <Button
             onClick={() => setDestroyMode(true)}
             variant="ghost"
@@ -475,6 +521,20 @@ export function UnlockVault() {
           >
             Having trouble? Reset App
           </Button>
+          
+          {process.env.NODE_ENV === "development" && (
+            <Button
+              onClick={async () => {
+                actions.setAccessSettings({ appLockEnabled: false, method: "passkey" });
+                await actions.unlockApp();
+              }}
+              variant="outline"
+              size="sm"
+              className="text-muted-foreground border-dashed"
+            >
+              Remove Lock (Dev Bypass)
+            </Button>
+          )}
         </div>
       )}
     </div>

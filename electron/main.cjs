@@ -1,3 +1,7 @@
+// --- SECURITY: Defense-in-depth must load FIRST (D5.1, D3.4) ---
+require("./defense.cjs").installMain();
+// --- END defense ---
+
 const {
   app,
   BrowserWindow,
@@ -6,13 +10,44 @@ const {
   ipcMain,
   safeStorage,
   systemPreferences,
+  session,
 } = require("electron");
+
+// Set identity early for taskbar/icon attribution
+app.setName("Carbon");
+if (process.platform === "win32") {
+  app.setAppUserModelId("com.carbon.ssh");
+}
+
+const crypto = require("crypto");
 
 ipcMain.on("set-zoom-factor", (event, factor) => {
   const webContents = event.sender;
   if (webContents) {
     webContents.setZoomFactor(factor);
   }
+});
+
+ipcMain.on("set-title-bar-overlay", (event, overlay) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (win) {
+    win.setTitleBarOverlay(overlay);
+  }
+});
+
+ipcMain.on("maximize-window", () => {
+  if (mainWindow) {
+    console.log("[main] maximize-window received");
+    mainWindow.show();
+    mainWindow.focus();
+    mainWindow.maximize();
+  }
+});
+
+ipcMain.on("pin-to-taskbar", () => {
+  // Programmatic pinning is unreliable/restricted on modern OSes.
+  // We keep this as a silent preference for now to avoid intrusive popups.
+  console.log("[main] Pin to taskbar preference toggled.");
 });
 
 // Biometrics and Safe Storage IPC Handlers
@@ -33,15 +68,31 @@ ipcMain.handle("biometric-unlock", async (event, reason) => {
 });
 
 ipcMain.handle("encrypt-string", (event, text) => {
+  if (typeof text !== "string") {
+    throw new Error("Invalid input: expected string");
+  }
+  if (text.length > 10 * 1024 * 1024) {
+    throw new Error("Input too large");
+  }
+  if (event.sender.id !== mainWindow?.webContents?.id) {
+    throw new Error("Unauthorized sender");
+  }
+
   if (safeStorage.isEncryptionAvailable()) {
     return safeStorage.encryptString(text).toString("base64");
   }
-  // Fallback to base64 if not available
-  return Buffer.from(text, "utf8").toString("base64");
+  // Never fall back to base64 — refuse to persist secrets in plaintext
+  throw new Error("Encryption not available: safeStorage is required for secret persistence");
 });
 
 ipcMain.handle("decrypt-string", (event, encryptedBase64) => {
   if (!encryptedBase64) return "";
+  if (typeof encryptedBase64 !== "string") {
+    throw new Error("Invalid input: expected string");
+  }
+  if (encryptedBase64.length > 10 * 1024 * 1024) {
+    throw new Error("Input too large");
+  }
 
   if (safeStorage.isEncryptionAvailable()) {
     try {
@@ -52,8 +103,12 @@ ipcMain.handle("decrypt-string", (event, encryptedBase64) => {
       return "";
     }
   }
-  // Fallback to base64 if encryption wasn't available
-  return Buffer.from(encryptedBase64, "base64").toString("utf8");
+  throw new Error("Encryption not available: safeStorage is required for secret decryption");
+});
+
+// Provide WS token to renderer for WebSocket auth (D7.2)
+ipcMain.handle("get-ws-token", () => {
+  return wsToken;
 });
 const { createServer } = require("http");
 const http = require("http");
@@ -76,6 +131,7 @@ if (!isDev) {
 
 let mainWindow = null;
 let nextProcess = null;
+let wsToken = null; // WebSocket auth token for renderer-to-main auth
 
 function renderSplashHtml() {
   const logoDir = isDev
@@ -189,16 +245,31 @@ function renderFatalHtml(title, details, logs = "") {
 }
 
 function createWindow() {
+  const iconPath = isDev
+    ? path.join(__dirname, "..", "public", "logo", "Carbon logo light.png")
+    : path.join(process.resourcesPath, "standalone", "public", "logo", "Carbon logo light.png");
+
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    width: 1050,
+    height: 650,
     minWidth: 900,
     minHeight: 600,
     backgroundColor: "#0d1117",
+    icon: iconPath,
+    titleBarStyle: "hidden",
+    titleBarOverlay: {
+      color: "#00000000",
+      symbolColor: "#a0a0a0",
+      height: 40,
+    },
     show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: true,
+      webSecurity: true,
+      allowRunningInsecureContent: false,
+      enableRemoteModule: false,
       preload: path.join(__dirname, "preload.cjs"),
     },
   });
@@ -215,9 +286,39 @@ function createWindow() {
     });
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    // Only allow https:// URLs in external browser
+    if (url.startsWith("https://")) {
+      shell.openExternal(url);
+    }
     return { action: "deny" };
   });
+
+  // Restrict navigation to localhost only
+  mainWindow.webContents.on("will-navigate", (event, navigationUrl) => {
+    const parsed = new URL(navigationUrl);
+    if (parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1") {
+      console.warn(`[security] Blocked navigation to: ${navigationUrl}`);
+      event.preventDefault();
+    }
+  });
+
+  // Disable DevTools in production
+  if (!isDev) {
+    mainWindow.webContents.on("devtools-opened", () => {
+      mainWindow.webContents.closeDevTools();
+    });
+  }
+
+  // Prevent core dumps on Linux (D3.5)
+  if (process.platform === "linux") {
+    try {
+      const { execSync } = require("child_process");
+      execSync(`prlimit --pid ${process.pid} --core=0:0`);
+      console.log(`[security] Core dumps disabled for PID ${process.pid}`);
+    } catch {
+      // Best effort — may not have prlimit available
+    }
+  }
 
   mainWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL) => {
     console.error("[main] did-fail-load", { errorCode, errorDescription, validatedURL });
@@ -361,6 +462,10 @@ async function startProductionServer(preferredPort) {
             const { WebSocketServer } = require("ws");
             const { handleWsConnection } = require("./ws-handler.cjs");
 
+            // Generate WebSocket auth token
+            const wsTokenLocal = crypto.randomBytes(32).toString("hex");
+            console.log("[main] WebSocket auth token generated");
+
             const srv = createServer((req, res) => {
               const proxyReq = http.request(
                 {
@@ -371,7 +476,10 @@ async function startProductionServer(preferredPort) {
                   headers: req.headers,
                 },
                 (proxyRes) => {
-                  res.writeHead(proxyRes.statusCode, proxyRes.headers);
+                  // Strip X-Frame-Options for Electron (not needed)
+                  const headers = { ...proxyRes.headers };
+                  delete headers["x-frame-options"];
+                  res.writeHead(proxyRes.statusCode, headers);
                   proxyRes.pipe(res);
                 },
               );
@@ -384,7 +492,21 @@ async function startProductionServer(preferredPort) {
             });
 
             const wss = new WebSocketServer({ noServer: true });
-            wss.on("connection", (ws) => handleWsConnection(ws));
+            wss.on("connection", (ws, req) => {
+              // Validate WebSocket token
+              try {
+                const url = new URL(req.url, "http://localhost");
+                if (url.searchParams.get("token") !== wsTokenLocal) {
+                  console.warn("[security] WebSocket connection rejected: invalid token");
+                  ws.close(4001, "Unauthorized");
+                  return;
+                }
+              } catch {
+                ws.close(4001, "Unauthorized");
+                return;
+              }
+              handleWsConnection(ws);
+            });
 
             srv.on("upgrade", (req, socket, head) => {
               const { pathname } = parse(req.url || "", true);
@@ -398,7 +520,8 @@ async function startProductionServer(preferredPort) {
             srv.listen(preferredPort, "127.0.0.1", () => {
               const actualPort = srv.address().port;
               console.log(`[main] Entry proxy: http://127.0.0.1:${actualPort}`);
-              resolve({ server: srv, port: actualPort });
+              wsToken = wsTokenLocal;
+              resolve({ server: srv, port: actualPort, wsToken: wsTokenLocal });
             });
           }
         });
@@ -419,6 +542,98 @@ async function startProductionServer(preferredPort) {
 
 app.whenReady().then(async () => {
   Menu.setApplicationMenu(null);
+
+  // --- SECURITY: Restrict file permissions on app data (D3.1) ---
+  if (!isDev) {
+    const { setRestrictivePermissions } = require("./file-permissions.cjs");
+    setRestrictivePermissions(app.getPath("userData"));
+  }
+
+  // --- SECURITY: Web preferences (nodeIntegration: false, contextIsolation: true, sandbox)
+  // are set explicitly on BrowserWindow in createWindow(). Electron removed
+  // WebContents#getWebPreferences(), so runtime introspection is not available.
+
+  // --- SECURITY: Network egress allowlist (D6.1) ---
+  const ALLOWED_ORIGINS = new Set([
+    "localhost",
+    "127.0.0.1",
+    "api.openai.com",
+    "api.anthropic.com",
+    "api.groq.com",
+    "api.deepseek.com",
+    "api.together.xyz",
+    "api.mistral.ai",
+    "generativelanguage.googleapis.com",
+    "gateway.ai.cloudflare.com",
+    "bedrock-runtime.us-east-1.amazonaws.com",
+    "bedrock-runtime.us-west-2.amazonaws.com",
+    "bedrock-runtime.eu-west-1.amazonaws.com",
+    "bedrock-runtime.ap-northeast-1.amazonaws.com",
+    "bedrock-runtime.ap-southeast-1.amazonaws.com",
+    "posthog.com",
+    "eu.posthog.com",
+    "us.posthog.com",
+  ]);
+
+  session.defaultSession.webRequest.onBeforeRequest(
+    { urls: ["*://*/*"] },
+    (details, callback) => {
+      try {
+        const url = new URL(details.url);
+        // Allow all localhost/loopback traffic
+        if (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]") {
+          callback({});
+          return;
+        }
+        // Only allow HTTPS for external traffic
+        if (url.protocol !== "https:") {
+          console.warn(`[security] Blocked non-HTTPS request to: ${details.url}`);
+          callback({ cancel: true });
+          return;
+        }
+        // Check against allowlist
+        if (!ALLOWED_ORIGINS.has(url.hostname)) {
+          console.warn(`[security] Blocked outbound request to: ${url.hostname}`);
+          callback({ cancel: true });
+          return;
+        }
+        callback({});
+      } catch {
+        callback({ cancel: true });
+      }
+    },
+  );
+
+  // --- SECURITY: IPC channel lockdown ---
+  const ALLOWED_IPC_CHANNELS = new Set([
+    "encrypt-string",
+    "decrypt-string",
+    "biometric-unlock",
+    "set-zoom-factor",
+    "get-ws-token",
+    "set-title-bar-overlay",
+    "pin-to-taskbar",
+    "maximize-window",
+  ]);
+
+  const originalHandle = ipcMain.handle.bind(ipcMain);
+  ipcMain.handle = (channel, handler) => {
+    if (!ALLOWED_IPC_CHANNELS.has(channel)) {
+      throw new Error(`Unauthorized IPC channel registration: ${channel}`);
+    }
+    return originalHandle(channel, handler);
+  };
+
+  // Also lock down ipcMain.on
+  const originalOn = ipcMain.on.bind(ipcMain);
+  ipcMain.on = (channel, handler) => {
+    if (!ALLOWED_IPC_CHANNELS.has(channel)) {
+      throw new Error(`Unauthorized IPC channel registration: ${channel}`);
+    }
+    return originalOn(channel, handler);
+  };
+  // --- END IPC lockdown ---
+
   createWindow();
 
   if (isDev) {

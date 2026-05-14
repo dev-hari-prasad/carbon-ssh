@@ -6,8 +6,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: "Manrope Variable", ui-sans-serif, system-ui, sans-serif;
 
   --color-bg: var(--bg);
   --color-bg-elev: var(--bg-elev);
@@ -91,27 +91,37 @@
     font-family: var(--font-sans);
     font-feature-settings: "ss01", "cv11";
     -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
   ::selection {
-    background: color-mix(in oklab, var(--accent) 35%, transparent);
+    background: color-mix(in oklab, var(--accent) 30%, transparent);
   }
-  /* Scrollbar */
+  /* Scrollbar — slim, native-feeling, unobtrusive */
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
   }
   ::-webkit-scrollbar-thumb {
-    background: var(--border-strong);
-    border-radius: 6px;
-    border: 2px solid var(--bg);
+    background: color-mix(in oklab, var(--border-strong) 60%, transparent);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    transition: background 0.2s ease;
   }
   ::-webkit-scrollbar-thumb:hover {
     background: var(--fg-dim);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
   }
   ::-webkit-scrollbar-track {
     background: transparent;
   }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
 
+  /* Interactive element base transitions — Apple system curve */
   button:not(:disabled),
   [role="button"]:not(:disabled),
   summary,
@@ -119,18 +129,34 @@
   a[href] {
     cursor: pointer;
     transition:
-      opacity 0.2s ease,
-      background-color 0.2s ease,
-      transform 0.1s ease,
-      filter 0.2s ease;
+      opacity 0.18s cubic-bezier(0.25, 0.1, 0.25, 1),
+      background-color 0.18s cubic-bezier(0.25, 0.1, 0.25, 1),
+      color 0.18s cubic-bezier(0.25, 0.1, 0.25, 1),
+      border-color 0.18s cubic-bezier(0.25, 0.1, 0.25, 1),
+      transform 0.12s cubic-bezier(0.25, 0.1, 0.25, 1),
+      box-shadow 0.18s cubic-bezier(0.25, 0.1, 0.25, 1);
+    will-change: transform;
   }
+  /* Subtle, tactile press — scale down instead of translate */
   button:not(:disabled):active,
   [role="button"]:not(:disabled):active {
-    transform: scale(0.98);
+    transform: scale(0.975);
+    filter: brightness(0.97);
+    transition-duration: 0.06s;
+  }
+  /* Refined focus-visible ring */
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px color-mix(in oklab, var(--accent) 40%, transparent);
+  }
+  input:focus-visible,
+  textarea:focus-visible {
+    box-shadow: none;
   }
   button:disabled,
   [role="button"][aria-disabled="true"] {
     cursor: not-allowed;
+    opacity: 0.5;
   }
 }
 
@@ -159,5 +185,39 @@
         transparent 1px
       );
     background-size: 32px 32px;
+  }
+}
+
+/* Radix Select: inner panel scales without fighting Popper transform on Content. */
+@keyframes tm-select-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.tm-select-pop-anim {
+  animation: tm-select-pop 220ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-select-pop-anim {
+    animation: none;
+  }
+}
+
+/* Keyframe for AI Bang Palette entrance */
+@keyframes aiBangIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

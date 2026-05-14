@@ -2,6 +2,7 @@ import { DEFAULT_THEME_ID, THEMES } from "@/config/themes";
 import { AI_PROVIDERS, DEFAULT_AI_SETTINGS, type AISettings } from "./ai";
 import type { Bang, Connection, HostGroup, ThemeId } from "./types";
 import { normalizeConnectionCredentials } from "./credentials";
+import { stripConnectionsSecrets } from "./secret-stripping";
 import { DEFAULT_LOG_RETENTION, type LogRetention } from "./log-retention";
 
 const KEY = "ssh.connections.v2";
@@ -21,6 +22,8 @@ const TELEMETRY_ENABLED_KEY = "ssh.telemetry-enabled.v1";
 const TAB_BAR_ORIENTATION_KEY = "ssh.tab-bar-orientation.v1";
 const SIDEBAR_COLLAPSED_KEY = "ssh.sidebar-collapsed.v1";
 const SIDEBAR_WIDTH_KEY = "ssh.sidebar-width.v1";
+const CLOSED_TABS_KEY = "ssh.closed-tabs.v1";
+const ONBOARDING_COMPLETED_KEY = "ssh.onboarding-completed.v1";
 
 const VALID_LOG_RETENTION = new Set<LogRetention>(["24h", "3d", "7d", "30d", "90d", "1y", "off"]);
 
@@ -100,9 +103,12 @@ export async function loadConnectionsAsync(): Promise<Connection[]> {
 
     const parsed = JSON.parse(decrypted);
     if (!Array.isArray(parsed)) return [];
-    return parsed.map((connection) =>
+    const connections = parsed.map((connection) =>
       normalizeConnectionCredentials(connection as Connection),
     ) as Connection[];
+
+    // Strip secrets before returning to renderer (D10.1)
+    return stripConnectionsSecrets(connections);
   } catch (e) {
     console.error("Failed to load/decrypt connections", e);
     return [];
@@ -223,7 +229,12 @@ export function saveFont(id: string) {
 
 export function loadTerminalFont(): string {
   if (typeof window === "undefined") return "jetbrains-mono";
-  return window.localStorage.getItem(TERMINAL_FONT_KEY) ?? "jetbrains-mono";
+  const raw = window.localStorage.getItem(TERMINAL_FONT_KEY) ?? "jetbrains-mono";
+  if (raw === "google-sans-code") {
+    window.localStorage.setItem(TERMINAL_FONT_KEY, "geist-mono");
+    return "geist-mono";
+  }
+  return raw;
 }
 
 export function saveTerminalFont(id: string) {
@@ -329,12 +340,12 @@ export function saveSidebarCollapsed(v: boolean): void {
 }
 
 export function loadSidebarWidth(orientation?: TabBarOrientation): number {
-  if (typeof window === "undefined") return orientation === "vertical" ? 260 : 200;
+  if (typeof window === "undefined") return orientation === "vertical" ? 200 : 140;
   const v = Number(window.localStorage.getItem(SIDEBAR_WIDTH_KEY));
   if (orientation === "vertical") {
-    return v >= 200 && v <= 400 ? v : 260;
+    return v >= 140 && v <= 400 ? v : 200;
   }
-  return v >= 60 && v <= 400 ? v : 200;
+  return v >= 60 && v <= 400 ? v : 140;
 }
 
 export function saveSidebarWidth(w: number): void {
@@ -353,4 +364,55 @@ export function loadTelemetryEnabled(): boolean {
 export function saveTelemetryEnabled(enabled: boolean): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(TELEMETRY_ENABLED_KEY, String(enabled));
+}
+
+export function loadClosedTabs(): string[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(CLOSED_TABS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((id) => typeof id === "string");
+  } catch {
+    return [];
+  }
+}
+
+export function saveClosedTabs(ids: string[]) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(CLOSED_TABS_KEY, JSON.stringify(ids));
+}
+
+export function loadOnboardingCompleted(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(ONBOARDING_COMPLETED_KEY) === "true";
+}
+
+export function saveOnboardingCompleted(completed: boolean): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(ONBOARDING_COMPLETED_KEY, String(completed));
+}
+
+/** localStorage key prefixes owned by Carbon / bundled analytics on this origin (factory reset). */
+const WIPE_LOCAL_PREFIXES = ["ssh.", "carbon.", "ph_"] as const;
+
+/** Removes all Carbon app data from localStorage (and sessionStorage). Reload the app after calling. */
+export function wipeAllCarbonLocalData(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const keys = Object.keys(window.localStorage);
+    for (const k of keys) {
+      if (WIPE_LOCAL_PREFIXES.some((p) => k.startsWith(p))) {
+        window.localStorage.removeItem(k);
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  try {
+    window.sessionStorage.clear();
+  } catch {
+    /* ignore */
+  }
 }

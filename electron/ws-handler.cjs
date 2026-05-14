@@ -1,5 +1,6 @@
 // Production-ready WebSocket handler for Electron (compiled from ws-handler.ts logic)
 const { Client } = require("ssh2");
+const crypto = require("crypto");
 
 function resolveAuthMethod(data) {
   if (data.authMethod === "privateKey") return "privateKey";
@@ -173,7 +174,16 @@ function handleWsConnection(ws) {
         readyTimeout: 20000,
         keepaliveInterval: 10000,
         tryKeyboard: true,
-        hostVerifier: () => true,
+        hostVerifier: (hashedKey, callback) => {
+          if (hashedKey) {
+            const fingerprint = crypto
+              .createHash("sha256")
+              .update(hashedKey)
+              .digest("base64");
+            console.log(`[ws-handler] Host key fingerprint: SHA256:${fingerprint}:${host}`);
+          }
+          return true;
+        },
       };
       if (authMethod === "password") {
         config.password = password || "";

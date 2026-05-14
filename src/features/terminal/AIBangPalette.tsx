@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { Command } from "cmdk";
-import { Sparkle, Lightning, MagicWand } from "@phosphor-icons/react";
+import { BoltIcon, SparklesIcon } from "@heroicons/react/24/solid";
 import { useStore } from "@/lib/store";
 import type { Bang } from "@/lib/types";
 
@@ -142,17 +142,18 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
   return (
     <div 
       ref={containerRef}
-      className={`absolute z-50 w-[340px] rounded-md bg-[var(--menu-bg)]/60 backdrop-blur-xl border border-[var(--border-strong)] overflow-hidden flex flex-col font-sans animate-in fade-in slide-in-from-bottom-2 duration-200 ${
+      className={`absolute z-50 w-[340px] rounded-md bg-[var(--menu-bg)]/60 backdrop-blur-xl border border-[var(--border-strong)] overflow-hidden flex flex-col font-sans ${
         !adjustedPosition ? "bottom-4 left-4" : ""
       }`}
-      style={
-        adjustedPosition
+      style={{
+        ...(adjustedPosition
           ? {
-              top: adjustedPosition.top + 8, // slight offset under cursor
-              left: Math.max(8, adjustedPosition.left - 10), // slight offset left to align nicely
+              top: adjustedPosition.top + 8,
+              left: Math.max(8, adjustedPosition.left - 10),
             }
-          : undefined
-      }
+          : {}),
+        animation: "aiBangIn 160ms cubic-bezier(0.32, 0.72, 0, 1) both",
+      }}
     >
       <Command
         className="flex flex-col w-full h-full"
@@ -165,9 +166,9 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
               <div className="w-full h-full border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
             </div>
           ) : aiEnabled ? (
-            <Sparkle size={16} weight="fill" className="text-accent shrink-0 mr-2" />
+            <SparklesIcon className="w-4 h-4 text-accent shrink-0 mr-2" />
           ) : (
-            <Lightning size={16} weight="fill" className="text-accent shrink-0 mr-2" />
+            <BoltIcon className="w-4 h-4 text-accent shrink-0 mr-2" />
           )}
           <Command.Input
             ref={inputRef}
@@ -200,13 +201,13 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
                   }}
                   className="flex items-center gap-2.5 px-2 py-1.5 mt-0.5 rounded-sm text-fg cursor-pointer hover:bg-[var(--menu-hover-bg)] aria-selected:bg-[var(--command-active-bg)] aria-selected:text-fg transition-all group border border-transparent aria-selected:border-accent/10"
                 >
-                  <div className="w-6 h-6 shrink-0 rounded-sm bg-accent/5 border border-accent/10 grid place-items-center text-accent">
-                    <MagicWand size={13} weight="fill" />
-                  </div>
                   <div className="flex items-center justify-between gap-3 min-w-0 flex-1">
-                    <code className="shrink-0 text-[11px] font-mono font-normal bg-bg-panel/60 px-2.5 py-0.5 rounded-full border border-border/40 text-fg-muted group-aria-selected:border-white/20 transition-colors">
-                      {suggestion.command}
-                    </code>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <SparklesIcon className="w-3.5 h-3.5 text-accent shrink-0" />
+                      <code className="shrink-0 text-[11px] font-mono font-normal bg-bg-panel/60 px-2.5 py-0.5 rounded-full border border-border/40 text-fg-muted group-aria-selected:border-white/20 transition-colors">
+                        {suggestion.command}
+                      </code>
+                    </div>
                     <span className="text-[12px] font-sans font-normal text-fg-muted group-aria-selected:text-white/80 transition-colors truncate lowercase first-letter:capitalize text-right">
                       {suggestion.label}
                     </span>
@@ -224,7 +225,7 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
                   }}
                   className="flex items-center gap-2 px-2 py-1.5 mt-0.5 rounded-sm text-[12px] text-fg cursor-pointer hover:bg-[var(--menu-hover-bg)] aria-selected:bg-[var(--command-active-bg)] aria-selected:text-fg transition-colors"
                 >
-                  <MagicWand size={14} className="text-fg-dim shrink-0" />
+                  <SparklesIcon className="w-3.5 h-3.5 text-fg-dim shrink-0" />
                   <span className="truncate lowercase first-letter:capitalize">Ask AI: {query.startsWith("!") ? query.slice(1) : query}</span>
                 </Command.Item>
               )}
@@ -243,13 +244,13 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
                   }}
                   className="flex items-center gap-2.5 px-2 py-1.5 mt-0.5 rounded-sm text-fg cursor-pointer hover:bg-[var(--menu-hover-bg)] aria-selected:bg-[var(--command-active-bg)] aria-selected:text-fg transition-all group border border-transparent aria-selected:border-accent/10"
                 >
-                  <div className="w-6 h-6 shrink-0 rounded-sm bg-accent/5 border border-accent/10 grid place-items-center text-accent">
-                    <Lightning size={13} weight="fill" />
-                  </div>
                   <div className="flex items-center justify-between gap-3 min-w-0 flex-1">
-                    <code className="shrink-0 text-[11px] font-mono font-normal bg-bg-panel/60 px-2.5 py-0.5 rounded-full border border-border/40 text-fg-muted group-aria-selected:text-white/90 group-aria-selected:border-white/20 transition-colors lowercase first-letter:capitalize">
-                      !{bang.trigger}
-                    </code>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <BoltIcon className="w-3.5 h-3.5 text-accent shrink-0" />
+                      <code className="shrink-0 text-[11px] font-mono font-normal bg-bg-panel/60 px-2.5 py-0.5 rounded-full border border-border/40 text-fg-muted group-aria-selected:border-white/20 transition-colors lowercase first-letter:capitalize">
+                        !{bang.trigger}
+                      </code>
+                    </div>
                     <span className="text-[12px] font-sans font-normal text-fg-muted group-aria-selected:text-white/80 transition-colors truncate text-right lowercase first-letter:capitalize">
                       {bang.description || bang.command}
                     </span>

@@ -1,10 +1,11 @@
 "use client";
 
-import { Columns, Rows, GridFour, CaretDown, SquaresFour } from "@phosphor-icons/react";
+import { ChevronRightIcon, Squares2X2Icon } from "@heroicons/react/24/outline";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { actions, useStore } from "@/lib/store";
 import type { SplitLayout } from "@/lib/types";
 import { SPLIT_LAYOUT_SLOTS } from "@/lib/types";
+import { Tooltip } from "@/components/Tooltip";
 
 function LayoutThumb({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
@@ -16,7 +17,7 @@ function LayoutThumb({ className, children }: { className?: string; children: Re
   );
 }
 
-const tileCell = "rounded-sm bg-[var(--command-active-bg)]";
+const tileCell = "rounded-sm bg-accent/20 border border-accent/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]";
 
 export function SplitLayoutPicker({
   variant,
@@ -54,8 +55,7 @@ export function SplitLayoutPicker({
         aria-haspopup="dialog"
         className={`${triggerClassTop} ${splitActive ? activeSplit : inactive}`}
       >
-        <GridFour size={15} weight={splitActive ? "fill" : "regular"} />
-        <CaretDown size={9} weight="bold" className="opacity-70" aria-hidden />
+        <Squares2X2Icon className={`w-[15px] h-[15px] ${splitActive ? "text-current" : ""}`} strokeWidth={splitActive ? 2.25 : 1.75} />
       </button>
     );
   } else if (variant === "sidebar-collapsed") {
@@ -66,7 +66,7 @@ export function SplitLayoutPicker({
         aria-haspopup="dialog"
         className={`${triggerClassSidebarIcon} ${splitActive ? activeSplit : inactive}`}
       >
-        <GridFour size={14} weight={splitActive ? "fill" : "regular"} />
+        <Squares2X2Icon className="w-[14px] h-[14px]" strokeWidth={splitActive ? 2.25 : 1.75} />
       </button>
     );
   } else {
@@ -75,11 +75,11 @@ export function SplitLayoutPicker({
         type="button"
         aria-label="Split layout options"
         aria-haspopup="dialog"
-        className={`${triggerClassSidebarFull} justify-start ${splitActive ? activeSplit : `${inactive} bg-[var(--command-bg)]`}`}
+        className={`${triggerClassSidebarFull} justify-start ${splitActive ? activeSplit : inactive}`}
       >
-        <GridFour size={16} weight={splitActive ? "fill" : "regular"} className="shrink-0" />
+        <Squares2X2Icon className="w-4 h-4 shrink-0" strokeWidth={splitActive ? 2.25 : 1.75} />
         <span className="truncate">Split tabs</span>
-        <CaretDown size={11} weight="bold" className="ml-auto shrink-0 opacity-60" aria-hidden />
+        <ChevronRightIcon className="w-[11px] h-[11px] ml-auto shrink-0 opacity-60" aria-hidden strokeWidth={2.5} />
       </button>
     );
   }
@@ -93,24 +93,30 @@ export function SplitLayoutPicker({
     const disabled = tabsLength < slots;
     const isActive = splitActive && splitLayout === layout;
     return (
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={() => pick(layout)}
-        title={disabled ? `Needs at least ${slots} tabs` : label}
-        className={`group flex flex-col items-center gap-1 rounded-md p-1.5 text-center outline-none transition-colors ${
-          disabled
-            ? "cursor-not-allowed opacity-35"
-            : isActive
-              ? "bg-accent/12 ring-1 ring-accent/40"
-              : "hover:bg-[var(--menu-hover-bg)] focus-visible:ring-2 focus-visible:ring-accent/45"
-        }`}
+      <Tooltip
+        key={layout}
+        label={disabled ? `Needs at least ${slots} tabs` : label}
+        side="bottom"
+        className="w-full"
       >
-        {thumb}
-        <span className={`text-[10px] font-sans leading-tight truncate ${isActive ? "text-accent font-medium" : "text-fg-muted group-hover:text-fg"}`}>
-          {label}
-        </span>
-      </button>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => pick(layout)}
+          className={`group flex w-full flex-col items-center gap-1 rounded-md p-1.5 text-center outline-none transition-colors ${
+            disabled
+              ? "cursor-not-allowed opacity-35"
+              : isActive
+                ? "bg-accent/12 ring-1 ring-accent/40"
+                : "hover:bg-[var(--menu-hover-bg)] focus-visible:ring-2 focus-visible:ring-accent/45"
+          }`}
+        >
+          {thumb}
+          <span className={`text-[10px] font-sans leading-tight truncate ${isActive ? "text-accent font-medium" : "text-fg-muted group-hover:text-fg"}`}>
+            {label}
+          </span>
+        </button>
+      </Tooltip>
     );
   };
 

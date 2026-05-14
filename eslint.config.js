@@ -22,6 +22,43 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      // --- SECURITY: Ban dangerous APIs (D5.5) ---
+      "no-eval": "error",
+      "no-implied-eval": "error",
+      "no-new-func": "error",
+      "@typescript-eslint/no-implied-eval": "error",
+      // Disallow dynamic code execution via strings
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression[callee.name='setTimeout'][arguments.0.type!='FunctionExpression'][arguments.0.type!='ArrowFunctionExpression']",
+          message: "setTimeout with string argument is prohibited. Use a function reference."
+        },
+        {
+          selector: "CallExpression[callee.name='setInterval'][arguments.0.type!='FunctionExpression'][arguments.0.type!='ArrowFunctionExpression']",
+          message: "setInterval with string argument is prohibited. Use a function reference."
+        }
+      ],
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "document",
+          property: "write",
+          message: "document.write() is prohibited. Use DOM manipulation APIs."
+        }
+      ],
+      "no-restricted-imports": [
+        "error",
+        {
+          "patterns": [
+            {
+              "group": ["child_process"],
+              "message": "child_process.exec is dangerous. Use execFile without shell:true, or the ssh2 library for SSH."
+            }
+          ]
+        }
+      ],
+      // --- END SECURITY ---
     },
   },
   eslintPluginPrettier,

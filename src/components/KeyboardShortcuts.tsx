@@ -37,9 +37,16 @@ export function KeyboardShortcuts() {
       }
 
       // New Session: Mod+T or Quick Switch: Mod+K, Mod+P
-      if (mod && (key === "t" || key === "k" || key === "p")) {
+      if (mod && !shift && (key === "t" || key === "k" || key === "p")) {
         e.preventDefault();
         window.dispatchEvent(new CustomEvent("tm:focus-search"));
+        return;
+      }
+
+      // Toggle Sidebar: Mod+B
+      if (mod && !shift && key === "b") {
+        e.preventDefault();
+        actions.toggleSidebarCollapsed();
         return;
       }
 

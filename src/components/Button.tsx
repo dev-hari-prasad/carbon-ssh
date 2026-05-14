@@ -9,7 +9,7 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const base =
-  "inline-flex items-center justify-center gap-1.5 font-medium font-sans rounded-sm transition-colors duration-100 disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent select-none";
+  "inline-flex items-center justify-center gap-1.5 font-medium font-sans rounded-sm transition-all duration-[180ms] ease-[cubic-bezier(0.25,0.1,0.25,1)] disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent select-none";
 
 const variants: Record<Variant, string> = {
   primary: "bg-[var(--button-bg)] text-accent-fg hover:bg-[var(--button-hover-bg)]",

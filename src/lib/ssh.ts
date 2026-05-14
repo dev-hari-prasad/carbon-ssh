@@ -170,15 +170,25 @@ export function connectSsh(
     client.on("error", (error) => handleError(formatSshError(error, authMethod)));
     client.on("close", handleClose);
 
-    const config: ConnectConfig = {
-      host: options.host,
-      port: options.port,
-      username: options.username,
-      readyTimeout: 20_000,
-      keepaliveInterval: 10_000,
-      tryKeyboard: true,
-      hostVerifier: () => true,
-    };
+      const config: ConnectConfig = {
+        host: options.host,
+        port: options.port,
+        username: options.username,
+        readyTimeout: 20_000,
+        keepaliveInterval: 10_000,
+        tryKeyboard: true,
+        hostVerifier: (hashedKey: any) => {
+          if (hashedKey) {
+            const crypto = require("crypto");
+            const fingerprint = crypto
+              .createHash("sha256")
+              .update(hashedKey)
+              .digest("base64");
+            console.log(`[ssh] Host key fingerprint: SHA256:${fingerprint}:${options.host}`);
+          }
+          return true;
+        },
+      };
 
     if (authMethod === "password") {
       config.password = options.password ?? "";

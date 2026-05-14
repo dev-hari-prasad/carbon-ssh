@@ -1,118 +1,13 @@
-@font-face {
-  font-family: "Manrope";
-  src: url("/fonts/Manrope.ttf") format("truetype-variations");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Inter";
-  src: url("/fonts/Inter.ttf") format("truetype-variations");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Inter";
-  src: url("/fonts/Inter-Italic.ttf") format("truetype-variations");
-  font-weight: 100 900;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Space Grotesk";
-  src: url("/fonts/SpaceGrotesk.ttf") format("truetype-variations");
-  font-weight: 300 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "JetBrains Mono";
-  src: url("/fonts/JetBrainsMono-VariableFont_wght.ttf") format("truetype-variations");
-  font-weight: 100 800;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "JetBrains Mono";
-  src: url("/fonts/JetBrainsMono-Italic-VariableFont_wght.ttf") format("truetype-variations");
-  font-weight: 100 800;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Geist";
-  src: url("/fonts/Geist.ttf") format("truetype");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Cascadia Code";
-  src: url("/fonts/CascadiaCode-VariableFont_wght.ttf") format("truetype-variations");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Cascadia Code";
-  src: url("/fonts/CascadiaCode-Italic-VariableFont_wght.ttf") format("truetype-variations");
-  font-weight: 100 900;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Fira Code";
-  src: url("/fonts/FiraCode-VariableFont_wght.ttf") format("truetype-variations");
-  font-weight: 300 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Google Sans Code";
-  src: url("/fonts/GoogleSansCode-VariableFont_MONO,wght.ttf") format("truetype-variations");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Google Sans Code";
-  src: url("/fonts/GoogleSansCode-Italic-VariableFont_MONO,wght.ttf") format("truetype-variations");
-  font-weight: 100 900;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Source Code Pro";
-  src: url("/fonts/SourceCodePro-VariableFont_wght.ttf") format("truetype-variations");
-  font-weight: 200 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Source Code Pro";
-  src: url("/fonts/SourceCodePro-Italic-VariableFont_wght.ttf") format("truetype-variations");
-  font-weight: 200 900;
-  font-style: italic;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Geist Mono";
-  src: url("/fonts/GeistMono.ttf") format("truetype");
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
+@import "@fontsource-variable/manrope/index.css";
+@import "@fontsource-variable/inter/index.css";
+@import "@fontsource-variable/inter/wght-italic.css";
+@import "@fontsource-variable/space-grotesk/index.css";
+@import "@fontsource-variable/geist/index.css";
+@import "@fontsource-variable/jetbrains-mono/index.css";
+@import "@fontsource-variable/jetbrains-mono/wght-italic.css";
+@import "@fontsource-variable/geist-mono/index.css";
+@import "@fontsource-variable/cascadia-code/index.css";
+@import "@fontsource-variable/cascadia-code/wght-italic.css";
+@import "@fontsource-variable/fira-code/index.css";
+@import "@fontsource-variable/source-code-pro/index.css";
+@import "@fontsource-variable/source-code-pro/wght-italic.css";

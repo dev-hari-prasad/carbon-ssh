@@ -147,8 +147,10 @@ export function Tooltip({
                 color: "var(--fg)",
                 borderColor: "var(--border-strong)",
                 opacity: ready ? 1 : 0,
-                transition: ready ? "opacity 90ms ease-out, transform 90ms ease-out" : "none",
-                transform: ready ? "scale(1)" : "scale(0.96)",
+                transition: ready
+                  ? "opacity 120ms cubic-bezier(0.25, 0.1, 0.25, 1), transform 120ms cubic-bezier(0.25, 0.1, 0.25, 1)"
+                  : "none",
+                transform: ready ? "translateY(0)" : "translateY(2px)",
               }}
               className={`pointer-events-none px-2 py-[6px] rounded-sm text-[11px] font-sans border shadow-lg ${
                 multiline

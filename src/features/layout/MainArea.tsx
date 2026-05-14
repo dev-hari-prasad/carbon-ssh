@@ -1,27 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  Plus,
-  X,
-  HardDrives,
-  Tag,
-  Lightning,
-  LinuxLogo,
-  Triangle,
-  Atom,
-  Database,
-  Cube,
-  UserCircle,
-  Lock,
-  Key,
-  PencilSimple,
-  CaretDown,
-  CaretRight,
-  Trash,
-  FloppyDisk,
-  SquaresFour,
-  FolderDashed,
-  ArrowsOutSimple,
-} from "@phosphor-icons/react";
+  ArrowDownOnSquareIcon,
+  ArrowsPointingOutIcon,
+  BoltIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  FolderIcon,
+  KeyIcon,
+  LockClosedIcon,
+  PlusIcon,
+  ServerStackIcon,
+  Squares2X2Icon,
+  TagIcon,
+  TrashIcon,
+  UserCircleIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+import {
+  BoltIcon as BoltIconSolid,
+  ServerStackIcon as ServerStackIconSolid,
+  Squares2X2Icon as Squares2X2IconSolid,
+  TrashIcon as TrashIconSolid,
+} from "@heroicons/react/24/solid";
 import { actions, useStore } from "@/lib/store";
 import { TerminalView } from "@/features/terminal/TerminalView";
 import type { AuthType, Connection, ConnectionRuntimeStatus, HostGroup, SplitLayout, Tab } from "@/lib/types";
@@ -34,7 +34,8 @@ import { Tooltip } from "@/components/Tooltip";
 import { HostIcon } from "@/components/HostIcon";
 import { TabIcon } from "@/components/TabIcon";
 import { hostAllowsAiFeatures } from "@/lib/ai";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion, LayoutGroup } from "framer-motion";
+import { PencilSimple, MagnifyingGlass } from "@phosphor-icons/react";
 
 function PopoverButtonKbd({
   children,
@@ -164,7 +165,7 @@ function SplitPane({
               }`}
               aria-label="Focus pane"
             >
-              <ArrowsOutSimple size={11} weight="bold" />
+              <ArrowsPointingOutIcon className="w-[11px] h-[11px]" strokeWidth={2.5} />
             </button>
           </Tooltip>
           <Tooltip label="Remove from split" side="bottom">
@@ -181,7 +182,7 @@ function SplitPane({
               }`}
               aria-label="Remove from split"
             >
-              <X size={10} weight="bold" />
+              <XMarkIcon className="w-2.5 h-2.5" strokeWidth={2.5} />
             </button>
           </Tooltip>
         </div>
@@ -381,6 +382,106 @@ export function MainArea() {
   );
 }
 
+function AddHostsToGroupPopover({
+  group,
+  connections,
+  onBeforeOpen,
+}: {
+  group: HostGroup;
+  connections: Connection[];
+  onBeforeOpen: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const availableHosts = connections.filter((c) => c.groupId !== group.id);
+  const filtered = search.trim()
+    ? availableHosts.filter(
+        (c) =>
+          c.name.toLowerCase().includes(search.toLowerCase()) ||
+          c.host.toLowerCase().includes(search.toLowerCase()),
+      )
+    : availableHosts;
+
+  const addToGroup = (conn: Connection) => {
+    actions.upsertConnection({ ...conn, groupId: group.id });
+  };
+
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        if (next) onBeforeOpen();
+        setOpen(next);
+        if (!next) setSearch("");
+      }}
+    >
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="group/add inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-accent/20 bg-accent/10 text-accent transition-[width,background-color,border-color,padding,gap,justify-content,color] duration-200 ease-out hover:w-[3.25rem] hover:justify-start hover:gap-1 hover:border-accent/40 hover:bg-accent/20 hover:px-1.5"
+          aria-label="Add hosts to group"
+        >
+          <PlusIcon className="w-[11px] h-[11px] shrink-0" strokeWidth={2.5} />
+          <span className="max-w-0 overflow-hidden whitespace-nowrap text-[11px] font-sans font-medium opacity-0 transition-[max-width,opacity] duration-200 ease-out group-hover/add:max-w-[2rem] group-hover/add:opacity-100">
+            Add
+          </span>
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        sideOffset={6}
+        className="w-72 p-0 bg-[var(--popover-bg)] border border-[var(--border-strong)] shadow-xl rounded-lg overflow-hidden flex flex-col"
+      >
+        <div className="p-2 border-b border-border bg-[var(--bg-panel)]/50">
+          <div className="relative flex items-center gap-2 h-8 px-2.5 rounded-md bg-bg/40 border border-transparent transition-all focus-within:border-accent/50 focus-within:bg-bg focus-within:ring-2 focus-within:ring-accent/20 group/search">
+            <MagnifyingGlass className="w-3.5 h-3.5 text-fg-muted group-focus-within/search:text-accent transition-colors" />
+            <input
+              autoFocus
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search hosts..."
+              className="flex-1 bg-transparent border-none outline-none text-[12px] font-sans text-fg placeholder:text-fg-muted"
+            />
+          </div>
+        </div>
+        <div className="max-h-[240px] overflow-y-auto p-1 flex flex-col gap-0.5">
+          {filtered.length === 0 ? (
+            <div className="py-8 text-center text-fg-muted text-[11px] font-sans">
+              No hosts found
+            </div>
+          ) : (
+            filtered.map((c) => {
+              const inGroup = c.groupId === group.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => addToGroup(c)}
+                  className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-sm hover:bg-[var(--bg-panel)] text-left group/item transition-colors"
+                >
+                  <HostIcon conn={c} size={16} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12px] font-sans font-medium text-fg truncate">
+                      {c.name}
+                    </div>
+                    <div className="text-[10px] font-mono text-fg-dim truncate">
+                      {c.username}@{c.host}
+                    </div>
+                  </div>
+                  <PlusIcon
+                    className="w-3 h-3 text-accent opacity-0 group-hover/item:opacity-100 transition-opacity"
+                    strokeWidth={3}
+                  />
+                </button>
+              );
+            })
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function AddGroupPopover({ onBeforeOpen }: { onBeforeOpen: () => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -434,7 +535,7 @@ function AddGroupPopover({ onBeforeOpen }: { onBeforeOpen: () => void }) {
           type="button"
           className="inline-flex items-center gap-1 px-2.5 h-7 rounded-sm text-[11.5px] font-sans font-medium text-accent border border-accent/40 bg-accent/10 hover:bg-accent/15 hover:border-accent/60 transition-colors shrink-0"
         >
-          <Plus size={11} weight="bold" aria-hidden />
+          <PlusIcon className="w-[11px] h-[11px]" aria-hidden strokeWidth={2.5} />
           Add groups
         </button>
       </PopoverTrigger>
@@ -567,10 +668,10 @@ function EditGroupPopover({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="group/edit mr-2 inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-success/20 bg-success/10 text-fg-muted transition-[width,background-color,border-color,padding,gap,justify-content,color] duration-200 ease-out hover:w-[3.125rem] hover:justify-start hover:gap-0.5 hover:border-success/40 hover:bg-success/20 hover:px-1.5 hover:text-success"
+          className="group/edit inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-success/20 bg-success/10 text-fg-muted transition-[width,background-color,border-color,padding,gap,justify-content,color] duration-200 ease-out hover:w-[3.125rem] hover:justify-start hover:gap-0.5 hover:border-success/40 hover:bg-success/20 hover:px-1.5 hover:text-success"
           aria-label="Edit group"
         >
-          <PencilSimple size={11} weight="regular" className="shrink-0" />
+          <PencilSimple className="w-[11px] h-[11px] shrink-0" weight="regular" />
           <span className="max-w-0 overflow-hidden whitespace-nowrap text-[11px] font-sans font-medium opacity-0 transition-[max-width,opacity] duration-200 ease-out group-hover/edit:max-w-[2rem] group-hover/edit:opacity-100">
             Edit
           </span>
@@ -618,10 +719,9 @@ function EditGroupPopover({
             <span className="text-[10.5px] uppercase tracking-wider font-sans font-semibold text-danger">
               Delete options
             </span>
-            <CaretRight
-              size={12}
-              weight="bold"
-              className="text-danger/80 shrink-0 transition-transform duration-200"
+            <ChevronRightIcon
+              className="w-3 h-3 text-danger/80 shrink-0 transition-transform duration-200"
+              strokeWidth={2.5}
             />
           </CollapsibleTrigger>
           <CollapsibleContent className="overflow-hidden text-sm data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
@@ -659,7 +759,7 @@ function EditGroupPopover({
                       }}
                       className="flex-1 h-8 rounded-sm border border-danger/60 text-danger text-[12px] font-sans font-semibold hover:bg-danger/10 transition-colors inline-flex items-center justify-center gap-1.5"
                     >
-                      <Trash size={12} weight="bold" /> Remove group
+                      <TrashIcon className="w-3 h-3" strokeWidth={2} /> Remove group
                     </button>
                   </div>
                 </div>
@@ -688,7 +788,7 @@ function EditGroupPopover({
                       }}
                       className="flex-1 h-8 rounded-sm bg-danger text-white text-[12px] font-sans font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5"
                     >
-                      <Trash size={12} weight="fill" /> Confirm delete
+                      <TrashIconSolid className="w-3 h-3" /> Confirm delete
                     </button>
                   </div>
                 </div>
@@ -699,7 +799,7 @@ function EditGroupPopover({
                     onClick={() => setPendingDelete("ungroup")}
                     className="w-full h-8 rounded-sm border border-danger/50 text-danger text-[12px] font-sans font-medium hover:bg-danger/10 transition-colors inline-flex items-center justify-center gap-1.5"
                   >
-                    <Trash size={12} weight="bold" /> Remove group
+                    <TrashIcon className="w-3 h-3" strokeWidth={2} /> Remove group
                   </button>
                   {hostCount > 0 ? (
                     <button
@@ -707,7 +807,7 @@ function EditGroupPopover({
                       onClick={() => setPendingDelete("delete-all")}
                       className="w-full h-8 rounded-sm bg-danger text-white text-[12px] font-sans font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5"
                     >
-                      <Trash size={12} weight="fill" /> Remove group &amp; delete hosts
+                      <TrashIconSolid className="w-3 h-3" /> Remove group &amp; delete hosts
                     </button>
                   ) : null}
                 </div>
@@ -777,20 +877,31 @@ function HostsView({ connections }: { connections: Connection[] }) {
 
   return (
     <div className="flex-1 min-w-0 relative bg-bg overflow-hidden">
-      <div
-        className={`h-full overflow-y-auto px-6 py-6 ${
-          settingsOpen ? "pr-[calc(340px+2.5rem)]" : selected ? "pr-[calc(320px+2.5rem)]" : ""
-        }`}
+      <LayoutGroup>
+        <motion.div
+        layout
+        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+        style={{
+          paddingRight: settingsOpen ? "calc(340px + 1.5rem)" : selected ? "calc(320px + 1.5rem)" : "1.5rem",
+          paddingLeft: "1.5rem",
+          paddingTop: "1.5rem",
+          paddingBottom: "1.5rem",
+        }}
+        className="h-full overflow-y-auto"
       >
         <div className="flex items-center justify-between mb-2.5 gap-2">
           <h2 className="text-[15px] font-sans font-semibold text-fg flex items-center gap-1">
-            <SquaresFour size={16} weight="duotone" className="text-accent/80" />
+            <Squares2X2Icon className="w-4 h-4 text-accent/80" />
             Groups
           </h2>
           <AddGroupPopover onBeforeOpen={dismissSidebars} />
         </div>
-        <div className={`grid gap-2.5 mb-4 ${sidePanelOpen ? "grid-cols-3" : "grid-cols-4"}`}>
-          <div className="relative flex items-stretch gap-1.5 min-w-0">
+        <motion.div 
+          layout
+          initial={false}
+          className={`grid gap-2.5 mb-4 ${sidePanelOpen ? "grid-cols-3" : "grid-cols-4"}`}
+        >
+          <motion.div layout className="relative flex items-stretch gap-1.5 min-w-0">
             <button
               type="button"
               onClick={() => {
@@ -843,15 +954,16 @@ function HostsView({ connections }: { connections: Connection[] }) {
                 aria-hidden
               />
             ) : null}
-          </div>
+          </motion.div>
 
           {groups.map((g) => {
             const count = groupCounts[g.id] ?? 0;
             const active = groupFilter === g.id;
             return (
-              <div
+              <motion.div
+                layout
                 key={g.id}
-                className={`flex items-center gap-1.5 min-w-0 rounded-md border transition-colors ${
+                className={`group flex items-center gap-1.5 min-w-0 rounded-md border transition-colors ${
                   active
                     ? "bg-[var(--command-active-bg)] border-accent/50 ring-1 ring-accent/30"
                     : "bg-[var(--bg-panel)] border-border hover:border-[var(--border-strong)]"
@@ -875,24 +987,31 @@ function HostsView({ connections }: { connections: Connection[] }) {
                     </div>
                   </div>
                 </button>
-                <EditGroupPopover
-                  group={g}
-                  hostCount={count}
-                  onBeforeOpen={dismissSidebars}
-                  onRemoved={() => {
-                    if (groupFilter === g.id) setGroupFilter(null);
-                  }}
-                />
-              </div>
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 pr-2 shrink-0">
+                  <EditGroupPopover
+                    group={g}
+                    hostCount={count}
+                    onBeforeOpen={dismissSidebars}
+                    onRemoved={() => {
+                      if (groupFilter === g.id) setGroupFilter(null);
+                    }}
+                  />
+                  <AddHostsToGroupPopover
+                    group={g}
+                    connections={connections}
+                    onBeforeOpen={dismissSidebars}
+                  />
+                </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
 
         <div className="h-px bg-gradient-to-r from-transparent via-border-strong/30 to-transparent my-0" />
 
         <div className="flex items-center justify-between mb-2 gap-2 mt-3">
           <h2 className="text-[15px] font-sans font-semibold text-fg truncate min-w-0 flex items-center gap-1">
-            <HardDrives size={16} weight="duotone" className="text-accent/80" />
+            <ServerStackIcon className="w-4 h-4 text-accent/80" />
             Hosts
           </h2>
           <div className="flex items-center gap-3 shrink-0">
@@ -904,7 +1023,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
                 }}
                 className="text-[11px] font-sans text-fg-muted hover:text-fg flex items-center gap-1"
               >
-                <X size={11} weight="bold" /> Clear filter
+                <XMarkIcon className="w-[11px] h-[11px]" strokeWidth={2.5} /> Clear filter
               </button>
             ) : null}
             <button
@@ -917,7 +1036,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
               }}
               className="inline-flex items-center gap-1 px-2.5 h-7 rounded-sm text-[11.5px] font-sans font-medium text-accent border border-accent/40 bg-accent/10 hover:bg-accent/15 hover:border-accent/60 transition-colors"
             >
-              <Plus size={11} weight="bold" aria-hidden />
+              <PlusIcon className="w-[11px] h-[11px]" aria-hidden strokeWidth={2.5} />
               Add hosts
             </button>
           </div>
@@ -926,11 +1045,15 @@ function HostsView({ connections }: { connections: Connection[] }) {
         {filteredHosts.length === 0 ? (
           <EmptyHosts />
         ) : (
-          <div className={`grid gap-2.5 ${sidePanelOpen ? "grid-cols-3" : "grid-cols-4"}`}>
+          <motion.div 
+            layout
+            initial={false}
+            className={`grid gap-2.5 ${sidePanelOpen ? "grid-cols-3" : "grid-cols-4"}`}
+          >
             {filteredHosts.map((c) => (
-              <HostCard
-                key={c.id}
-                conn={c}
+              <motion.div layout key={c.id}>
+                <HostCard
+                  conn={c}
                 active={selectedId === c.id}
                 status={connectionStatus[c.id]}
                 onShowDetails={() => {
@@ -941,10 +1064,12 @@ function HostsView({ connections }: { connections: Connection[] }) {
                   actions.openTab(c.id);
                 }}
               />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
+      </LayoutGroup>
 
       <AnimatePresence>
         {!settingsOpen && selected ? (
@@ -970,7 +1095,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
 function GroupIcon() {
   return (
     <div className="w-9 h-9 shrink-0 rounded-md bg-gradient-to-br from-[#3b82f6] to-[#1d4ed8] grid place-items-center text-white shadow-inner">
-      <HardDrives size={16} weight="fill" />
+      <ServerStackIconSolid className="w-4 h-4" />
     </div>
   );
 }
@@ -978,7 +1103,7 @@ function GroupIcon() {
 function UncategorizedGroupIcon() {
   return (
     <div className="w-9 h-9 shrink-0 rounded-md bg-[var(--input-bg)] border border-dashed border-[var(--border-strong)] grid place-items-center text-fg-muted">
-      <FolderDashed size={16} weight="regular" className="text-fg-muted" />
+      <FolderIcon className="w-4 h-4 text-fg-muted" />
     </div>
   );
 }
@@ -986,7 +1111,7 @@ function UncategorizedGroupIcon() {
 function AllGroupIcon() {
   return (
     <div className="w-9 h-9 shrink-0 rounded-md bg-[var(--input-bg)] border border-[var(--border-strong)] grid place-items-center text-fg-muted shadow-inner">
-      <SquaresFour size={16} weight="fill" className="text-fg" />
+      <Squares2X2IconSolid className="w-4 h-4 text-fg" />
     </div>
   );
 }
@@ -1028,7 +1153,7 @@ function HostCard({
           aria-label="Edit host"
           className="group/edit inline-flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-success/20 bg-success/10 text-fg-muted transition-[width,background-color,border-color,padding,gap,justify-content,color] duration-200 ease-out hover:w-[3.125rem] hover:justify-start hover:gap-0.5 hover:border-success/40 hover:bg-success/20 hover:px-1.5 hover:text-success"
         >
-          <PencilSimple size={11} weight="regular" className="shrink-0" />
+          <PencilSimple className="w-[11px] h-[11px] shrink-0" weight="regular" aria-hidden />
           <span className="max-w-0 overflow-hidden whitespace-nowrap text-[11px] font-sans font-medium opacity-0 transition-[max-width,opacity] duration-200 ease-out group-hover/edit:max-w-[2rem] group-hover/edit:opacity-100">
             Edit
           </span>
@@ -1040,7 +1165,7 @@ function HostCard({
           aria-label="Connect"
           className="inline-flex items-center gap-1 h-7 px-2.5 rounded-sm border border-border bg-[var(--command-bg)] text-fg hover:bg-[var(--command-active-bg)] hover:border-[var(--border-strong)] disabled:opacity-55 disabled:pointer-events-none transition-colors text-[11px] font-sans font-medium"
         >
-          <Lightning size={11} weight="fill" />
+          <BoltIconSolid className="w-[11px] h-[11px]" />
           {isConnecting ? "Connecting" : "Connect"}
         </button>
       </div>
@@ -1067,7 +1192,7 @@ function EmptyHosts() {
         }}
       >
         <div className="w-10 h-10 shrink-0 rounded-sm flex items-center justify-center bg-accent/8 text-accent border border-accent/20 transition-transform duration-300 group-hover:scale-105 shadow-sm">
-          <HardDrives size={20} weight="duotone" />
+          <ServerStackIcon className="w-5 h-5 text-accent/80" />
         </div>
 
         <div className="flex-1 min-w-0 flex flex-col items-start text-left">
@@ -1081,7 +1206,7 @@ function EmptyHosts() {
 
         <div className="shrink-0 ml-2">
           <span className="inline-flex items-center gap-1 px-4 h-8 ml-3 rounded-sm text-[11.5px] font-sans font-medium text-accent border border-accent/40 bg-accent/10 transition-colors group-hover:bg-accent/15 group-hover:border-accent/60">
-            <Plus size={11} weight="bold" aria-hidden />
+            <PlusIcon className="w-[11px] h-[11px]" aria-hidden strokeWidth={2.5} />
             Add host
           </span>
         </div>
@@ -1091,6 +1216,7 @@ function EmptyHosts() {
 }
 
 function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void }) {
+  const reduceMotion = useReducedMotion();
   const [host, setHost] = useState(conn.host);
   const [port, setPort] = useState(String(conn.port));
   const [name, setName] = useState(conn.name);
@@ -1179,7 +1305,7 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
             aria-label="Close host details"
             className="w-7 h-7 -mt-1 -mr-1 grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--neutral-hover-bg)] transition-colors"
           >
-            <X size={13} weight="bold" />
+            <XMarkIcon className="w-[13px] h-[13px]" strokeWidth={2.5} />
           </button>
         </Tooltip>
       </div>
@@ -1198,7 +1324,7 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
                 >
                   <HostIcon conn={conn} size={28} />
                   <span className="absolute inset-0 grid place-items-center rounded-full bg-black/45 text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                    <PencilSimple size={11} weight="bold" />
+                    <PencilSimple className="w-[11px] h-[11px]" weight="regular" />
                   </span>
                 </button>
               )}
@@ -1249,7 +1375,7 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
         <div>
           <SubLabel>Tags</SubLabel>
           <div className="flex items-start gap-2 px-2 py-1.5 rounded-sm bg-[var(--input-bg)] border border-border focus-within:border-[var(--border-strong)] min-h-9">
-            <Tag size={12} weight="bold" className="text-fg-muted shrink-0 mt-1" />
+            <TagIcon className="w-3 h-3 text-fg-muted shrink-0 mt-1" />
             <div className="flex flex-wrap items-center gap-1.5 min-w-0 flex-1">
               {(conn.tags ?? []).map((t) => (
                 <span
@@ -1266,7 +1392,7 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
                     aria-label={`Remove tag ${t}`}
                     className="text-fg-muted hover:text-fg"
                   >
-                    <X size={9} weight="bold" />
+                    <XMarkIcon className="w-[9px] h-[9px]" strokeWidth={2.5} />
                   </button>
                 </span>
               ))}
@@ -1342,7 +1468,7 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
         <div>
           <SubLabel>Username</SubLabel>
           <EditableInputRow
-            icon={<UserCircle size={13} />}
+            icon={<UserCircleIcon className="w-[13px] h-[13px]" />}
             value={username}
             onChange={setUsername}
             placeholder="root"
@@ -1354,44 +1480,60 @@ function HostDetails({ conn, onClose }: { conn: Connection; onClose: () => void 
           <AuthMethodToggle value={authType} onChange={setAuthType} />
         </div>
 
-        <div className="space-y-3 transition-all duration-200">
+        <AnimatePresence mode="wait" initial={false}>
           {authType === "password" ? (
-          <div>
-            <SubLabel>Password</SubLabel>
-            <EditableInputRow
-              icon={<Lock size={13} />}
-              value={password}
-              onChange={setPassword}
-              placeholder="••••••••"
-              type="password"
-            />
-          </div>
-        ) : (
-          <>
-            <div>
-              <SubLabel hint="PEM / OpenSSH">Private key</SubLabel>
-              <textarea
-                value={privateKey}
-                onChange={(e) => setPrivateKey(e.target.value)}
-                placeholder={"-----BEGIN OPENSSH PRIVATE KEY-----\n"}
-                spellCheck={false}
-                wrap="off"
-                className="w-full min-h-[80px] max-h-[100px] resize-y overflow-auto px-3 py-2.5 rounded-sm bg-[var(--input-bg)] border border-border focus:border-[var(--border-strong)] text-[12px] leading-relaxed font-mono text-fg placeholder:text-fg-muted focus:outline-none whitespace-pre"
-              />
-            </div>
-            <div>
-              <SubLabel hint="optional">Passphrase</SubLabel>
-              <EditableInputRow
-                icon={<Key size={13} />}
-                value={passphrase}
-                onChange={setPassphrase}
-                placeholder="Passphrase"
-                type="password"
-              />
-            </div>
-          </>
+            <motion.div
+              key="cred-password"
+              initial={reduceMotion ? false : { opacity: 0, y: 10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={reduceMotion ? undefined : { opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+              className="space-y-3"
+            >
+              <div>
+                <SubLabel>Password</SubLabel>
+                <EditableInputRow
+                  icon={<LockClosedIcon className="w-[13px] h-[13px]" />}
+                  value={password}
+                  onChange={setPassword}
+                  placeholder="••••••••"
+                  type="password"
+                />
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="cred-private-key"
+              initial={reduceMotion ? false : { opacity: 0, y: 10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={reduceMotion ? undefined : { opacity: 0, y: -8, scale: 0.98 }}
+              transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+              className="space-y-3"
+            >
+              <div>
+                <SubLabel hint="PEM / OpenSSH">Private key</SubLabel>
+                <textarea
+                  value={privateKey}
+                  onChange={(e) => setPrivateKey(e.target.value)}
+                  placeholder={"-----BEGIN OPENSSH PRIVATE KEY-----\n"}
+                  spellCheck={false}
+                  wrap="off"
+                  className="w-full min-h-[80px] max-h-[100px] resize-y overflow-auto px-3 py-2.5 rounded-sm bg-[var(--input-bg)] border border-border focus:border-[var(--border-strong)] text-[12px] leading-relaxed font-mono text-fg placeholder:text-fg-muted focus:outline-none whitespace-pre"
+                />
+              </div>
+              <div>
+                <SubLabel hint="optional">Passphrase</SubLabel>
+                <EditableInputRow
+                  icon={<KeyIcon className="w-[13px] h-[13px]" />}
+                  value={passphrase}
+                  onChange={setPassphrase}
+                  placeholder="Passphrase"
+                  type="password"
+                />
+              </div>
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
       </div>
 
       <ActionsAndDanger
@@ -1523,7 +1665,7 @@ function ActionsAndDanger({
             disabled={!canSave}
             className="flex-1 h-9 rounded-md bg-fg text-bg text-[12.5px] font-sans font-semibold hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity inline-flex items-center justify-center gap-2"
           >
-            <FloppyDisk size={13} weight="fill" /> Save
+            <ArrowDownOnSquareIcon className="w-[13px] h-[13px]" /> Save
             <PopoverButtonKbd variant="onInverse">S</PopoverButtonKbd>
           </button>
           <button
@@ -1545,7 +1687,7 @@ function ActionsAndDanger({
         disabled={isConnecting}
         className="h-10 rounded-md bg-accent text-accent-fg text-[13px] font-sans font-semibold hover:opacity-90 disabled:opacity-55 disabled:pointer-events-none transition-opacity inline-flex items-center justify-center gap-2"
       >
-        <Lightning size={13} weight="fill" /> {isConnecting ? "Connecting" : "Connect"}
+        <BoltIconSolid className="w-[13px] h-[13px]" /> {isConnecting ? "Connecting" : "Connect"}
       </button>
 
       {statusMessage ? (
@@ -1588,7 +1730,7 @@ function ActionsAndDanger({
               }}
               className="flex-1 h-8 rounded-sm bg-danger text-white text-[12px] font-sans font-semibold hover:opacity-90 transition-opacity inline-flex items-center justify-center gap-1.5"
             >
-              <Trash size={12} weight="fill" /> Confirm remove
+              <TrashIconSolid className="w-3 h-3" /> Confirm remove
             </button>
           </div>
         ) : (
@@ -1597,7 +1739,7 @@ function ActionsAndDanger({
             onClick={() => setConfirmDelete(true)}
             className="w-full h-8 rounded-sm border border-danger/50 text-danger text-[12px] font-sans font-medium hover:bg-danger/10 transition-colors inline-flex items-center justify-center gap-1.5"
           >
-            <Trash size={12} weight="bold" /> Remove host
+            <TrashIcon className="w-3 h-3" strokeWidth={2} /> Remove host
           </button>
         )}
       </div>
@@ -1657,6 +1799,7 @@ function EditableInputRow({
 
 function GroupSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
+  const reduceMotion = useReducedMotion();
   const ref = useRef<HTMLDivElement>(null);
   const groups = useStore((s) => s.groups);
   const current = groups.find((g) => g.id === value) ?? null;
@@ -1679,24 +1822,38 @@ function GroupSelect({ value, onChange }: { value: string; onChange: (v: string)
 
   return (
     <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full h-9 px-3 flex items-center justify-between gap-2 rounded-sm bg-[var(--input-bg)] border border-border hover:border-[var(--border-strong)] text-[12.5px] font-sans text-fg"
+      <motion.div
+        className="w-full"
+        whileTap={reduceMotion ? undefined : { scale: 0.98 }}
+        transition={{ type: "spring", stiffness: 400, damping: 25 }}
       >
-        <span className={current ? "text-fg" : "text-fg-muted"}>
-          {current ? current.name : "No group"}
-        </span>
-        <CaretDown size={11} weight="bold" className="text-fg-muted" />
-      </button>
-      {open ? (
-        <div
-          className="absolute left-0 right-0 top-full mt-1 z-30 rounded-md border shadow-xl overflow-hidden p-1"
-          style={{
-            background: "var(--popover-bg)",
-            borderColor: "var(--border-strong)",
-          }}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="w-full h-9 px-3 flex items-center justify-between gap-2 rounded-sm bg-[var(--input-bg)] border border-border hover:border-[var(--border-strong)] text-[12.5px] font-sans text-fg"
         >
+          <span className={current ? "text-fg" : "text-fg-muted"}>
+            {current ? current.name : "No group"}
+          </span>
+          <ChevronDownIcon className="w-[11px] h-[11px] text-fg-muted" strokeWidth={2.5} />
+        </button>
+      </motion.div>
+      <AnimatePresence>
+        {open ? (
+          <motion.div
+            key="group-select-listbox"
+            role="listbox"
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+            className="absolute left-0 right-0 top-full mt-1 z-30 rounded-md border shadow-xl overflow-hidden p-1"
+            style={{
+              transformOrigin: "top center",
+              background: "var(--popover-bg)",
+              borderColor: "var(--border-strong)",
+            }}
+          >
           <button
             type="button"
             onClick={() => {
@@ -1726,8 +1883,9 @@ function GroupSelect({ value, onChange }: { value: string; onChange: (v: string)
               {g.name}
             </button>
           ))}
-        </div>
-      ) : null}
+        </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

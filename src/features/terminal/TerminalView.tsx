@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { getThemeById, terminalThemeForTheme } from "@/config/themes";
 import { getTerminalFontById } from "@/config/fonts";
-import { MagnifyingGlass, X, ArrowsClockwise } from "@phosphor-icons/react";
+import { ArrowPathIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import type { Connection, Tab } from "@/lib/types";
 import { actions, useStore } from "@/lib/store";
 import { buildSshAuthPayload } from "@/lib/credentials";
@@ -44,9 +44,21 @@ type ServerMessage =
   | { type: "connected" }
   | { type: "closed" };
 
-function buildWebSocketUrl() {
+async function buildWebSocketUrl() {
   const url = new URL("/api/ws", window.location.origin);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  // Attach WebSocket auth token (D7.2)
+  try {
+    const electron = (window as any).electron;
+    if (electron?.getWsToken) {
+      const token = await electron.getWsToken();
+      if (token) {
+        url.searchParams.set("token", token);
+      }
+    }
+  } catch {
+    // In dev without Electron, proceed without token
+  }
   return url.toString();
 }
 
@@ -235,7 +247,9 @@ export function TerminalView({ tab, conn }: Props) {
       // Connect WebSocket
       if (disposed) return;
 
-      socket = new WebSocket(buildWebSocketUrl());
+      const wsUrl = await buildWebSocketUrl();
+      if (disposed) return;
+      socket = new WebSocket(wsUrl);
       let closed = false;
 
       const currentSocket = socket;
@@ -381,20 +395,20 @@ export function TerminalView({ tab, conn }: Props) {
         const mod = isMac ? e.metaKey : e.ctrlKey;
         const shift = e.shiftKey;
 
-        // Mod + C or Ctrl + Shift + C: Copy (if selection exists)
-        if ((mod && e.key.toLowerCase() === "c") || (e.ctrlKey && shift && e.key.toLowerCase() === "c")) {
+        // Mac: Cmd + C/V or Cmd + Shift + C/V
+        // Windows/Linux: Ctrl + Shift + C/V (Ctrl + C is for SIGINT)
+        const isCopy = (mod && shift && e.key.toLowerCase() === "c") || (isMac && e.metaKey && e.key.toLowerCase() === "c");
+        const isPaste = (mod && shift && e.key.toLowerCase() === "v") || (isMac && e.metaKey && e.key.toLowerCase() === "v");
+
+        if (isCopy) {
           const selection = term.getSelection();
-          if (selection) {
-            if (e.type === "keydown") {
-              navigator.clipboard.writeText(selection);
-            }
-            return false; // Prevent sending SIGINT if we're copying
+          if (selection && e.type === "keydown") {
+            navigator.clipboard.writeText(selection);
           }
-          return true; // No selection? Let it send SIGINT
+          return false;
         }
 
-        // Mod + V or Ctrl + Shift + V: Paste
-        if ((mod && e.key.toLowerCase() === "v") || (e.ctrlKey && shift && e.key.toLowerCase() === "v")) {
+        if (isPaste) {
           if (e.type === "keydown") {
             navigator.clipboard.readText().then((text) => {
               send({ type: "input", data: text });
@@ -718,7 +732,7 @@ export function TerminalView({ tab, conn }: Props) {
           }}
           className="absolute bottom-4 left-4 z-10 flex items-center gap-1.5 text-fg-muted hover:text-fg underline transition-all font-mono text-xs underline-offset-2 cursor-pointer"
         >
-          <ArrowsClockwise size={12} />
+          <ArrowPathIcon className="w-3 h-3" />
           Try reconnecting
         </button>
       )}
@@ -730,9 +744,9 @@ export function TerminalView({ tab, conn }: Props) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="absolute top-4 right-8 z-50 flex items-center gap-2 px-2 py-1.5 rounded-md bg-[var(--popover-bg)] border border-[var(--border-strong)] shadow-2xl w-[280px]"
+            className="absolute top-4 right-8 z-50 flex items-center gap-2 px-2 py-1.5 rounded-md bg-[var(--popover-bg)] border border-[var(--border-strong)] shadow-2xl w-[280px] transition-all focus-within:border-accent/50 focus-within:ring-2 focus-within:ring-accent/20 group/search"
           >
-            <MagnifyingGlass size={14} className="text-fg-muted" />
+            <MagnifyingGlassIcon className="w-3.5 h-3.5 text-fg-muted transition-colors group-focus-within/search:text-accent" />
             <input
               ref={searchInputRef}
               type="text"
@@ -750,13 +764,13 @@ export function TerminalView({ tab, conn }: Props) {
                   setSearchOpen(false);
                 }
               }}
-              className="flex-1 bg-transparent border-none outline-none text-[12.5px] font-sans text-fg placeholder:text-fg-muted"
+              className="flex-1 bg-transparent border-none outline-none text-[12.5px] font-sans text-fg placeholder:text-fg-muted focus:ring-0 shadow-none"
             />
             <button
               onClick={() => setSearchOpen(false)}
               className="w-6 h-6 grid place-items-center rounded-md hover:bg-[var(--menu-hover-bg)] text-fg-muted hover:text-fg transition-colors"
             >
-              <X size={12} weight="bold" />
+              <XMarkIcon className="w-3 h-3" strokeWidth={2.5} />
             </button>
           </motion.div>
         )}

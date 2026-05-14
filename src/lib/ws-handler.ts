@@ -235,7 +235,17 @@ export function handleWsConnection(ws: WebSocket): void {
         readyTimeout: 20_000,
         keepaliveInterval: 10_000,
         tryKeyboard: true,
-        hostVerifier: () => true,
+        hostVerifier: (hashedKey: any) => {
+          if (hashedKey) {
+            const crypto = require("crypto");
+            const fingerprint = crypto
+              .createHash("sha256")
+              .update(hashedKey)
+              .digest("base64");
+            console.log(`[ws-handler] Host key fingerprint: SHA256:${fingerprint}:${host}`);
+          }
+          return true;
+        },
       };
 
       if (authMethod === "password") {

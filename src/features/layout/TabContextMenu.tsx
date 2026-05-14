@@ -1,11 +1,11 @@
 import {
-  SplitHorizontal,
-  SplitVertical,
-  ArrowsOutSimple,
-  X,
-  SquaresFour,
-  Swap,
-} from "@phosphor-icons/react";
+  ArrowsPointingOutIcon,
+  ArrowsRightLeftIcon,
+  Square2StackIcon,
+  Squares2X2Icon,
+  ViewColumnsIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -58,14 +58,14 @@ export function TabContextMenu({ tabId, children }: TabContextMenuProps) {
               }}
               className="flex items-center gap-2.5 text-[12px]"
             >
-              <ArrowsOutSimple size={15} weight="bold" className="text-fg-muted shrink-0" />
+              <ArrowsPointingOutIcon className="w-[15px] h-[15px] text-fg-muted shrink-0" strokeWidth={2} />
               Focus (exit split)
             </ContextMenuItem>
             <ContextMenuItem
               onClick={() => actions.removeFromSplit(tabId)}
               className="flex items-center gap-2.5 text-[12px]"
             >
-              <X size={15} weight="bold" className="text-fg-muted shrink-0" />
+              <XMarkIcon className="w-[15px] h-[15px] text-fg-muted shrink-0" strokeWidth={2} />
               Remove from split
             </ContextMenuItem>
             {splitCount >= 2 && (
@@ -77,7 +77,7 @@ export function TabContextMenu({ tabId, children }: TabContextMenuProps) {
                 }
                 className="flex items-center gap-2.5 text-[12px]"
               >
-                <Swap size={15} weight="bold" className="text-fg-muted shrink-0" />
+                <ArrowsRightLeftIcon className="w-[15px] h-[15px] text-fg-muted shrink-0" strokeWidth={2} />
                 Toggle layout ({splitLayout === "two-columns" ? "Stacked" : "Side by side"})
               </ContextMenuItem>
             )}
@@ -94,7 +94,7 @@ export function TabContextMenu({ tabId, children }: TabContextMenuProps) {
               }}
               className="flex items-center gap-2.5 text-[12px]"
             >
-              <SplitHorizontal size={15} weight="bold" className="text-fg-muted shrink-0" />
+              <ViewColumnsIcon className="w-[15px] h-[15px] text-fg-muted shrink-0" strokeWidth={2} />
               Split Right
               <ContextMenuShortcut>Horizontal</ContextMenuShortcut>
             </ContextMenuItem>
@@ -105,7 +105,7 @@ export function TabContextMenu({ tabId, children }: TabContextMenuProps) {
               }}
               className="flex items-center gap-2.5 text-[12px]"
             >
-              <SplitVertical size={15} weight="bold" className="text-fg-muted shrink-0" />
+              <Square2StackIcon className="w-[15px] h-[15px] text-fg-muted shrink-0" strokeWidth={2} />
               Split Down
               <ContextMenuShortcut>Vertical</ContextMenuShortcut>
             </ContextMenuItem>
@@ -114,7 +114,7 @@ export function TabContextMenu({ tabId, children }: TabContextMenuProps) {
               onClick={handleSplitWithActive}
               className="flex items-center gap-2.5 text-[12px]"
             >
-              <SquaresFour size={15} weight="bold" className="text-fg-muted shrink-0" />
+              <Squares2X2Icon className="w-[15px] h-[15px] text-fg-muted shrink-0" strokeWidth={2} />
               Split with active tab
             </ContextMenuItem>
           </>

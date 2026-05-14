@@ -1,15 +1,21 @@
 import { useEffect, useState, useCallback } from "react";
-import { HardDrives } from "@phosphor-icons/react";
+import { ServerStackIcon } from "@heroicons/react/24/solid";
 import { Modal } from "@/components/Modal";
 import { Button } from "@/components/Button";
 import { Input, Textarea, Field } from "@/components/Input";
 import { Kbd } from "@/components/Kbd";
 import type { AuthType, Connection } from "@/lib/types";
 import { actions } from "@/lib/store";
-import { IconPicker, type IconValue } from "./IconPicker";
+import { IconPicker, SYSTEM_ICONS, type IconValue } from "./IconPicker";
 import { BRAND_ICONS } from "./brandIcons";
 import { ICONOIR_ICONS } from "./iconoirIcons";
 import { AuthMethodToggle } from "./AuthMethodToggle";
+
+import { toast } from "sonner";
+
+function FallbackBrandIcon({ width = 16, height = 16 }: { width?: number; height?: number }) {
+  return <ServerStackIcon width={width} height={height} />;
+}
 
 export function ConnectionForm({
   open,
@@ -50,7 +56,38 @@ export function ConnectionForm({
   }, [open, initial]);
 
   const submit = useCallback(() => {
-    if (!name.trim() || !host.trim() || !username.trim()) return;
+    if (!name.trim()) {
+      toast.error("Connection name is required", {
+        description: "Please provide a name for this machine.",
+      });
+      return;
+    }
+    if (!host.trim()) {
+      toast.error("Host is required", {
+        description: "IP address or domain name is needed to connect.",
+      });
+      return;
+    }
+    if (!username.trim()) {
+      toast.error("Username is required", {
+        description: "SSH user is required for authentication.",
+      });
+      return;
+    }
+
+    if (authType === "password" && !password) {
+      toast.error("Password is required", {
+        description: "Password authentication requires a valid password.",
+      });
+      return;
+    }
+
+    if (authType === "privateKey" && !privateKey.trim()) {
+      toast.error("Private key is required", {
+        description: "Please paste your OpenSSH private key.",
+      });
+      return;
+    }
 
     actions.upsertConnection({
       id: initial?.id,
@@ -112,7 +149,7 @@ export function ConnectionForm({
       open={open}
       onClose={onClose}
       title={initial ? "Edit connection" : "New connection"}
-      icon={<HardDrives size={18} weight="duotone" className="text-accent" />}
+      icon={<ServerStackIcon className="w-[18px] h-[18px] text-accent" />}
       footerAlign="start"
       panelClassName="max-w-md"
       showFooterSeparator
@@ -142,10 +179,10 @@ export function ConnectionForm({
                 {(openPicker) => {
                   const Icon =
                     icon.kind === "brand"
-                      ? (BRAND_ICONS.find((item) => item.id === icon.id)?.Icon ?? HardDrives)
+                      ? (BRAND_ICONS.find((item) => item.id === icon.id)?.Icon ?? FallbackBrandIcon)
                       : icon.kind === "iconoir"
-                        ? (ICONOIR_ICONS.find((item) => item.id === icon.id)?.Icon ?? HardDrives)
-                        : HardDrives;
+                        ? (ICONOIR_ICONS.find((item) => item.id === icon.id)?.Icon ?? FallbackBrandIcon)
+                        : (SYSTEM_ICONS.find((s) => s.id === icon.id)?.Icon ?? SYSTEM_ICONS[0].Icon);
 
                   return (
                     <button
