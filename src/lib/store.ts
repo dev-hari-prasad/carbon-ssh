@@ -8,7 +8,11 @@ import {
 } from "@/config/fonts";
 import { applyThemeToDocument } from "@/lib/theme-document";
 import { DEFAULT_AI_SETTINGS, type AISettings } from "./ai";
-import { normalizeConnectionCredentials } from "./credentials";
+import {
+  getCredentialStorageAdapter,
+  normalizeAuthType,
+  type ConnectionSecrets,
+} from "./credentials";
 import {
   DEFAULT_LOG_RETENTION,
   pruneLogsToRetention,
@@ -298,23 +302,106 @@ export const actions = {
     saveAccessSettings(access);
     setState({ access, isUnlocked: !access.appLockEnabled ? true : state.isUnlocked });
   },
-  upsertConnection(input: Omit<Connection, "id" | "createdAt"> & { id?: string }) {
+  async upsertConnection(input: Omit<Connection, "id" | "createdAt"> & { id?: string }) {
     ensureInit();
-    const normalizedInput = normalizeConnectionCredentials(input);
+    const adapter = getCredentialStorageAdapter();
+    const normalizedAuthType = normalizeAuthType(input.authType as any);
+    const normalizedInput = {
+      ...input,
+      authType: normalizedAuthType,
+    };
     const existing = normalizedInput.id
       ? state.connections.find((c) => c.id === normalizedInput.id)
       : null;
+
+    const nextId = existing?.id ?? uid();
+    const nextConnection: Connection = {
+      ...(existing ?? { createdAt: Date.now() }),
+      ...normalizedInput,
+      id: nextId,
+      createdAt: existing?.createdAt ?? Date.now(),
+    };
+
+    const hasExplicitSecretInput =
+      normalizedAuthType === "password"
+        ? typeof normalizedInput.password === "string" && normalizedInput.password.length > 0
+        : (typeof normalizedInput.privateKey === "string" && normalizedInput.privateKey.length > 0) || 
+          typeof normalizedInput.passphrase === "string";
+
+    let secretsToPersist: ConnectionSecrets | undefined;
+    
+    if (adapter.kind === "os-secure-storage" && hasExplicitSecretInput) {
+      secretsToPersist = {
+        authType: normalizedAuthType,
+        password: normalizedAuthType === "password" ? normalizedInput.password : undefined,
+        privateKey: normalizedAuthType === "privateKey" ? normalizedInput.privateKey : undefined,
+        passphrase: normalizedAuthType === "privateKey" ? normalizedInput.passphrase : undefined,
+      };
+
+      // Merge with existing secrets if modifying an existing connection without providing all secrets
+      if (existing) {
+        try {
+          const existingSecrets = await adapter.loadConnectionSecrets(existing);
+          if (normalizedAuthType === "password") {
+            secretsToPersist.password = secretsToPersist.password || existingSecrets.password;
+          } else {
+            secretsToPersist.privateKey = secretsToPersist.privateKey || existingSecrets.privateKey;
+            secretsToPersist.passphrase = secretsToPersist.passphrase ?? existingSecrets.passphrase;
+          }
+        } catch (e) {
+          console.warn("Failed to load existing secrets for merge", e);
+        }
+      }
+      
+      try {
+        await adapter.saveConnectionSecrets(nextId, secretsToPersist);
+      } catch (error) {
+        console.error("Failed to persist connection secrets", error);
+        actions.log(
+          "error",
+          "connections",
+          "Failed to persist credentials in secure storage. Please retry.",
+        );
+        return; // Prevent dropping credentials if secure write fails
+      }
+    }
+
+    const connectionForState =
+      adapter.kind === "os-secure-storage"
+        ? {
+            ...nextConnection,
+            password: undefined,
+            privateKey: undefined,
+            passphrase: undefined,
+          }
+        : nextConnection;
+
     let next: Connection[];
     if (existing) {
       next = state.connections.map((c) =>
-        c.id === existing.id ? { ...existing, ...normalizedInput, id: existing.id } : c,
+        c.id === existing.id ? connectionForState : c,
       );
     } else {
-      const conn: Connection = { ...normalizedInput, id: uid(), createdAt: Date.now() };
-      next = [...state.connections, conn];
+      next = [...state.connections, connectionForState];
     }
+
+    if (window.electron?.saveConnectionMetadata) {
+      try {
+        await window.electron.saveConnectionMetadata(nextId, {
+          id: nextId,
+          name: nextConnection.name,
+          host: nextConnection.host,
+          port: nextConnection.port,
+          username: nextConnection.username,
+          authType: nextConnection.authType,
+        });
+      } catch (error) {
+        console.error("Failed to persist connection metadata for secure connect flow", error);
+      }
+    }
+
     setState({ connections: next });
-    saveConnectionsAsync(next);
+    void saveConnectionsAsync(next);
     actions.log(
       "info",
       "connections",
@@ -361,11 +448,11 @@ export const actions = {
   /** Delete the group and every host that belonged to it. */
   removeGroupAndDeleteHosts(groupId: string) {
     ensureInit();
+    const adapter = getCredentialStorageAdapter();
     const g = state.groups.find((x) => x.id === groupId);
     if (!g) return;
-    const toRemove = new Set(
-      state.connections.filter((c) => c.groupId === groupId).map((c) => c.id),
-    );
+    const removedConnections = state.connections.filter((c) => c.groupId === groupId);
+    const toRemove = new Set(removedConnections.map((c) => c.id));
     let connections = state.connections.filter((c) => !toRemove.has(c.id));
     let tabs = state.tabs.filter((t) => !toRemove.has(t.connectionId));
     let activeTabId = state.activeTabId;
@@ -380,12 +467,25 @@ export const actions = {
       activeTabId,
     });
     saveGroups(nextGroups);
-    saveConnectionsAsync(connections);
+    void saveConnectionsAsync(connections);
+    if (adapter.kind === "os-secure-storage") {
+      for (const connection of removedConnections) {
+        void adapter.deleteConnectionSecrets(connection.id).catch((error) => {
+          console.error("Failed to delete secure secret for removed connection", error);
+        });
+        if (window.electron?.deleteConnectionMetadata) {
+          void window.electron.deleteConnectionMetadata(connection.id).catch((error) => {
+            console.error("Failed to delete secure metadata for removed connection", error);
+          });
+        }
+      }
+    }
     actions.log("warn", "groups", `Removed group "${g.name}" and deleted its hosts`);
   },
 
   deleteConnection(id: string) {
     ensureInit();
+    const adapter = getCredentialStorageAdapter();
     const conn = state.connections.find((c) => c.id === id);
     const next = state.connections.filter((c) => c.id !== id);
     const tabs = state.tabs.filter((t) => t.connectionId !== id);
@@ -394,7 +494,17 @@ export const actions = {
       activeTabId = tabs[tabs.length - 1]?.id ?? null;
     }
     setState({ connections: next, tabs, activeTabId });
-    saveConnectionsAsync(next);
+    void saveConnectionsAsync(next);
+    if (adapter.kind === "os-secure-storage") {
+      void adapter.deleteConnectionSecrets(id).catch((error) => {
+        console.error("Failed to delete secure secret for connection", error);
+      });
+      if (window.electron?.deleteConnectionMetadata) {
+        void window.electron.deleteConnectionMetadata(id).catch((error) => {
+          console.error("Failed to delete secure metadata for connection", error);
+        });
+      }
+    }
     if (conn) actions.log("warn", "connections", `Deleted ${conn.name}`);
   },
 
@@ -697,6 +807,16 @@ export const actions = {
   updateAI(patch: Partial<AISettings>) {
     ensureInit();
     const next = { ...state.ai, ...patch };
+    const provider = (patch.provider ?? state.ai.provider) as string;
+    const apiKeyPatch = patch.apiKey;
+
+    if (typeof apiKeyPatch === "string" && window.electron?.saveAiApiKey) {
+      void window.electron.saveAiApiKey(provider, apiKeyPatch, next.baseUrl).catch((error) => {
+        console.error("Failed to save AI API key in secure storage", error);
+      });
+      next.apiKey = "";
+    }
+
     setState({ ai: next });
     saveAISettings(next);
   },

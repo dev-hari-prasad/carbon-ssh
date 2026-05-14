@@ -30,6 +30,56 @@ export const localCredentialStorage: CredentialStorageAdapter = {
   },
 };
 
+function getElectronBridge() {
+  if (typeof window === "undefined") return null;
+  return window.electron;
+}
+
+export const osSecureCredentialStorage: CredentialStorageAdapter = {
+  kind: "os-secure-storage",
+  async loadConnectionSecrets(connection) {
+    const bridge = getElectronBridge();
+    if (!bridge?.loadConnectionSecret) {
+      return pickConnectionSecrets(connection);
+    }
+    const stored = await bridge.loadConnectionSecret(connection.id);
+    if (!stored) {
+      return {
+        authType: normalizeAuthType(connection.authType as LegacyAuthType),
+      };
+    }
+    return {
+      authType: normalizeAuthType(stored.authType as LegacyAuthType),
+      password: typeof stored.password === "string" ? stored.password : undefined,
+      privateKey: normalizePrivateKeyForSsh(stored.privateKey),
+      passphrase: typeof stored.passphrase === "string" ? stored.passphrase : undefined,
+    };
+  },
+  async saveConnectionSecrets(connectionId, secrets) {
+    const bridge = getElectronBridge();
+    if (!bridge?.saveConnectionSecret) return;
+    await bridge.saveConnectionSecret(connectionId, {
+      authType: normalizeAuthType(secrets.authType as LegacyAuthType),
+      password: secrets.password,
+      privateKey: secrets.privateKey,
+      passphrase: secrets.passphrase,
+    });
+  },
+  async deleteConnectionSecrets(connectionId) {
+    const bridge = getElectronBridge();
+    if (!bridge?.deleteConnectionSecret) return;
+    await bridge.deleteConnectionSecret(connectionId);
+  },
+};
+
+export function getCredentialStorageAdapter(): CredentialStorageAdapter {
+  const bridge = getElectronBridge();
+  if (bridge?.saveConnectionSecret && bridge?.loadConnectionSecret) {
+    return osSecureCredentialStorage;
+  }
+  return localCredentialStorage;
+}
+
 export function normalizeAuthType(authType: LegacyAuthType): AuthType {
   return authType === "key" || authType === "privateKey" ? "privateKey" : "password";
 }

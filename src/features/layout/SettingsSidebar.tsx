@@ -2367,35 +2367,72 @@ function AIPanel() {
   const ai = useStore((s) => s.ai);
   const meta = getProviderMeta(ai.provider);
   const [showKey, setShowKey] = useState(false);
-  const ready = isAIConfigured(ai);
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [hasStoredApiKey, setHasStoredApiKey] = useState(false);
+  const ready = isAIConfigured({
+    ...ai,
+    apiKey: apiKeyInput || ai.apiKey || (hasStoredApiKey ? "configured" : ""),
+  });
   const [testPhase, setTestPhase] = useState<"idle" | "loading" | "ok" | "err">("idle");
   const [testError, setTestError] = useState<string | null>(null);
 
   useEffect(() => {
     setTestPhase("idle");
     setTestError(null);
-  }, [ai.provider, ai.apiKey, ai.baseUrl, ai.autocompleteModel]);
+  }, [ai.provider, apiKeyInput, ai.baseUrl, ai.autocompleteModel]);
+
+  useEffect(() => {
+    let disposed = false;
+    if (!window.electron?.hasAiApiKey) {
+      setHasStoredApiKey(false);
+      return;
+    }
+    window.electron
+      .hasAiApiKey(ai.provider)
+      .then((hasKey) => {
+        if (!disposed) setHasStoredApiKey(Boolean(hasKey));
+      })
+      .catch(() => {
+        if (!disposed) setHasStoredApiKey(false);
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [ai.provider, apiKeyInput]);
 
   async function runConnectionTest() {
     if (!ready) return;
     setTestPhase("loading");
     setTestError(null);
     try {
-      const res = await fetch("/api/ai/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      if (window.electron?.aiTestConnection) {
+        const data = await window.electron.aiTestConnection({
           provider: ai.provider,
-          apiKey: ai.apiKey,
           baseUrl: ai.baseUrl,
           autocompleteModel: ai.autocompleteModel,
-        }),
-      });
-      const data = (await res.json()) as { ok?: boolean; error?: string };
-      if (!res.ok || !data.ok) {
-        setTestPhase("err");
-        setTestError(data.error ?? `HTTP ${res.status}`);
-        return;
+        });
+        if (!data?.ok) {
+          setTestPhase("err");
+          setTestError(data?.error ?? "AI test failed");
+          return;
+        }
+      } else {
+        const res = await fetch("/api/ai/test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            provider: ai.provider,
+            apiKey: apiKeyInput || ai.apiKey,
+            baseUrl: ai.baseUrl,
+            autocompleteModel: ai.autocompleteModel,
+          }),
+        });
+        const data = (await res.json()) as { ok?: boolean; error?: string };
+        if (!res.ok || !data.ok) {
+          setTestPhase("err");
+          setTestError(data.error ?? `HTTP ${res.status}`);
+          return;
+        }
       }
       setTestPhase("ok");
     } catch (e) {
@@ -2421,9 +2458,13 @@ function AIPanel() {
             type={showKey ? "text" : "password"}
             autoComplete="off"
             spellCheck={false}
-            value={ai.apiKey}
-            onChange={(e) => actions.updateAI({ apiKey: e.target.value })}
-            placeholder={meta.apiKeyHint}
+            value={apiKeyInput}
+            onChange={(e) => {
+              const value = e.target.value;
+              setApiKeyInput(value);
+              actions.updateAI({ apiKey: value });
+            }}
+            placeholder={hasStoredApiKey ? "Stored securely. Enter new key to replace." : meta.apiKeyHint}
             className="min-w-0 flex-1 bg-transparent text-[12.5px] font-mono text-fg placeholder:text-fg-muted focus:outline-none"
           />
           <button
@@ -2435,12 +2476,15 @@ function AIPanel() {
             {showKey ? <EyeSlashIcon className="w-3 h-3" /> : <EyeIcon className="w-3 h-3" />}
           </button>
         </IconFieldRow>
+        {hasStoredApiKey ? (
+          <p className="mt-1 px-0.5 text-[11px] font-sans text-fg-muted">API key configured in secure storage.</p>
+        ) : null}
       </FieldBlock>
 
       {meta.needsBaseUrl ? (
         <FieldBlock
           label={meta.baseUrlField?.label ?? "Base URL"}
-          hint={meta.baseUrlField?.fieldHint ?? "required"}
+          hint={(meta.baseUrlField?.fieldHint ?? "required") + " (Re-enter API key if changing)"}
         >
           <IconFieldRow icon={<GlobeAltIcon className="w-[13px] h-[13px]" strokeWidth={2} />}>
             <input

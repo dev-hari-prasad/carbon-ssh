@@ -39,6 +39,13 @@ export interface Connection {
   aiFeaturesEnabled?: boolean;
 }
 
+export interface ConnectionSecretInput {
+  authType: AuthType;
+  password?: string;
+  privateKey?: string;
+  passphrase?: string;
+}
+
 export interface HostGroup {
   id: string;
   name: string;

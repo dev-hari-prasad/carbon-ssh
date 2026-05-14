@@ -1,6 +1,8 @@
 // Production-ready WebSocket handler for Electron (compiled from ws-handler.ts logic)
 const { Client } = require("ssh2");
 const crypto = require("crypto");
+const { app, safeStorage } = require("electron");
+const secureStore = require("./secure-store.cjs");
 
 function resolveAuthMethod(data) {
   if (data.authMethod === "privateKey") return "privateKey";
@@ -106,9 +108,47 @@ function handleWsConnection(ws) {
       }
       closed = false;
 
-      const { host, port, username, password, privateKey, passphrase, cols, rows } = message.data;
-      const authMethod = resolveAuthMethod(message.data);
-      const normalizedPrivateKey = normalizePrivateKey(privateKey);
+      const { connectionId, cols, rows } = message.data || {};
+
+      if (typeof connectionId !== "string" || !connectionId.trim()) {
+        sendMsg({ type: "error", message: "Missing connection reference" });
+        handleClose();
+        return;
+      }
+
+      const connectionMetadata = secureStore.loadConnectionMetadata(app, connectionId);
+      if (!connectionMetadata) {
+        sendMsg({ type: "error", message: "Unknown connection reference" });
+        handleClose();
+        return;
+      }
+
+      let storedSecrets = null;
+      try {
+        storedSecrets = secureStore.loadConnectionSecrets(app, safeStorage, connectionId);
+      } catch (error) {
+        console.error("[ws-handler] Failed loading secure credentials", error);
+        sendMsg({ type: "error", message: "Secure credential storage is unavailable" });
+        handleClose();
+        return;
+      }
+
+      const mergedSecrets = {
+        authMethod: storedSecrets?.authType || connectionMetadata.authType,
+        password: storedSecrets?.password,
+        privateKey: storedSecrets?.privateKey,
+        passphrase: storedSecrets?.passphrase,
+      };
+
+      const authMethod = resolveAuthMethod(mergedSecrets);
+      const normalizedPrivateKey = normalizePrivateKey(mergedSecrets.privateKey);
+      const resolvedPassword = mergedSecrets.password;
+
+      if (authMethod === "password" && !resolvedPassword) {
+        sendMsg({ type: "error", message: "Missing credentials for this connection" });
+        handleClose();
+        return;
+      }
 
       if (authMethod === "privateKey" && !normalizedPrivateKey) {
         sendMsg({ type: "error", message: "Invalid private key" });
@@ -118,15 +158,16 @@ function handleWsConnection(ws) {
 
       const sshClient = new Client();
       client = sshClient;
+      let hostTrustPromptSent = false;
 
       sshClient.on("keyboard-interactive", (_n, _i, _l, prompts, finish) => {
         if (
           authMethod === "password" &&
           prompts.length > 0 &&
           prompts[0].prompt.toLowerCase().includes("password") &&
-          password
+          resolvedPassword
         ) {
-          finish([password]);
+          finish([resolvedPassword]);
         } else {
           finish([]);
         }
@@ -137,7 +178,7 @@ function handleWsConnection(ws) {
           { term: "xterm-256color", cols: cols ?? 80, rows: rows ?? 24 },
           (err, stream) => {
             if (err) {
-              console.error("[ws-handler] Shell error full trace:\n", err.stack || err);
+              console.error("[ws-handler] Shell error:", err.message || err);
               sendMsg({ type: "error", message: err.message });
               sshClient.end();
               return;
@@ -156,7 +197,11 @@ function handleWsConnection(ws) {
       });
 
       sshClient.on("error", (err) => {
-        console.error("[ws-handler] SSH client error full trace:\n", err.stack || err);
+        console.error("[ws-handler] SSH client error:", err.message || err);
+        if (hostTrustPromptSent && !shell) {
+          handleClose();
+          return;
+        }
         if (!shell) {
           sendMsg({ type: "error", message: formatSshError(err, authMethod) });
           handleClose();
@@ -168,29 +213,57 @@ function handleWsConnection(ws) {
       sshClient.on("close", () => handleClose());
 
       const config = {
-        host,
-        port,
-        username,
+        host: connectionMetadata.host,
+        port: connectionMetadata.port,
+        username: connectionMetadata.username,
         readyTimeout: 20000,
         keepaliveInterval: 10000,
         tryKeyboard: true,
-        hostVerifier: (hashedKey, callback) => {
-          if (hashedKey) {
-            const fingerprint = crypto
-              .createHash("sha256")
-              .update(hashedKey)
-              .digest("base64");
-            console.log(`[ws-handler] Host key fingerprint: SHA256:${fingerprint}:${host}`);
+        hostVerifier: (hashedKey) => {
+          try {
+            const keyBuffer = Buffer.isBuffer(hashedKey)
+              ? hashedKey
+              : Buffer.from(String(hashedKey ?? ""), "utf8");
+            const fingerprint = crypto.createHash("sha256").update(keyBuffer).digest("base64");
+            const known = secureStore.readKnownHost(
+              app,
+              connectionMetadata.host,
+              connectionMetadata.port,
+              "default",
+            );
+            if (!known) {
+              hostTrustPromptSent = true;
+              sendMsg({
+                type: "host-key-untrusted",
+                data: {
+                  connectionId,
+                  host: connectionMetadata.host,
+                  port: connectionMetadata.port,
+                  algorithm: "default",
+                  fingerprint: `SHA256:${fingerprint}`,
+                },
+              });
+              return false;
+            }
+            const matches = known.fingerprint === fingerprint;
+            if (!matches) {
+              console.warn(
+                `[security] SSH host key mismatch blocked for ${connectionMetadata.host}:${connectionMetadata.port}`,
+              );
+            }
+            return matches;
+          } catch (error) {
+            console.error("[ws-handler] Host key verification failure", error);
+            return false;
           }
-          return true;
         },
       };
       if (authMethod === "password") {
-        config.password = password || "";
+        config.password = resolvedPassword || "";
       }
       if (authMethod === "privateKey") {
         config.privateKey = normalizedPrivateKey;
-        if (passphrase) config.passphrase = passphrase;
+        if (mergedSecrets.passphrase) config.passphrase = mergedSecrets.passphrase;
       }
 
       try {

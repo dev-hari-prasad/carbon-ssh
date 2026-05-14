@@ -88,16 +88,14 @@ function getSignature(
   return `${opts.cornerRadius}:${opts.cornerSmoothing}:${w}:${h}`;
 }
 
-const EDGE_BUFFER = 1;
-
 function applySquircle(el: HTMLElement, opts: NonNullable<ReturnType<typeof getCornerOptions>>) {
   const w = el.offsetWidth;
   const h = el.offsetHeight;
   if (w < MIN_ELEMENT_SIZE || h < MIN_ELEMENT_SIZE) return;
 
   const path = getSvgPath({
-    width: w + EDGE_BUFFER,
-    height: h + EDGE_BUFFER,
+    width: w,
+    height: h,
     cornerRadius: opts.cornerRadius,
     cornerSmoothing: opts.cornerSmoothing,
     preserveSmoothing: true,

@@ -5,7 +5,7 @@ import { createLanguageModel, type AISettings } from "@/lib/ai";
 
 const BodySchema = z.object({
   provider: z.enum(["openai", "anthropic", "gateway", "openrouter", "bedrock", "custom"]),
-  apiKey: z.string(),
+  apiKey: z.string().optional(),
   baseUrl: z.string(),
   autocompleteModel: z.string(),
 });
@@ -13,7 +13,7 @@ const BodySchema = z.object({
 function toSettings(body: z.infer<typeof BodySchema>): AISettings {
   return {
     provider: body.provider,
-    apiKey: body.apiKey,
+    apiKey: body.apiKey ?? "",
     baseUrl: body.baseUrl,
     chatModel: "",
     autocompleteModel: body.autocompleteModel,
@@ -35,6 +35,7 @@ function messageFromUnknown(e: unknown): string {
 const PING_PROMPT = "Reply with exactly one word: ok. No punctuation or explanation.";
 
 export async function POST(req: Request) {
+  const isInternalCall = req.headers.get("x-carbon-internal-ai") === "1";
   let json: unknown;
   try {
     json = await req.json();
@@ -46,6 +47,12 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return NextResponse.json(
       { ok: false as const, error: "Invalid AI settings payload" },
+      { status: 400 },
+    );
+  }
+  if (!isInternalCall && parsed.data.apiKey && process.env.NODE_ENV !== "development") {
+    return NextResponse.json(
+      { ok: false as const, error: "Raw API keys are not accepted from renderer requests" },
       { status: 400 },
     );
   }

@@ -79,29 +79,41 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
           return;
         }
 
-        const res = await fetch("/api/ai/autocomplete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            prompt: cleanQuery,
-            settings: {
-              provider: ai.provider,
-              apiKey: ai.apiKey,
-              baseUrl: ai.baseUrl,
-              autocompleteModel: ai.autocompleteModel,
-            },
-            context: {
-              username: conn.username,
-              history: history,
-              terminalOutput: terminalOutput,
-            },
-          }),
-          signal: controller.signal,
-        });
+        const payload = {
+          prompt: cleanQuery,
+          settings: {
+            provider: ai.provider,
+            baseUrl: ai.baseUrl,
+            autocompleteModel: ai.autocompleteModel,
+          },
+          context: {
+            username: conn.username,
+            history: history,
+            terminalOutput: terminalOutput,
+          },
+        };
 
-        if (!res.ok) throw new Error("AI failed");
-        const data = await res.json();
-        setAiSuggestions(data.suggestions || []);
+        if (window.electron?.aiAutocomplete) {
+          const data = await window.electron.aiAutocomplete(payload);
+          setAiSuggestions(data.suggestions || []);
+        } else {
+          const res = await fetch("/api/ai/autocomplete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...payload,
+              settings: {
+                ...payload.settings,
+                apiKey: ai.apiKey,
+              },
+            }),
+            signal: controller.signal,
+          });
+
+          if (!res.ok) throw new Error("AI failed");
+          const data = await res.json();
+          setAiSuggestions(data.suggestions || []);
+        }
       } catch (e) {
         if ((e as Error).name !== "AbortError") {
           console.error("AI error:", e);

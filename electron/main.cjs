@@ -20,6 +20,33 @@ if (process.platform === "win32") {
 }
 
 const crypto = require("crypto");
+const secureStore = require("./secure-store.cjs");
+
+function ensureMainSender(event) {
+  if (event.sender.id !== mainWindow?.webContents?.id) {
+    throw new Error("Unauthorized sender");
+  }
+}
+
+async function postLocalJson(pathname, body, extraHeaders = {}) {
+  const port = appEntryPort || DEFAULT_PORT;
+  const response = await fetch(`http://127.0.0.1:${port}${pathname}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...extraHeaders },
+    body: JSON.stringify(body),
+  });
+  const text = await response.text();
+  let data = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { error: text || `HTTP ${response.status}` };
+  }
+  if (!response.ok) {
+    throw new Error(data?.error || `HTTP ${response.status}`);
+  }
+  return data;
+}
 
 ipcMain.on("set-zoom-factor", (event, factor) => {
   const webContents = event.sender;
@@ -74,9 +101,7 @@ ipcMain.handle("encrypt-string", (event, text) => {
   if (text.length > 10 * 1024 * 1024) {
     throw new Error("Input too large");
   }
-  if (event.sender.id !== mainWindow?.webContents?.id) {
-    throw new Error("Unauthorized sender");
-  }
+  ensureMainSender(event);
 
   if (safeStorage.isEncryptionAvailable()) {
     return safeStorage.encryptString(text).toString("base64");
@@ -107,8 +132,138 @@ ipcMain.handle("decrypt-string", (event, encryptedBase64) => {
 });
 
 // Provide WS token to renderer for WebSocket auth (D7.2)
-ipcMain.handle("get-ws-token", () => {
+ipcMain.handle("get-ws-token", (event) => {
+  ensureMainSender(event);
   return wsToken;
+});
+
+ipcMain.handle("save-connection-secret", (event, connectionId, secrets) => {
+  ensureMainSender(event);
+  if (typeof connectionId !== "string" || !connectionId.trim()) {
+    throw new Error("Invalid connectionId");
+  }
+  if (!secrets || typeof secrets !== "object") {
+    throw new Error("Invalid secrets payload");
+  }
+  const payload = {
+    authType: secrets.authType === "privateKey" ? "privateKey" : "password",
+    password: typeof secrets.password === "string" ? secrets.password : undefined,
+    privateKey: typeof secrets.privateKey === "string" ? secrets.privateKey : undefined,
+    passphrase: typeof secrets.passphrase === "string" ? secrets.passphrase : undefined,
+  };
+  secureStore.saveConnectionSecrets(app, safeStorage, connectionId, payload);
+  return true;
+});
+
+ipcMain.handle("load-connection-secret", (event, connectionId) => {
+  ensureMainSender(event);
+  if (typeof connectionId !== "string" || !connectionId.trim()) {
+    throw new Error("Invalid connectionId");
+  }
+  return secureStore.loadConnectionSecrets(app, safeStorage, connectionId);
+});
+
+ipcMain.handle("delete-connection-secret", (event, connectionId) => {
+  ensureMainSender(event);
+  if (typeof connectionId !== "string" || !connectionId.trim()) {
+    throw new Error("Invalid connectionId");
+  }
+  secureStore.deleteConnectionSecrets(app, connectionId);
+  return true;
+});
+
+ipcMain.handle("save-connection-metadata", (event, connectionId, metadata) => {
+  ensureMainSender(event);
+  if (typeof connectionId !== "string" || !connectionId.trim()) {
+    throw new Error("Invalid connectionId");
+  }
+  if (!metadata || typeof metadata !== "object") {
+    throw new Error("Invalid metadata payload");
+  }
+  secureStore.saveConnectionMetadata(app, connectionId, metadata);
+  return true;
+});
+
+ipcMain.handle("delete-connection-metadata", (event, connectionId) => {
+  ensureMainSender(event);
+  if (typeof connectionId !== "string" || !connectionId.trim()) {
+    throw new Error("Invalid connectionId");
+  }
+  secureStore.deleteConnectionMetadata(app, connectionId);
+  return true;
+});
+
+ipcMain.handle("save-ai-api-key", (event, provider, apiKey, baseUrl) => {
+  ensureMainSender(event);
+  if (typeof provider !== "string" || !provider.trim()) {
+    throw new Error("Invalid provider");
+  }
+  if (typeof apiKey !== "string") {
+    throw new Error("Invalid apiKey");
+  }
+  secureStore.saveAiApiKey(app, safeStorage, provider, apiKey, baseUrl);
+  return true;
+});
+
+ipcMain.handle("has-ai-api-key", (event, provider) => {
+  ensureMainSender(event);
+  if (typeof provider !== "string" || !provider.trim()) {
+    throw new Error("Invalid provider");
+  }
+  return secureStore.hasAiApiKey(app, safeStorage, provider);
+});
+
+ipcMain.handle("trust-known-host", (event, payload) => {
+  ensureMainSender(event);
+  const host = payload?.host;
+  const port = payload?.port;
+  const algorithm = payload?.algorithm;
+  const fingerprint = payload?.fingerprint;
+  if (typeof host !== "string" || !host.trim()) {
+    throw new Error("Invalid host");
+  }
+  if (typeof fingerprint !== "string" || !fingerprint.trim()) {
+    throw new Error("Invalid fingerprint");
+  }
+  secureStore.trustKnownHost(app, host, Number(port) || 22, String(algorithm || "default"), fingerprint);
+  return true;
+});
+
+ipcMain.handle("ai-autocomplete", async (event, payload) => {
+  ensureMainSender(event);
+  const provider = payload?.settings?.provider;
+  if (typeof provider !== "string" || !provider.trim()) {
+    throw new Error("Invalid AI provider");
+  }
+  const { apiKey, baseUrl } = secureStore.loadAiApiKey(app, safeStorage, provider);
+  const body = {
+    ...payload,
+    settings: {
+      ...(payload?.settings || {}),
+      apiKey,
+      ...(baseUrl ? { baseUrl } : {}) // Override renderer baseUrl if we safely stored one
+    },
+  };
+  return postLocalJson("/api/ai/autocomplete", body, { "x-carbon-internal-ai": "1" });
+});
+
+ipcMain.handle("ai-test-connection", async (event, payload) => {
+  ensureMainSender(event);
+  const provider = payload?.provider;
+  if (typeof provider !== "string" || !provider.trim()) {
+    throw new Error("Invalid AI provider");
+  }
+  const { apiKey, baseUrl } = secureStore.loadAiApiKey(app, safeStorage, provider);
+  return postLocalJson(
+    "/api/ai/test",
+    {
+      ...payload,
+      apiKey,
+      ...(baseUrl ? { baseUrl } : {}) // Override renderer baseUrl if we safely stored one
+    },
+    },
+    { "x-carbon-internal-ai": "1" },
+  );
 });
 const { createServer } = require("http");
 const http = require("http");
@@ -132,6 +287,7 @@ if (!isDev) {
 let mainWindow = null;
 let nextProcess = null;
 let wsToken = null; // WebSocket auth token for renderer-to-main auth
+let appEntryPort = DEFAULT_PORT;
 
 function renderSplashHtml() {
   const logoDir = isDev
@@ -521,6 +677,7 @@ async function startProductionServer(preferredPort) {
               const actualPort = srv.address().port;
               console.log(`[main] Entry proxy: http://127.0.0.1:${actualPort}`);
               wsToken = wsTokenLocal;
+              appEntryPort = actualPort;
               resolve({ server: srv, port: actualPort, wsToken: wsTokenLocal });
             });
           }
@@ -611,6 +768,16 @@ app.whenReady().then(async () => {
     "biometric-unlock",
     "set-zoom-factor",
     "get-ws-token",
+    "save-connection-secret",
+    "load-connection-secret",
+    "delete-connection-secret",
+    "save-connection-metadata",
+    "delete-connection-metadata",
+    "save-ai-api-key",
+    "has-ai-api-key",
+    "trust-known-host",
+    "ai-autocomplete",
+    "ai-test-connection",
     "set-title-bar-overlay",
     "pin-to-taskbar",
     "maximize-window",

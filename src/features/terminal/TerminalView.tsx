@@ -5,7 +5,6 @@ import { getTerminalFontById } from "@/config/fonts";
 import { ArrowPathIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import type { Connection, Tab } from "@/lib/types";
 import { actions, useStore } from "@/lib/store";
-import { buildSshAuthPayload } from "@/lib/credentials";
 import {
   classifySshFailureForTelemetry,
   trackFeatureUsed,
@@ -23,15 +22,16 @@ type ClientMessage =
   | {
       type: "connect";
       data: {
-        host: string;
-        port: number;
-        username: string;
-        authMethod: "password" | "privateKey";
+        connectionId: string;
+        cols: number;
+        rows: number;
+        host?: string;
+        port?: number;
+        username?: string;
+        authMethod?: "password" | "privateKey";
         password?: string;
         privateKey?: string;
         passphrase?: string;
-        cols: number;
-        rows: number;
       };
     }
   | { type: "input"; data: string }
@@ -41,6 +41,16 @@ type ClientMessage =
 type ServerMessage =
   | { type: "data"; data: string }
   | { type: "error"; message: string }
+  | {
+      type: "host-key-untrusted";
+      data: {
+        connectionId: string;
+        host: string;
+        port: number;
+        algorithm: string;
+        fingerprint: string;
+      };
+    }
   | { type: "connected" }
   | { type: "closed" };
 
@@ -125,10 +135,6 @@ export function TerminalView({ tab, conn }: Props) {
       host: conn.host,
       port: conn.port,
       username: conn.username,
-      authType: conn.authType,
-      password: conn.password,
-      privateKey: conn.privateKey,
-      passphrase: conn.passphrase,
     }),
     [
       conn.id,
@@ -136,13 +142,8 @@ export function TerminalView({ tab, conn }: Props) {
       conn.host,
       conn.port,
       conn.username,
-      conn.authType,
-      conn.password,
-      conn.privateKey,
-      conn.passphrase,
     ],
   );
-  const authPayload = useMemo(() => buildSshAuthPayload(connectionSnapshot), [connectionSnapshot]);
 
   // Separate effect: update terminal theme/font WITHOUT killing the connection
   useEffect(() => {
@@ -289,13 +290,24 @@ export function TerminalView({ tab, conn }: Props) {
         }
         send({
           type: "connect",
-          data: {
-            host: connectionSnapshot.host,
-            port: connectionSnapshot.port,
-            ...authPayload,
-            cols: term.cols,
-            rows: term.rows,
-          },
+          data: window.electron?.loadConnectionSecret
+            ? {
+                connectionId: connectionSnapshot.id,
+                cols: term.cols,
+                rows: term.rows,
+              }
+            : {
+                connectionId: connectionSnapshot.id,
+                host: conn.host,
+                port: conn.port,
+                username: conn.username,
+                authMethod: conn.authType,
+                password: conn.password,
+                privateKey: conn.privateKey,
+                passphrase: conn.passphrase,
+                cols: term.cols,
+                rows: term.rows,
+              },
         });
       });
 
@@ -316,6 +328,29 @@ export function TerminalView({ tab, conn }: Props) {
             actions.setConnectionStatus(connectionSnapshot.id, { state: "connected" });
             actions.log("info", connectionSnapshot.name, `Session ${tab.title} connected`);
             break;
+          case "host-key-untrusted": {
+            const details = message.data;
+            const shouldTrust = window.confirm(
+              `Untrusted SSH host key for ${details.host}:${details.port}\n` +
+                `Fingerprint: ${details.fingerprint}\n\n` +
+                "Only accept if you trust this server.",
+            );
+            if (shouldTrust && window.electron?.trustKnownHost) {
+              window.electron
+                .trustKnownHost(details)
+                .then(() => {
+                  setReconnectKey((k) => k + 1);
+                })
+                .catch(() => {
+                  term.writeln("\r\n\x1b[31merror: Failed to trust SSH host key\x1b[0m");
+                  setIsClosed(true);
+                });
+            } else {
+              term.writeln("\r\n\x1b[31merror: SSH host key is not trusted\x1b[0m");
+              setIsClosed(true);
+            }
+            break;
+          }
           case "closed":
             handleClosed();
             break;

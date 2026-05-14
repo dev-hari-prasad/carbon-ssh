@@ -7,7 +7,7 @@ const BodySchema = z.object({
   prompt: z.string(),
   settings: z.object({
     provider: z.enum(["openai", "anthropic", "gateway", "openrouter", "bedrock", "custom"]),
-    apiKey: z.string(),
+    apiKey: z.string().optional(),
     baseUrl: z.string(),
     autocompleteModel: z.string(),
   }),
@@ -30,17 +30,22 @@ Output: [{"command": "ls -A", "label": "List hidden files", "description": "Show
 
 export async function POST(req: Request) {
   try {
+    const isInternalCall = req.headers.get("x-carbon-internal-ai") === "1";
     const body = await req.json();
     const parsed = BodySchema.safeParse(body);
     
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
+    if (!isInternalCall && parsed.data.settings.apiKey && process.env.NODE_ENV !== "development") {
+      return NextResponse.json({ error: "Raw API keys are not accepted from renderer requests" }, { status: 400 });
+    }
 
     const { prompt, settings, context } = parsed.data as any;
     
     const s: AISettings = {
       ...settings,
+      apiKey: typeof settings.apiKey === "string" ? settings.apiKey : "",
       chatModel: "",
       autocompleteEnabled: true,
       chatEnabled: false,

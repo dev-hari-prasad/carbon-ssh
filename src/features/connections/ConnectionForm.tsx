@@ -43,9 +43,10 @@ export function ConnectionForm({
     setPort(String(initial?.port ?? 22));
     setUsername(initial?.username ?? "");
     setAuthType(initial?.authType ?? "password");
-    setPassword(initial?.password ?? "");
-    setPrivateKey(initial?.privateKey ?? "");
-    setPassphrase(initial?.passphrase ?? "");
+    // Never preload secrets into renderer form state.
+    setPassword("");
+    setPrivateKey("");
+    setPassphrase("");
     setIcon(
       initial?.iconBrand
         ? { kind: "brand", id: initial.iconBrand }
@@ -75,14 +76,18 @@ export function ConnectionForm({
       return;
     }
 
-    if (authType === "password" && !password) {
+    if (authType === "password" && !password && !(initial && initial.authType === "password")) {
       toast.error("Password is required", {
         description: "Password authentication requires a valid password.",
       });
       return;
     }
 
-    if (authType === "privateKey" && !privateKey.trim()) {
+    if (
+      authType === "privateKey" &&
+      !privateKey.trim() &&
+      !(initial && initial.authType === "privateKey")
+    ) {
       toast.error("Private key is required", {
         description: "Please paste your OpenSSH private key.",
       });
@@ -96,9 +101,9 @@ export function ConnectionForm({
       port: Number(port) || 22,
       username: username.trim(),
       authType,
-      password: authType === "password" ? password : undefined,
-      privateKey: authType === "privateKey" ? privateKey : undefined,
-      passphrase: authType === "privateKey" ? passphrase : undefined,
+      password: authType === "password" && password ? password : undefined,
+      privateKey: authType === "privateKey" && privateKey.trim() ? privateKey : undefined,
+      passphrase: authType === "privateKey" && passphrase ? passphrase : undefined,
       iconKind: icon.kind === "system" ? icon.id : undefined,
       iconColor: icon.kind === "system" ? icon.color : undefined,
       iconBrand: icon.kind === "brand" ? icon.id : undefined,

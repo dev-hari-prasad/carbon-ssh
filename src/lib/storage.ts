@@ -1,8 +1,12 @@
 import { DEFAULT_THEME_ID, THEMES } from "@/config/themes";
 import { AI_PROVIDERS, DEFAULT_AI_SETTINGS, type AISettings } from "./ai";
 import type { Bang, Connection, HostGroup, ThemeId } from "./types";
-import { normalizeConnectionCredentials } from "./credentials";
-import { stripConnectionsSecrets } from "./secret-stripping";
+import {
+  getCredentialStorageAdapter,
+  normalizeAuthType,
+  pickConnectionSecrets,
+} from "./credentials";
+import { stripConnectionSecrets, stripConnectionsSecrets } from "./secret-stripping";
 import { DEFAULT_LOG_RETENTION, type LogRetention } from "./log-retention";
 
 const KEY = "ssh.connections.v2";
@@ -26,6 +30,24 @@ const CLOSED_TABS_KEY = "ssh.closed-tabs.v1";
 const ONBOARDING_COMPLETED_KEY = "ssh.onboarding-completed.v1";
 
 const VALID_LOG_RETENTION = new Set<LogRetention>(["24h", "3d", "7d", "30d", "90d", "1y", "off"]);
+
+async function syncConnectionMetadataToElectron(connections: Connection[]): Promise<void> {
+  if (!window.electron?.saveConnectionMetadata) return;
+  for (const connection of connections) {
+    try {
+      await window.electron.saveConnectionMetadata(connection.id, {
+        id: connection.id,
+        name: connection.name,
+        host: connection.host,
+        port: connection.port,
+        username: connection.username,
+        authType: normalizeAuthType(connection.authType as any),
+      });
+    } catch {
+      // Best effort sync. Connection metadata still lives in local storage.
+    }
+  }
+}
 
 export type AccessMethod = "passkey" | "password";
 
@@ -103,12 +125,66 @@ export async function loadConnectionsAsync(): Promise<Connection[]> {
 
     const parsed = JSON.parse(decrypted);
     if (!Array.isArray(parsed)) return [];
-    const connections = parsed.map((connection) =>
-      normalizeConnectionCredentials(connection as Connection),
-    ) as Connection[];
 
-    // Strip secrets before returning to renderer (D10.1)
-    return stripConnectionsSecrets(connections);
+    const adapter = getCredentialStorageAdapter();
+    if (adapter.kind === "local-development") {
+      const connections = parsed
+        .filter((rawConnection) => rawConnection && typeof rawConnection === "object")
+        .map((rawConnection) => {
+          const candidate = rawConnection as Connection;
+          return {
+            ...candidate,
+            authType: normalizeAuthType(candidate.authType as any),
+          } as Connection;
+        })
+        .filter((connection) => typeof connection.id === "string" && connection.id.length > 0);
+      await syncConnectionMetadataToElectron(connections);
+      return connections;
+    }
+
+    const sanitizedConnections: Connection[] = [];
+    let migratedLegacySecrets = false;
+
+    for (const rawConnection of parsed) {
+      if (!rawConnection || typeof rawConnection !== "object") continue;
+
+      const candidate = rawConnection as Connection;
+      if (typeof candidate.id !== "string" || !candidate.id) continue;
+
+      const normalizedConnection: Connection = {
+        ...candidate,
+        authType: normalizeAuthType(candidate.authType as any),
+      };
+      const hadLegacySecrets = Boolean(
+        normalizedConnection.password ||
+          normalizedConnection.privateKey ||
+          normalizedConnection.passphrase,
+      );
+
+      if (hadLegacySecrets && adapter.kind === "os-secure-storage") {
+        try {
+          await adapter.saveConnectionSecrets(
+            normalizedConnection.id,
+            pickConnectionSecrets(normalizedConnection),
+          );
+          migratedLegacySecrets = true;
+          sanitizedConnections.push(stripConnectionSecrets(normalizedConnection));
+        } catch (e) {
+          console.error("Migration failed for connection", normalizedConnection.id, e);
+          // push the unstripped connection so it is not corrupted and can be retried
+          sanitizedConnections.push(normalizedConnection);
+        }
+      } else {
+        sanitizedConnections.push(stripConnectionSecrets(normalizedConnection));
+      }
+    }
+
+    if (migratedLegacySecrets) {
+      await saveConnectionsAsync(sanitizedConnections);
+    }
+    await syncConnectionMetadataToElectron(sanitizedConnections);
+
+    return sanitizedConnections;
   } catch (e) {
     console.error("Failed to load/decrypt connections", e);
     return [];
@@ -122,12 +198,27 @@ export function saveConnections(list: Connection[]) {
 export async function saveConnectionsAsync(list: Connection[]) {
   if (typeof window === "undefined") return;
   try {
-    const raw = JSON.stringify(list.map((connection) => normalizeConnectionCredentials(connection)));
+    const adapter = getCredentialStorageAdapter();
+    const normalizedConnections = list.map((connection) => ({
+      ...connection,
+      authType: normalizeAuthType(connection.authType as any),
+    }));
+
+    const raw =
+      adapter.kind === "local-development"
+        ? JSON.stringify(
+            normalizedConnections.map((connection) => ({
+              ...connection,
+              ...pickConnectionSecrets(connection),
+            })),
+          )
+        : JSON.stringify(stripConnectionsSecrets(normalizedConnections));
     let encrypted = raw;
     if (window.electron?.encryptString) {
       encrypted = await window.electron.encryptString(raw);
     }
     window.localStorage.setItem(KEY, encrypted);
+    await syncConnectionMetadataToElectron(normalizedConnections);
   } catch (e) {
     console.error("Failed to save/encrypt connections", e);
   }
@@ -258,6 +349,21 @@ export function loadAISettings(): AISettings {
     const raw = window.localStorage.getItem(AI_KEY);
     if (!raw) return { ...DEFAULT_AI_SETTINGS };
     const parsed = JSON.parse(raw) as Partial<AISettings> & { model?: string };
+    if (typeof parsed.apiKey === "string" && parsed.apiKey && window.electron?.saveAiApiKey) {
+      window.electron
+        .saveAiApiKey(
+          typeof parsed.provider === "string" ? parsed.provider : DEFAULT_AI_SETTINGS.provider,
+          parsed.apiKey,
+          typeof parsed.baseUrl === "string" ? parsed.baseUrl : ""
+        )
+        .then(() => {
+          const { apiKey: _migrated, ...publicSettings } = parsed;
+          window.localStorage.setItem(AI_KEY, JSON.stringify(publicSettings));
+        })
+        .catch((e) => {
+          console.error("AI Key migration failed", e);
+        });
+    }
     const legacy =
       typeof parsed.model === "string" && parsed.model.trim() !== "" ? parsed.model : "";
     const chatModel =
@@ -274,7 +380,7 @@ export function loadAISettings(): AISettings {
         parsed.provider && AI_PROVIDERS.some((p) => p.id === parsed.provider)
           ? parsed.provider
           : DEFAULT_AI_SETTINGS.provider,
-      apiKey: typeof parsed.apiKey === "string" ? parsed.apiKey : "",
+      apiKey: "",
       baseUrl: typeof parsed.baseUrl === "string" ? parsed.baseUrl : "",
       chatModel,
       autocompleteModel,
@@ -288,7 +394,8 @@ export function loadAISettings(): AISettings {
 
 export function saveAISettings(s: AISettings) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(AI_KEY, JSON.stringify(s));
+  const { apiKey: _ignoredApiKey, ...publicSettings } = s;
+  window.localStorage.setItem(AI_KEY, JSON.stringify(publicSettings));
 }
 
 export function loadLogRetention(): LogRetention {
