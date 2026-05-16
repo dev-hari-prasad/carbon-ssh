@@ -22,18 +22,24 @@ The most important implementation boundary is this: scan modules can collect dat
 
 ## Implementation Order
 
+Cross-cutting gaps from the parent plan’s **Appendix D** are covered by **`10`**, **`11`**, and **`12`** — implement them in the phase below, not only at the end.
+
 1. `01-scan-engine-and-data-model.md`
-2. `02-ssh-security-scanners.md`
-3. `03-network-firewall-and-docker.md`
-4. `04-remediation-rollback-and-safe-execution.md`
-5. `05-lockdown-protocols.md`
-6. `06-ai-cve-and-reporting.md`
-7. `07-ui-consent-and-terminal-integration.md`
-8. `08-fleet-drift-and-policy.md`
-9. `09-testing-rollout-and-operations.md`
+2. `10-strict-host-key-validation.md` (session trust before meaningful scan/remediate QA on real hosts)
+3. `02-ssh-security-scanners.md`
+4. `03-network-firewall-and-docker.md`
+5. `11-parameterized-shell-execution.md` (hard constraint before widening write paths)
+6. `04-remediation-rollback-and-safe-execution.md`
+7. `12-client-loopback-trust-and-local-audit.md` (trusted orchestration + client audit alongside remediation UX)
+8. `05-lockdown-protocols.md`
+9. `06-ai-cve-and-reporting.md`
+10. `07-ui-consent-and-terminal-integration.md`
+11. `08-fleet-drift-and-policy.md` (only after single-host remediation is stable)
+12. `09-testing-rollout-and-operations.md`
 
 ## Cross-Cutting Dependencies
 
+- Parent plan **`agents/plans/security-guard.md` Appendix D** (security engineering concerns and improvements) — keep in sync with **`12`** and rollout epics in **`09`**.
 - Existing Carbon SSH connection/session layer.
 - Electron main process for trusted local orchestration and credential access.
 - Renderer UI for scan dashboards, confirmation dialogs, and rollback controls.

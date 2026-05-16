@@ -18,8 +18,8 @@ export default function Page() {
   const isUnlocked = useStore((s) => s.isUnlocked);
   const onboardingCompleted = useStore((s) => s.onboardingCompleted);
   const tabBarOrientation = useStore((s) => s.tabBarOrientation);
-  const themeId = useStore((s) => s.themeId);
-  const currentTheme = getThemeById(themeId);
+  const theme = useStore((s) => s.theme);
+  const currentTheme = getThemeById(theme);
   const logoSrc = currentTheme.type === "light" ? "/logo/Carbon logo dark.svg" : "/logo/Carbon logo light.svg";
 
   const showUnlock = !isUnlocked && onboardingCompleted;

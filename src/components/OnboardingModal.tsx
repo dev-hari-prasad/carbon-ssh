@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { Kbd } from "@/components/Kbd";
-import { KeyReturn, HardDrive, Fingerprint, ShieldCheck, ChartBar, PushPinSimple } from "@phosphor-icons/react";
+import { KeyReturn, HardDrive, Fingerprint, ShieldCheck, ShieldWarning, ChartBar, PushPinSimple } from "@phosphor-icons/react";
 
 const STEPS = 4;
 const SKIP_LOCK_WARNING =
@@ -51,7 +51,9 @@ export function OnboardingModal() {
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [activeTab, setActiveTab] = useState("biometric");
+  const access = useStore((s) => s.access);
+  const [activeTab, setActiveTab] = useState(access.appLockEnabled ? access.method : "passkey");
+  const [setupStatus, setSetupStatus] = useState<'idle' | 'success' | 'error' | 'skipped'>(access.appLockEnabled ? 'success' : 'idle');
   const [showSkipWarning, setShowSkipWarning] = useState(false);
 
   const onboardingCompleted = useStore((s) => s.onboardingCompleted);
@@ -82,6 +84,7 @@ export function OnboardingModal() {
       }
       actions.setAccessSettings({ appLockEnabled: true, method: "passkey" });
       await actions.unlockApp();
+      setSetupStatus('success');
       handleNext();
     } catch (err: any) {
       setError(true);
@@ -100,23 +103,36 @@ export function OnboardingModal() {
     await savePasswordAccess(password);
     actions.setAccessSettings({ appLockEnabled: true, method: "password" });
     await actions.unlockApp();
+    setSetupStatus('success');
     handleNext();
   }, [password, handleNext]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (onboardingCompleted) return;
+      
+      const target = e.target as HTMLElement;
+      const isInput = target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable;
+
       if (e.key === "Enter") {
-        if (step < STEPS && step !== 3) {
-          setStep((s) => s + 1);
-        } else if (step === 3 && activeTab === "password") {
-          attemptPasswordSetup();
+        if (step < STEPS) {
+          if (step === 3) {
+            if (setupStatus === 'idle') {
+              if (activeTab === "password") attemptPasswordSetup();
+            } else {
+              handleNext();
+            }
+          } else {
+            handleNext();
+          }
         }
+      } else if (e.key === "Backspace" && step > 1 && !isInput) {
+        setStep(s => s - 1);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [step, onboardingCompleted, activeTab, attemptPasswordSetup]);
+  }, [step, onboardingCompleted, activeTab, attemptPasswordSetup, setupStatus, handleNext]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-onboarding", "true");
@@ -160,13 +176,20 @@ export function OnboardingModal() {
   const confirmSkipLock = () => {
     actions.setAccessSettings({ appLockEnabled: false, method: "passkey" });
     setShowSkipWarning(false);
+    setSetupStatus('skipped');
     handleNext();
   };
 
 
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--bg)]">
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[var(--bg)]"
+      style={{ 
+        "--fg-muted": "color-mix(in oklab, var(--fg-muted) 65%, var(--fg))",
+        "--input": "color-mix(in oklab, var(--border) 60%, var(--border-strong))",
+      } as React.CSSProperties}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -184,7 +207,7 @@ export function OnboardingModal() {
             pointerEvents: isCompleting ? "none" : "auto"
           }}
           transition={{ duration: 0.6, ease: [0.32, 0.72, 0, 1] }}
-          className="h-full bg-[var(--bg)] p-10 flex flex-col relative shrink-0 border-r border-border overflow-hidden"
+          className="h-full bg-[var(--bg)] pt-8 px-10 pb-10 flex flex-col relative shrink-0 border-r border-border overflow-hidden"
         >
           <AnimatePresence mode="wait">
             <motion.div
@@ -196,7 +219,7 @@ export function OnboardingModal() {
               className="flex-1 flex flex-col"
             >
               {step === 1 && (
-                <div className="flex flex-col h-full justify-center px-6">
+                <div className="flex flex-col h-full justify-start pt-[22vh] pl-10 pr-6">
                   <motion.div 
                     className="flex flex-col items-center w-full mb-8"
                     initial="hidden"
@@ -221,14 +244,14 @@ export function OnboardingModal() {
                           }}
                           src={currentTheme.type === "light" ? "/logo/Carbon logo dark.svg" : "/logo/Carbon logo light.svg"} 
                           alt="Carbon" 
-                          className="h-14 mb-4" 
+                          className="h-14 mb-3" 
                         />
                         <motion.h1 
                           variants={{
                             hidden: { opacity: 0, y: 10 },
                             visible: { opacity: 1, y: 0 }
                           }}
-                          className="text-2xl font-bold text-fg mb-0.5"
+                          className="text-xl font-bold text-fg mb-0"
                         >
                           Welcome to Carbon SSH
                         </motion.h1>
@@ -237,13 +260,13 @@ export function OnboardingModal() {
                             hidden: { opacity: 0, y: 10 },
                             visible: { opacity: 1, y: 0 }
                           }}
-                          className="text-fg-muted text-[14px]"
+                          className="text-fg-muted text-[13px]"
                         >
                           A new, faster and easier way to manage your SSH hosts.
                         </motion.p>
                       </div>
                       
-                      <div className="mt-2 space-y-3">
+                      <div className="mt-2 space-y-2">
                         {[
                           { icon: HardDrive, text: "Store and access your hosts securely" },
                           { icon: Fingerprint, text: "Lock your data and Carbon with Passkeys" },
@@ -271,9 +294,9 @@ export function OnboardingModal() {
 
               {step === 2 && (
                 <div className="flex flex-col h-full px-0">
-                  <div className="mb-8 mt-2 shrink-0">
-                    <h1 className="text-2xl font-bold text-fg mb-0.5">Customize Carbon</h1>
-                    <p className="text-fg-muted text-[14px]">Tailor the UI to your liking.</p>
+                  <div className="mb-8 mt-0 shrink-0">
+                    <h1 className="text-xl font-bold text-fg mb-0">Customize Carbon</h1>
+                    <p className="text-fg-muted text-[13px]">Tailor the UI to your liking.</p>
                   </div>
 
                   <div className="flex-1 flex flex-col justify-center items-center max-w-[80%] mx-auto w-full pb-12 mb-12">
@@ -315,7 +338,7 @@ export function OnboardingModal() {
                         </div>
                       </div>
 
-                      <hr className="border-border w-full opacity-60" />
+                      <hr className="border-border w-full opacity-80" />
 
                       {/* Theme */}
                       <div className="flex flex-col gap-3">
@@ -333,115 +356,161 @@ export function OnboardingModal() {
 
               {step === 3 && (
                 <div className="flex flex-col h-full px-0">
-                  <div className="mb-6 mt-2 shrink-0">
-                    <h1 className="text-2xl font-bold text-fg mb-0.5">Secure your data</h1>
-                    <p className="text-fg-muted text-[14px]">Carbon locks your data. Choose how you want to unlock it.</p>
+                  <div className="mb-6 mt-0 shrink-0">
+                    <h1 className="text-xl font-bold text-fg mb-0">Secure your data</h1>
+                    <p className="text-fg-muted text-[13px]">Choose how you want to unlock your data.</p>
                   </div>
 
                   <div className="flex-1 flex flex-col justify-center items-center pb-12 pr-2 w-[70%] mx-auto">
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                      <TabsList className="grid w-full grid-cols-2 mb-4 bg-[var(--bg-panel)] border border-border h-9 p-1 relative overflow-hidden">
-                        <TabsTrigger value="biometric" className="z-10 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-fg">
-                          <FingerPrintIcon className="w-4 h-4 mr-2" /> Passkeys
-                        </TabsTrigger>
-                        <TabsTrigger value="password" className="z-10 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-fg">
-                          <KeyIcon className="w-4 h-4 mr-2" /> Password
-                        </TabsTrigger>
-                        <motion.div
-                          className="absolute h-[calc(100%-8px)] top-1 bg-[var(--command-active-bg)] shadow-sm rounded-md"
-                          initial={false}
-                          animate={{
-                            left: activeTab === "biometric" ? "4px" : "50%",
-                            width: "calc(50% - 4px)"
-                          }}
-                          transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
-                        />
-                      </TabsList>
+                    {setupStatus === 'success' ? (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="flex flex-col items-center justify-center py-8"
+                      >
+                         <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
+                           <ShieldCheck className="w-10 h-10 text-emerald-500" weight="fill" />
+                         </div>
+                         <h3 className="text-lg font-bold text-fg mb-1">Securely locked</h3>
+                         <p className="text-fg-muted mb-6 text-center text-[13px] leading-relaxed">
+                           Your data is now protected by {access.method === 'passkey' ? 'biometric authentication' : 'a master password'}.
+                         </p>
+                         <Button 
+                           variant="outline" 
+                           size="sm" 
+                           onClick={() => setSetupStatus('idle')} 
+                           className="h-8 px-6 text-[11px] font-medium bg-transparent border-border hover:bg-[var(--command-active-bg)]"
+                         >
+                           Change method
+                         </Button>
+                      </motion.div>
+                    ) : setupStatus === 'skipped' ? (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="flex flex-col items-center justify-center py-8"
+                      >
+                         <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-4">
+                           <ShieldWarning className="w-10 h-10 text-amber-500" weight="fill" />
+                         </div>
+                         <h3 className="text-lg font-bold text-fg mb-1">App lock skipped</h3>
+                         <p className="text-fg-muted mb-6 text-center text-[13px] leading-relaxed">
+                           Your data is currently unprotected. We highly recommend enabling a lock for security.
+                         </p>
+                         <div className="flex justify-center w-full">
+                           <Button 
+                             onClick={() => setSetupStatus('idle')} 
+                             className="h-9 px-8 text-[12px] font-medium bg-accent text-accent-fg hover:opacity-90 shadow-sm"
+                           >
+                             Setup App Lock
+                           </Button>
+                         </div>
+                      </motion.div>
+                    ) : (
+                      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2 mb-4 bg-[var(--bg-panel)] border border-border h-9 p-1 relative overflow-hidden">
+                          <TabsTrigger value="passkey" className="z-10 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-fg">
+                            <FingerPrintIcon className="w-4 h-4 mr-2" /> Passkeys
+                          </TabsTrigger>
+                          <TabsTrigger value="password" className="z-10 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-fg">
+                            <KeyIcon className="w-4 h-4 mr-2" /> Password
+                          </TabsTrigger>
+                          <motion.div
+                            className="absolute h-[calc(100%-8px)] top-1 bg-[var(--command-active-bg)] shadow-sm rounded-md"
+                            initial={false}
+                            animate={{
+                              left: activeTab === "passkey" ? "4px" : "50%",
+                              width: "calc(50% - 4px)"
+                            }}
+                            transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
+                          />
+                        </TabsList>
 
-                      <div className="relative h-[180px]">
-                        <AnimatePresence mode="wait">
-                          {activeTab === "biometric" ? (
-                            <motion.div
-                              key="biometric"
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -10 }}
-                              transition={{ duration: 0.2 }}
-                              className="flex flex-col gap-4"
-                            >
-                              <p className="text-[13px] text-fg-muted text-center mx-auto mt-4">
-                                Uses Touch ID or Windows Hello. <br /> You can change this later in settings.
-                              </p>
-                              {error && (
-                                <div className="bg-red-500/10 text-red-500 text-sm px-4 py-3 rounded-lg w-full text-center border border-red-500/20">
-                                  {errorMessage}
+                        <div className="relative h-[180px]">
+                          <AnimatePresence mode="wait">
+                            {activeTab === "passkey" ? (
+                              <motion.div
+                                key="passkey"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                                className="flex flex-col gap-4"
+                              >
+                                <p className="text-[13px] text-fg-muted text-center mx-auto mt-4">
+                                  Uses Touch ID or Windows Hello. <br /> You can change this later in settings.
+                                </p>
+                                {error && (
+                                  <div className="bg-red-500/10 text-red-500 text-sm px-4 py-3 rounded-lg w-full text-center border border-red-500/20">
+                                    {errorMessage}
+                                  </div>
+                                )}
+                                  <div className="flex flex-col gap-1.5">
+                                    <Button
+                                      onClick={attemptBiometricUnlock}
+                                      disabled={loading}
+                                      className="w-full bg-accent text-accent-fg hover:opacity-90 h-10 mt-4 max-w-[95%] mx-auto"
+                                    >
+                                      {loading ? "Waiting..." : "Set up Passkey"}
+                                    </Button>
+                                    <Button 
+                                      onClick={handleSkipLock} 
+                                      variant="outline"
+                                      className="w-fit px-6 bg-transparent hover:bg-[var(--command-active-bg)] text-fg h-8 mt-2 mx-auto border-dashed border-border-strong text-[11px] font-medium"
+                                    >
+                                      Skip app lock
+                                    </Button>
+                                  </div>
+                              </motion.div>
+                            ) : (
+                              <motion.div
+                                key="password"
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                                className="flex flex-col gap-4"
+                              >
+                                <div className="space-y-2">
+                                  <label className="text-xs font-medium text-fg-muted">Password</label>
+                                  <div className="relative">
+                                    <Input
+                                      type={showPassword ? "text" : "password"}
+                                      value={password}
+                                      onChange={(e) => setPassword(e.target.value)}
+                                      placeholder="Enter a secure password..."
+                                      className="pr-8 bg-[var(--input-bg)] border-border text-fg focus:border-border-strong"
+                                      onKeyDown={(e) => e.key === "Enter" && attemptPasswordSetup()}
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => setShowPassword(!showPassword)}
+                                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg transition-colors"
+                                    >
+                                      {showPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
+                                    </button>
+                                  </div>
+                                  {passwordError && <p className="text-xs text-danger">{passwordError}</p>}
                                 </div>
-                              )}
-                                <div className="flex flex-col gap-1.5">
-                                  <Button
-                                    onClick={attemptBiometricUnlock}
-                                    disabled={loading}
-                                    className="w-full bg-accent text-accent-fg hover:opacity-90 h-10 mt-4 max-w-[95%] mx-auto"
-                                  >
-                                    {loading ? "Waiting..." : "Set up Passkey"}
-                                  </Button>
-                                  <Button 
-                                    onClick={handleSkipLock} 
-                                    variant="outline"
-                                    className="w-fit px-6 bg-transparent hover:bg-[var(--command-active-bg)] text-fg h-8 mt-2 mx-auto border-dashed border-border-strong text-[11px] font-medium"
-                                  >
-                                    Skip app lock
-                                  </Button>
-                                </div>
-                            </motion.div>
-                          ) : (
-                            <motion.div
-                              key="password"
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: -10 }}
-                              transition={{ duration: 0.2 }}
-                              className="flex flex-col gap-4"
-                            >
-                              <div className="space-y-2">
-                                <label className="text-xs font-medium text-fg-muted">Password</label>
-                                <div className="relative">
-                                  <Input
-                                    type={showPassword ? "text" : "password"}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    placeholder="Enter a secure password..."
-                                    className="pr-8 bg-[var(--input-bg)] border-border text-fg focus:border-border-strong"
-                                    onKeyDown={(e) => e.key === "Enter" && attemptPasswordSetup()}
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-fg-muted hover:text-fg transition-colors"
-                                  >
-                                    {showPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-                                  </button>
-                                </div>
-                                {passwordError && <p className="text-xs text-danger">{passwordError}</p>}
-                              </div>
 
-                                <div className="flex flex-col gap-1.5">
-                                  <Button onClick={attemptPasswordSetup} className="w-full bg-accent text-accent-fg hover:opacity-90 h-10 mt-3">
-                                    Set Password
-                                  </Button>
-                                  <Button 
-                                    onClick={handleSkipLock} 
-                                    variant="outline"
-                                    className="w-fit px-6 bg-transparent hover:bg-[var(--command-active-bg)] text-fg h-8 mt-2 mx-auto border-dashed border-border-strong text-[11px] font-medium"
-                                  >
-                                    Skip app lock
-                                  </Button>
-                                </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </Tabs>
+                                  <div className="flex flex-col gap-1.5">
+                                    <Button onClick={attemptPasswordSetup} className="w-full bg-accent text-accent-fg hover:opacity-90 h-10 mt-3">
+                                      Set Password
+                                    </Button>
+                                    <Button 
+                                      onClick={handleSkipLock} 
+                                      variant="outline"
+                                      className="w-fit px-6 bg-transparent hover:bg-[var(--command-active-bg)] text-fg h-8 mt-2 mx-auto border-dashed border-border-strong text-[11px] font-medium"
+                                    >
+                                      Skip app lock
+                                    </Button>
+                                  </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </Tabs>
+                    )}
                     
                     <AlertDialog open={showSkipWarning} onOpenChange={setShowSkipWarning}>
                       <AlertDialogContent 
@@ -467,9 +536,9 @@ export function OnboardingModal() {
               )}
               {step === 4 && (
                 <div className="flex flex-col h-full px-0">
-                  <div className="mb-6 mt-2 shrink-0">
-                    <h1 className="text-2xl font-bold text-fg mb-0">One last thing</h1>
-                    <p className="text-fg-muted text-[14px]">Configure your final preferences to get the most out of Carbon.</p>
+                  <div className="mb-6 mt-0 shrink-0">
+                    <h1 className="text-xl font-bold text-fg mb-0">One last thing</h1>
+                    <p className="text-fg-muted text-[13px]">Set your final preferences to get started.</p>
                   </div>
 
                   <div className="flex-1 flex flex-col justify-center items-center pb-12 mb-10 max-w-[400px] mx-auto w-full">
@@ -498,7 +567,7 @@ export function OnboardingModal() {
                             <ChartBar className="w-4 h-4 text-fg" weight="duotone" />
                           </div>
                           <div className="space-y-1">
-                            <h4 className="text-[14px] font-medium text-fg">Super Anonymous Telemetry</h4>
+                            <h4 className="text-[14px] font-medium text-fg">Anonymous Telemetry</h4>
                             <p className="text-[12px] text-fg-muted leading-tight">
                               Share anonymous usage data to improve Carbon.
                             </p>
@@ -539,28 +608,35 @@ export function OnboardingModal() {
             {step < STEPS && step !== 3 ? (
               <Button onClick={handleNext} className="bg-accent text-accent-fg hover:opacity-90 flex items-center gap-2 pl-4 pr-2 h-8 text-xs font-semibold rounded-md">
                 Next
-                <Kbd variant="onAccent" className="border-none bg-transparent shadow-none opacity-60"><KeyReturn weight="bold" size={12} /></Kbd>
+                <Kbd variant="onAccent" className="border-none bg-transparent shadow-none opacity-85"><KeyReturn weight="bold" size={12} /></Kbd>
               </Button>
             ) : step === 3 ? (
-              <TooltipProvider>
-                <Tooltip delayDuration={0}>
-                  <TooltipTrigger asChild>
-                    <div className="inline-block">
-                      <Button disabled className="bg-accent/50 text-accent-fg/50 cursor-not-allowed flex items-center gap-2 pl-4 pr-2 h-8 text-xs font-semibold rounded-md">
-                        Next
-                        <Kbd variant="onAccent" className="border-none bg-transparent shadow-none opacity-40"><KeyReturn weight="bold" size={12} /></Kbd>
-                      </Button>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="bg-popover text-popover-fg border-border">
-                    <p className="text-xs font-medium">Setup or skip security first</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              setupStatus === 'idle' ? (
+                <TooltipProvider>
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>
+                      <div className="inline-block">
+                        <Button disabled className="bg-accent/50 text-accent-fg/50 cursor-not-allowed flex items-center gap-2 pl-4 pr-2 h-8 text-xs font-semibold rounded-md">
+                          Next
+                          <Kbd variant="onAccent" className="border-none bg-transparent shadow-none opacity-65"><KeyReturn weight="bold" size={12} /></Kbd>
+                        </Button>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="bg-popover text-popover-fg border-border">
+                      <p className="text-xs font-medium">Setup or skip security first</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <Button onClick={handleNext} className="bg-accent text-accent-fg hover:opacity-90 flex items-center gap-2 pl-4 pr-2 h-8 text-xs font-semibold rounded-md">
+                  Next
+                  <Kbd variant="onAccent" className="border-none bg-transparent shadow-none opacity-85"><KeyReturn weight="bold" size={12} /></Kbd>
+                </Button>
+              )
             ) : (
               <Button onClick={handleFinish} className="bg-accent text-accent-fg hover:opacity-90 flex items-center gap-2 pl-4 pr-2 h-8 text-xs font-semibold rounded-md">
                 Start SSHing
-                <Kbd variant="onAccent" className="border-none bg-transparent shadow-none opacity-60"><KeyReturn weight="bold" size={12} /></Kbd>
+                <Kbd variant="onAccent" className="border-none bg-transparent shadow-none opacity-85"><KeyReturn weight="bold" size={12} /></Kbd>
               </Button>
             )}
           </div>
@@ -571,7 +647,7 @@ export function OnboardingModal() {
           className="flex-1 flex items-center justify-center relative overflow-hidden"
           style={{
             background: currentTheme.type === "light"
-              ? "linear-gradient(135deg, #e5e5e5 0%, #a3a3a3 100%)"
+              ? "linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%)"
               : "linear-gradient(135deg, #525252 0%, #171717 100%)"
           }}
         >
@@ -604,6 +680,7 @@ export function OnboardingModal() {
                   theme={currentTheme} 
                   tabBarOrientation={tabBarOrientation as "vertical" | "horizontal"} 
                   isCompleting={isCompleting}
+                  reducedBlur={step === 3}
                 />
               </motion.div>
             )}
@@ -819,8 +896,8 @@ function FakeDock({ platform, theme, pinned = true }: { platform: string; theme:
                 }}
               >
                 {item.isCarbon ? (
-                  <div className="w-10 h-10 rounded-xl bg-black flex items-center justify-center shadow-lg ring-1 ring-white/10">
-                    <img src="/logo/Carbon logo light.svg" alt="" className="w-6 h-6" />
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-lg ring-1 ${isDark ? 'bg-black ring-white/10' : 'bg-white ring-black/5'}`}>
+                    <img src={isDark ? "/logo/Carbon logo light.svg" : "/logo/Carbon logo dark.svg"} alt="" className="w-6 h-6" />
                   </div>
                 ) : (
                   <item.Icon className="w-7 h-7" />
@@ -879,8 +956,8 @@ function FakeDock({ platform, theme, pinned = true }: { platform: string; theme:
                 }}
               >
                 {item.isCarbon ? (
-                  <div className="w-9 h-9 rounded-md bg-white/10 flex items-center justify-center shadow-sm ring-1 ring-white/10">
-                    <img src="/logo/Carbon logo light.svg" alt="" className="w-5 h-5" />
+                  <div className={`w-9 h-9 rounded-md flex items-center justify-center shadow-sm ring-1 ${isDark ? 'bg-white/10 ring-white/10' : 'bg-black/5 ring-black/5'}`}>
+                    <img src={isDark ? "/logo/Carbon logo light.svg" : "/logo/Carbon logo dark.svg"} alt="" className="w-5 h-5" />
                   </div>
                 ) : (
                   <item.Icon className="w-5 h-5" />
@@ -936,11 +1013,11 @@ function FakeDock({ platform, theme, pinned = true }: { platform: string; theme:
             >
               {item.isCarbon ? (
                 <img 
-                  src="/logo/Carbon logo light.svg" 
+                  src={isDark ? "/logo/Carbon logo light.svg" : "/logo/Carbon logo dark.svg"} 
                   alt="" 
                   className="w-6 h-6" 
                   style={{ 
-                    filter: pinned ? 'drop-shadow(0 0 10px rgba(255,255,255,0.4))' : 'none',
+                    filter: pinned ? (isDark ? 'drop-shadow(0 0 10px rgba(255,255,255,0.4))' : 'drop-shadow(0 0 10px rgba(0,0,0,0.1))') : 'none',
                     transition: 'filter 0.3s ease',
                     transitionDelay: delay
                   }}
@@ -1075,11 +1152,13 @@ function MiniAppPreview({
   theme,
   tabBarOrientation,
   isCompleting = false,
+  reducedBlur = false,
 }: {
   step: number;
   theme: AppTheme;
   tabBarOrientation: "vertical" | "horizontal";
   isCompleting?: boolean;
+  reducedBlur?: boolean;
 }) {
   let scale = 1;
   let originX = "0%";
@@ -1342,11 +1421,14 @@ function MiniAppPreview({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md"
+            className={`absolute inset-0 z-50 flex items-center justify-center ${reducedBlur ? 'bg-black/10 backdrop-blur-[4px]' : 'bg-black/30 backdrop-blur-md'}`}
           >
             <div
-              className="w-[320px] p-8 rounded-2xl border flex flex-col items-center justify-center gap-5 shadow-2xl backdrop-blur-2xl"
-              style={{ borderColor: "rgba(255,255,255,0.2)", backgroundColor: "rgba(255,255,255,0.08)" }}
+              className={`w-[320px] p-8 rounded-2xl border flex flex-col items-center justify-center gap-5 shadow-2xl ${reducedBlur ? 'backdrop-blur-xl' : 'backdrop-blur-2xl'}`}
+              style={{ 
+                borderColor: "rgba(255,255,255,0.2)", 
+                backgroundColor: reducedBlur ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.14)" 
+              }}
             >
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center shadow-lg"

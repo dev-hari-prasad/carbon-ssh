@@ -213,6 +213,29 @@ Operations matter because failures will happen. The product needs support diagno
 - Redaction tests for diagnostics export.
 - Manual review of every high-risk error copy.
 
+### Epic: Release Integrity And Supply-Chain Communication
+
+#### Tasks
+
+- [ ] Publish **checksums** (and signatures when available) for release artifacts that include Security Guard.
+- [ ] Publish or attach **SBOM** (or link to generated SBOM in CI) for transparency; align with repo `pnpm sbom` / CycloneDX if present.
+- [ ] Maintain a **security-facing changelog section** for releases: scanner module changes, remediation allowlist changes, rollback/watchdog behavior, and AI consent boundaries.
+- [ ] Ensure marketing and in-app copy do not claim “audit” or “guarantee” beyond what shipped controls support (pairs with support incident epic).
+
+#### Acceptance Criteria
+
+- Users and enterprises can verify download integrity without trusting the readme alone.
+- Reviewers can see what changed in privileged behavior between versions in one place.
+
+#### Rollback Plan
+
+- If integrity artifacts are incomplete, keep high-risk remediations behind flags (per feature-flag epic).
+
+#### Testing Requirements
+
+- CI checklist that SBOM/checksums jobs run on release tags.
+- Manual review of changelog entries for any PR touching scanner commands or remediation registry.
+
 ### Epic: Open Questions To Resolve
 
 #### Tasks

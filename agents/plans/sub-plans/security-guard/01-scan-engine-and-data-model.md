@@ -27,6 +27,7 @@ The MVP should avoid remote agent installation. It should execute small command 
 - Ambiguous parsing can generate false confidence, especially for `sshd_config` includes and firewall backends.
 - Running commands with sudo can trigger prompts or policy failures that look like scanner bugs.
 - Scan results may contain usernames, IP addresses, package versions, and firewall rules that require careful storage and AI-consent handling.
+- Compromised release or unreviewed scanner diffs could change **hardcoded** remote command strings; tie scanner changes to review + release transparency (see `09`).
 
 ## Epics
 
@@ -158,7 +159,11 @@ The MVP should avoid remote agent installation. It should execute small command 
 - [ ] Implement scanner registration.
   - [ ] Static module registry for MVP.
   - [ ] No dynamic remote module loading.
+  - [ ] No loading scanner modules from user-supplied paths, remote URLs, or unsigned bundles in MVP.
   - [ ] Module version included in results.
+- [ ] Define maintainer workflow for scanner changes.
+  - [ ] Any change to scanner command lists or parsers requires PR review with security lens.
+  - [ ] Record notable scanner/remediation command changes in release notes (see `09` release-integrity epic).
 - [ ] Implement pipeline phases.
   - [ ] Capability probe.
   - [ ] Module eligibility.

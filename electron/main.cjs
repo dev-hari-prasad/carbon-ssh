@@ -261,7 +261,6 @@ ipcMain.handle("ai-test-connection", async (event, payload) => {
       apiKey,
       ...(baseUrl ? { baseUrl } : {}) // Override renderer baseUrl if we safely stored one
     },
-    },
     { "x-carbon-internal-ai": "1" },
   );
 });

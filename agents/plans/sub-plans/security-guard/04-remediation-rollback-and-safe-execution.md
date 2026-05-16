@@ -98,6 +98,10 @@ The remediation engine should only execute deterministic, code-reviewed actions.
   - [ ] Preserve permissions and ownership.
   - [ ] Store checksum.
   - [ ] Avoid backing up private key material unless absolutely required.
+- [ ] Define backup **retention** under `/var/lib/carbon/` (default window, max size, pruning strategy).
+  - [ ] Document disk-space expectations and behavior when the volume is full.
+  - [ ] Surface non-secret warnings in UX when target retention cannot be enforced.
+- [ ] Add user-facing note on backup confidentiality (disk images, provider snapshots, third-party access).
 - [ ] Implement package/service state capture where practical.
   - [ ] Package installed before action.
   - [ ] Service enabled/active before action.

@@ -1491,6 +1491,17 @@ shutdown / reboot            # Unless explicitly requested
 
 **AI data consent:** Separate opt-in for sending scan data to LLM for analysis. Must be independently togglable. Scanning works without AI.
 
+### 11.5 Security Improvements & Recommendations
+
+**What improvements would meaningfully improve security?**
+
+- **Strict Host Key Validation UI:** Enforce strict checking of server host keys on every connection, explicitly blocking connections and alerting the user if the server fingerprint changes (preventing active SSH MitM attacks).
+- **Parameterized Shell Execution:** For the upcoming Security Guard features, ensure any remote SSH execution strictly avoids string concatenation in Bash. Use parameterized inputs (e.g., passing arguments via stdin or using robust escaping wrappers) when modifying config files or disabling services.
+
+### 11.6 Overall Confidence
+
+**Overall Confidence Rating:** Very High (9/10). The architecture handles user data with an "assume breach" mindset, implementing strict telemetry scrubbing, isolated credential storage, and runtime API integrity monitoring. It correctly prioritizes deterministic security engineering over potentially dangerous AI-driven system modifications.
+
 ---
 
 ## 12. Competitive Analysis
@@ -1834,3 +1845,38 @@ Security Guard has root SSH access to user machines. It is itself a high-value t
 | **Fleet** | A group of machines managed together |
 | **Scan** | A read-only security audit of a machine |
 | **Score** | A 0–100 numerical representation of a machine's security posture |
+
+---
+
+## Appendix D: Security engineering concerns & improvements
+
+This section records **practical risks and gaps** that should stay visible while Security Guard moves from plan to code. It complements the sub-plans under `agents/plans/sub-plans/security-guard/` and the current Carbon SSH client implementation.
+
+### D.1 Concerns (product + implementation)
+
+- **Blast radius:** Security Guard materially increases risk compared to “SSH terminal only”: mistaken or malicious remediation can cause **lockout**, **downtime**, or **data loss**. The plan’s rollback and watchdog story is essential; without it shipped and tested, the feature should not advertise one-click hardening.
+- **AI boundary:** Any shortcut that lets an LLM **propose, reorder, or substitute** executable remote commands (even “just fixing” a template) collapses the trust model. Enforcement must be structural (e.g. remediation IDs pointing to code-reviewed command lists), not policy prose alone.
+- **Command injection:** Remediation must **never** interpolate untrusted strings (user input, hostnames, paths from remote output, AI text) into shell. Prefer fixed commands, dedicated parsers, or **parameterized** remoting patterns; align with sub-plan `11-parameterized-shell-execution.md` and validate with tests that feed malicious data.
+- **Scan integrity:** Read-only scans still run arbitrary **hardcoded** remote commands. A compromised Carbon build or supply-chain attack could swap those strings. Mitigations: signed releases, pinned dependencies, review of scanner diffs, and **no runtime loading** of scanner modules from the network.
+- **Host key / session trust:** SSH MITM and wrong-host mistakes are user-affecting. Production Carbon already enforces **known-host pinning** before connect; **development** paths that skip verification must not be what engineers use against real servers when testing Security Guard. Track sub-plan `10-strict-host-key-validation.md` and dev/prod parity explicitly.
+- **Local attack surface (Electron + local HTTP):** Loopback services often rely on **obscurity** (port, WS token, headers). Malware on the same user account may abuse **127.0.0.1** APIs or memory. Security Guard orchestration should prefer **main-process** orchestration for high-risk actions and assume **same-user local attackers** are in scope for “who can trigger remediation.”
+- **Data handling:** Scan reports can contain **identifiers and operational detail** (accounts, listen sockets, firewall rules). If AI is enabled, **redaction and explicit consent** must match what is actually sent (not only marketing copy). Provide a clear **offline / no-AI** path.
+- **Target-side artifacts:** Backups and manifests under `/var/lib/carbon/` must use **restrictive permissions**, retention limits, and clear user guidance (disk space, third-party access to disk images).
+- **Fleet and batch remediation:** Parallel or unattended fixes amplify mistakes. Default to **sequential** execution, strong previews, and **stop-on-failure** until mature; avoid “fix all fleet” without per-machine rollouts and accounting for heterogenous distros.
+- **Distro and privilege reality:** Non-root, immutable/atomic hosts, containers-only boxes, and **cloud provider firewalls** limit what remediation can do; the UI must not imply fixes were applied when the check was skipped or only partial.
+- **Confidence vs. aspiration:** A written “high confidence” rating applies to **shipped, audited controls**, not to the design doc alone. Reconcile roadmap claims with independent review once remediations exist in code.
+
+### D.2 Meaningful improvements (prioritized)
+
+1. **Ship rollback + manifest + watchdog first** before broad remediation UI; fuzz test SSH and firewall failure modes.
+2. **Remediation allowlist/registry in code** with tests; static analysis or CI checks that **block** dynamic `bash -c` from interpolated variables.
+3. **Strict host-key UX** end-to-end (including dev workflows) per sub-plan 10.
+4. **Parameterized / safe remote execution** layer shared by scan and remediate paths per sub-plan 11.
+5. **Separate AI consent** from scan consent; ground model input in **structured findings** with field-level redaction; never send raw terminal scrollback by default.
+6. **Audit log** on the client (who confirmed what, when, which protocol version) stored with least privilege; clarify retention.
+7. **Document same-user local threat model** for Electron + embedded Next server; tighten internal auth between processes where feasible (session-bound secrets, not only static headers).
+8. **Enterprise-lite release hygiene** for a high-risk feature: signatures/checksums, SBOM publication, and security changelog entries for scanner/remediation changes.
+
+### D.3 Relation to sub-plans
+
+Implement the numbered sub-plans in `agents/plans/sub-plans/security-guard/` in a way that **closes the gaps above**, especially **02** (scanners), **04** (remediation/rollback/safe execution), **07** (UI consent), **09** (testing/rollout, including release integrity), **10** (host keys), **11** (parameterized shell), and **12** (client loopback trust + local audit). Treat **fleet (08)** as higher risk until single-host remediation is proven stable.
