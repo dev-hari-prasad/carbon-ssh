@@ -8,6 +8,9 @@ interface Window {
     biometricUnlock: (reason: string) => Promise<boolean>;
     encryptString: (text: string) => Promise<string>;
     decryptString: (encrypted: string) => Promise<string>;
+    setAppLockPassword?: (password: string) => Promise<boolean>;
+    verifyAppLockPassword?: (candidate: string) => Promise<boolean>;
+    clearAppLockPassword?: () => Promise<boolean>;
     getWsToken?: () => Promise<string>;
     saveConnectionSecret?: (
       connectionId: string,

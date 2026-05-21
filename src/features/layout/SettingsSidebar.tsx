@@ -785,17 +785,25 @@ function GeneralPanel() {
     }
   };
 
-  const enablePassword = () => {
+  const enablePassword = async () => {
     const nextPassword = accessPassword.trim();
     if (!nextPassword) {
       setAccessMessage("Enter a password to use password lock.");
       return;
     }
-    savePasswordAccess(nextPassword);
-    actions.setAccessSettings({ appLockEnabled: true, method: "password" });
-    setAccessPassword("");
-    setAccessMessage("Password lock is enabled.");
-    setShowLockMethodEdit(false);
+    setAccessBusy(true);
+    setAccessMessage(null);
+    try {
+      await savePasswordAccess(nextPassword);
+      actions.setAccessSettings({ appLockEnabled: true, method: "password" });
+      setAccessPassword("");
+      setAccessMessage("Password lock is enabled.");
+      setShowLockMethodEdit(false);
+    } catch {
+      setAccessMessage("Could not save password. Try again.");
+    } finally {
+      setAccessBusy(false);
+    }
   };
 
   return (
@@ -1517,6 +1525,7 @@ const SHORTCUTS: Array<{
         { keys: ["Mod", "P"], label: "Quick-switch machines" },
         { keys: ["Mod", "Shift", "A"], label: "Toggle Activity" },
         { keys: ["Mod", "S"], label: "Toggle settings" },
+        { keys: ["Mod", "R"], label: "Reconnect" },
       ],
     },
     {
@@ -2039,7 +2048,7 @@ function SubTabBtn({
     >
       <button
         onClick={onClick}
-        className={`h-7 w-full px-2.5 rounded-sm text-[11.5px] font-sans transition-colors flex items-center justify-center ${active ? "bg-[var(--command-active-bg)] text-fg" : "text-fg-muted hover:text-fg"
+        className={`h-7 w-full px-2.5 rounded-sm text-[11.5px] font-sans transition-colors flex items-center justify-center gap-1.5 ${active ? "bg-[var(--command-active-bg)] text-fg" : "text-fg-muted hover:text-fg"
           }`}
       >
         {children}

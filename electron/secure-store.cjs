@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 
@@ -153,19 +154,168 @@ function hasAiApiKey(app, safeStorage, provider) {
   return loadAiApiKey(app, safeStorage, provider).apiKey.length > 0;
 }
 
-function trustKnownHost(app, host, port, algorithm, fingerprint) {
+// ─── Known-host MAC helpers ────────────────────────────────────────────────
+//
+// Each known-host entry is protected by HMAC-SHA256 keyed with a per-install
+// secret that is itself encrypted by safeStorage.  This makes it impossible to
+// forge or silently tamper with stored fingerprints without also compromising
+// safeStorage (which requires OS-level credential access).
+
+const KNOWN_HOST_MAC_ALG = "sha256";
+
+/**
+ * Retrieve (or lazily generate) the HMAC key used to authenticate known-host
+ * entries.  The raw key is stored encrypted; only the hex plaintext is returned
+ * for in-process use.
+ */
+function getOrCreateKnownHostMacKey(app, safeStorage) {
+  ensureSafeStorageAvailable(safeStorage);
+
+  const store = readStore(app);
+  if (store.knownHostMacKey && typeof store.knownHostMacKey === "string") {
+    try {
+      const buf = Buffer.from(store.knownHostMacKey, "base64");
+      return safeStorage.decryptString(buf);
+    } catch {
+      // Key blob is corrupt — fall through to regenerate.
+      console.warn("[security] Known-host MAC key was corrupt; regenerating");
+    }
+  }
+
+  // First run (or after corruption): generate a fresh key, encrypt it, and
+  // persist.  Re-read the store before writing to minimise TOCTOU races.
+  const keyHex = crypto.randomBytes(32).toString("hex");
+  const fresh = readStore(app);
+  fresh.knownHostMacKey = safeStorage.encryptString(keyHex).toString("base64");
+  writeStore(app, fresh);
+  return keyHex;
+}
+
+/**
+ * Compute a deterministic HMAC over all fields that make a known-host entry
+ * meaningful.  Including `trustedAt` prevents replay of older entries whose
+ * fingerprint may have since been rotated.
+ */
+function computeKnownHostMac(keyHex, host, port, algorithm, fingerprint, trustedAt) {
+  const canonical = JSON.stringify({
+    host: String(host).trim().toLowerCase(),
+    port: Number(port) || 22,
+    algorithm: String(algorithm || ""),
+    fingerprint: String(fingerprint),
+    trustedAt: Number(trustedAt),
+  });
+  return crypto
+    .createHmac(KNOWN_HOST_MAC_ALG, Buffer.from(keyHex, "hex"))
+    .update(canonical, "utf8")
+    .digest("hex");
+}
+
+// ─── End known-host MAC helpers ─────────────────────────────────────────────
+
+function trustKnownHost(app, safeStorage, host, port, algorithm, fingerprint) {
+  const macKey = getOrCreateKnownHostMacKey(app, safeStorage);
+  // Re-read immediately before writing to avoid clobbering concurrent changes.
   const store = readStore(app);
   const key = knownHostKey(host, port, algorithm);
-  store.knownHosts[key] = {
-    fingerprint,
-    trustedAt: Date.now(),
-  };
+  const trustedAt = Date.now();
+  const mac = computeKnownHostMac(macKey, host, port, algorithm, fingerprint, trustedAt);
+  store.knownHosts[key] = { fingerprint, trustedAt, mac };
   writeStore(app, store);
 }
 
-function readKnownHost(app, host, port, algorithm) {
+function readKnownHost(app, safeStorage, host, port, algorithm) {
   const store = readStore(app);
-  return store.knownHosts[knownHostKey(host, port, algorithm)] || null;
+  const entry = store.knownHosts[knownHostKey(host, port, algorithm)];
+  if (!entry) return null;
+
+  // Entries written before MAC support have no `mac` field.  Treat them as
+  // untrusted so the user is prompted to re-confirm the host key once, after
+  // which the fresh entry will carry a valid MAC.
+  if (!entry.mac || typeof entry.mac !== "string") {
+    console.warn(
+      `[security] Known-host entry for ${host}:${port} missing MAC — treating as untrusted (migration)`,
+    );
+    return null;
+  }
+
+  try {
+    const macKey = getOrCreateKnownHostMacKey(app, safeStorage);
+    const expectedMac = computeKnownHostMac(
+      macKey,
+      host,
+      port,
+      algorithm,
+      entry.fingerprint,
+      entry.trustedAt,
+    );
+    const entryBuf    = Buffer.from(entry.mac,   "hex");
+    const expectedBuf = Buffer.from(expectedMac, "hex");
+    // Guard against length mismatch before calling timingSafeEqual.
+    if (entryBuf.length !== expectedBuf.length) {
+      console.warn(
+        `[security] Known-host MAC length mismatch for ${host}:${port} — treating as tampered`,
+      );
+      return null;
+    }
+    if (!crypto.timingSafeEqual(entryBuf, expectedBuf)) {
+      console.warn(
+        `[security] Known-host MAC verification FAILED for ${host}:${port} — possible store tampering`,
+      );
+      return null;
+    }
+  } catch (err) {
+    console.error("[security] Known-host MAC verification error", err);
+    return null;
+  }
+
+  return entry;
+}
+
+const SCRYPT_APP_LOCK_OPTS = { N: 16384, r: 8, p: 1 };
+
+function saveAppLockHash(app, safeStorage, password) {
+  ensureSafeStorageAvailable(safeStorage);
+  const saltBuf = crypto.randomBytes(16);
+  const hashBuf = crypto.scryptSync(password, saltBuf, 32, SCRYPT_APP_LOCK_OPTS);
+  const inner = JSON.stringify({
+    alg: "scrypt-N16384-r8-p1",
+    saltHex: saltBuf.toString("hex"),
+    hashHex: hashBuf.toString("hex"),
+  });
+  const store = readStore(app);
+  store.appLockHash = safeStorage.encryptString(inner).toString("base64");
+  writeStore(app, store);
+}
+
+function verifyAppLockPassword(app, safeStorage, candidatePassword) {
+  const store = readStore(app);
+  const encryptedBase64 = store.appLockHash;
+  if (!encryptedBase64 || typeof encryptedBase64 !== "string") return false;
+
+  try {
+    ensureSafeStorageAvailable(safeStorage);
+    const decrypted = safeStorage.decryptString(Buffer.from(encryptedBase64, "base64"));
+    const payload = JSON.parse(decrypted);
+    if (payload.alg !== "scrypt-N16384-r8-p1") return false;
+    const saltHex = typeof payload.saltHex === "string" ? payload.saltHex : "";
+    const storedHashHex = typeof payload.hashHex === "string" ? payload.hashHex : "";
+    if (!/^[0-9a-fA-F]+$/.test(saltHex) || !/^[0-9a-fA-F]+$/.test(storedHashHex))
+      return false;
+    const salt = Buffer.from(saltHex, "hex");
+    const storedHash = Buffer.from(storedHashHex, "hex");
+    const candidateBuf = crypto.scryptSync(candidatePassword, salt, 32, SCRYPT_APP_LOCK_OPTS);
+    if (candidateBuf.length !== storedHash.length) return false;
+    return crypto.timingSafeEqual(candidateBuf, storedHash);
+  } catch {
+    return false;
+  }
+}
+
+function clearAppLockHash(app) {
+  const store = readStore(app);
+  if (!store.appLockHash) return;
+  delete store.appLockHash;
+  writeStore(app, store);
 }
 
 module.exports = {
@@ -180,4 +330,7 @@ module.exports = {
   hasAiApiKey,
   trustKnownHost,
   readKnownHost,
+  saveAppLockHash,
+  verifyAppLockPassword,
+  clearAppLockHash,
 };

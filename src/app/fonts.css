@@ -1,13 +1,99 @@
-@import "@fontsource-variable/manrope/index.css";
-@import "@fontsource-variable/inter/index.css";
-@import "@fontsource-variable/inter/wght-italic.css";
-@import "@fontsource-variable/space-grotesk/index.css";
-@import "@fontsource-variable/geist/index.css";
-@import "@fontsource-variable/jetbrains-mono/index.css";
-@import "@fontsource-variable/jetbrains-mono/wght-italic.css";
-@import "@fontsource-variable/geist-mono/index.css";
-@import "@fontsource-variable/cascadia-code/index.css";
-@import "@fontsource-variable/cascadia-code/wght-italic.css";
-@import "@fontsource-variable/fira-code/index.css";
-@import "@fontsource-variable/source-code-pro/index.css";
-@import "@fontsource-variable/source-code-pro/wght-italic.css";
+/* Manrope Variable */
+@font-face {
+  font-family: 'Manrope Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/Manrope.ttf') format('truetype');
+}
+
+/* Inter Variable */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/Inter.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: italic;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/Inter-Italic.ttf') format('truetype');
+}
+
+/* Space Grotesk Variable */
+@font-face {
+  font-family: 'Space Grotesk Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('/fonts/SpaceGrotesk.ttf') format('truetype');
+}
+
+/* JetBrains Mono Variable */
+@font-face {
+  font-family: 'JetBrains Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url('/fonts/JetBrainsMono.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'JetBrains Mono Variable';
+  font-style: italic;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url('/fonts/JetBrainsMono-Italic.ttf') format('truetype');
+}
+
+/* Geist Mono Variable */
+@font-face {
+  font-family: 'Geist Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/GeistMono.ttf') format('truetype');
+}
+
+/* Cascadia Code Variable */
+@font-face {
+  font-family: 'Cascadia Code Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('/fonts/CascadiaCode-VariableFont_wght.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Cascadia Code Variable';
+  font-style: italic;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('/fonts/CascadiaCode-Italic-VariableFont_wght.ttf') format('truetype');
+}
+
+/* Fira Code Variable */
+@font-face {
+  font-family: 'Fira Code Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 300 700;
+  src: url('/fonts/FiraCode-VariableFont_wght.ttf') format('truetype');
+}
+
+/* Source Code Pro Variable */
+@font-face {
+  font-family: 'Source Code Pro Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 200 900;
+  src: url('/fonts/SourceCodePro.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Source Code Pro Variable';
+  font-style: italic;
+  font-display: swap;
+  font-weight: 200 900;
+  src: url('/fonts/SourceCodePro-Italic.ttf') format('truetype');
+}

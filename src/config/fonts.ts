@@ -29,13 +29,6 @@ export const FONTS: AppFont[] = [
     category: "sans",
   },
   {
-    id: "geist",
-    name: "Geist",
-    family: "Geist Variable",
-    stack: `"Geist Variable", ui-sans-serif, system-ui, sans-serif`,
-    category: "sans",
-  },
-  {
     id: "system",
     name: "System",
     family: "system-ui",
@@ -86,7 +79,8 @@ export const DEFAULT_FONT_ID = "manrope";
 export const DEFAULT_TERMINAL_FONT_ID = "jetbrains-mono";
 
 export function getFontById(id: string): AppFont {
-  return FONTS.find((f) => f.id === id) ?? FONTS[0];
+  const resolved = id === "geist" ? DEFAULT_FONT_ID : id;
+  return FONTS.find((f) => f.id === resolved) ?? FONTS[0];
 }
 
 export function getTerminalFontById(id: string): AppFont {

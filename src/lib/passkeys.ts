@@ -47,7 +47,7 @@ export async function promptElectronTouchId(reason: string) {
 export async function setUpBestAvailablePasskey() {
   if (canUseElectronTouchId()) {
     await promptElectronTouchId("Set up Carbon biometric unlock");
-    savePasskeyAccess("electron");
+    await savePasskeyAccess("electron");
     return "electron" satisfies PasskeyProvider;
   }
 
@@ -90,7 +90,7 @@ export async function createWebAuthnPasskey() {
   }
 
   const credentialId = bufferToBase64url(credential.rawId);
-  savePasskeyAccess("webauthn", credentialId);
+  await savePasskeyAccess("webauthn", credentialId);
   return credentialId;
 }
 

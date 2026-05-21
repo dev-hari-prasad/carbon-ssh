@@ -203,6 +203,7 @@ export function MainArea() {
   const splitColRatio = useStore((s) => s.splitColRatio);
   const splitRowRatio = useStore((s) => s.splitRowRatio);
   const connectionStatus = useStore((s) => s.connectionStatus);
+  const tabSessionStatus = useStore((s) => s.tabSessionStatus);
   const outerSplitRef = useRef<HTMLDivElement>(null);
   const rightColRef = useRef<HTMLDivElement>(null);
   const topRowRef = useRef<HTMLDivElement>(null);
@@ -241,7 +242,7 @@ export function MainArea() {
                 tab={t}
                 conn={c}
                 isFocused={t.id === activeTabId}
-                status={connectionStatus[c.id]}
+                status={tabSessionStatus[t.id]}
               />
             );
           };
@@ -340,7 +341,7 @@ export function MainArea() {
                     tab={t}
                     conn={c}
                     isFocused={t.id === activeTabId}
-                    status={connectionStatus[c.id]}
+                    status={tabSessionStatus[t.id]}
                   />
                 );
               })}

@@ -41,3 +41,5 @@ dist-ssr
 *.sw?
 *.sqlite
 *.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm

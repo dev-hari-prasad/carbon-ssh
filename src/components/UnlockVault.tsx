@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { actions } from "@/lib/store";
 import { trackOnboardingComplete } from "@/lib/telemetry";
-import { savePasskeyAccess, savePasswordAccess } from "@/lib/storage";
+import { savePasskeyAccess, savePasswordAccess, verifyAppLockPassword } from "@/lib/storage";
 import {
   canUseElectronTouchId,
   createWebAuthnPasskey,
@@ -72,11 +72,11 @@ export function UnlockVault() {
     await promptElectronTouchId(isFirstTime ? "Set up Carbon biometric unlock" : "Unlock Carbon");
 
     if (isFirstTime) {
-      savePasskeyAccess("electron");
+      await savePasskeyAccess("electron");
       actions.setAccessSettings({ appLockEnabled: true, method: "passkey" });
     }
 
-    await actions.unlockApp();
+    await actions.unlockAfterVerifiedAuth();
     if (isFirstTime) {
       trackOnboardingComplete({ path: "passkey_or_biometric" });
     }
@@ -86,7 +86,7 @@ export function UnlockVault() {
     if (isFirstTime || (setupIfMissing && !getSavedPasskeyId())) {
       await createWebAuthnPasskey();
       actions.setAccessSettings({ appLockEnabled: true, method: "passkey" });
-      await actions.unlockApp();
+      await actions.unlockAfterVerifiedAuth();
       if (isFirstTime) {
         trackOnboardingComplete({ path: "passkey_or_biometric" });
       }
@@ -94,7 +94,7 @@ export function UnlockVault() {
     }
 
     await verifyWebAuthnPasskey();
-    await actions.unlockApp();
+    await actions.unlockAfterVerifiedAuth();
   };
 
   const attemptBiometricUnlock = async () => {
@@ -140,9 +140,10 @@ export function UnlockVault() {
       setPasswordError("Password cannot be empty");
       return;
     }
-    savePasswordAccess(password);
+    setPasswordError("");
+    await savePasswordAccess(password);
     actions.setAccessSettings({ appLockEnabled: true, method: "password" });
-    await actions.unlockApp();
+    await actions.unlockAfterVerifiedAuth();
     trackOnboardingComplete({ path: "password_setup" });
   };
 
@@ -151,12 +152,19 @@ export function UnlockVault() {
       setPasswordError("Password cannot be empty");
       return;
     }
-    const saved = window.localStorage.getItem("ssh.temp-pwd");
-    if (saved === password) {
-      await actions.unlockApp();
-    } else {
-      setPasswordError("Incorrect password");
-      setError(true);
+    setLoading(true);
+    setError(false);
+    setPasswordError("");
+    try {
+      const ok = await verifyAppLockPassword(password);
+      if (ok) {
+        await actions.unlockAfterVerifiedAuth();
+      } else {
+        setPasswordError("Incorrect password");
+        setError(true);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -178,8 +186,7 @@ export function UnlockVault() {
   };
 
   const handleSkipLock = async () => {
-    actions.setAccessSettings({ appLockEnabled: false, method: "passkey" });
-    await actions.unlockApp();
+    await actions.skipAppLock();
     trackOnboardingComplete({ path: "skip_lock" });
   };
 
@@ -521,20 +528,6 @@ export function UnlockVault() {
           >
             Having trouble? Reset App
           </Button>
-          
-          {process.env.NODE_ENV === "development" && (
-            <Button
-              onClick={async () => {
-                actions.setAccessSettings({ appLockEnabled: false, method: "passkey" });
-                await actions.unlockApp();
-              }}
-              variant="outline"
-              size="sm"
-              className="text-muted-foreground border-dashed"
-            >
-              Remove Lock (Dev Bypass)
-            </Button>
-          )}
         </div>
       )}
     </div>

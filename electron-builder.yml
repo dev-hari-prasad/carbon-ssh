@@ -18,6 +18,8 @@ files:
       - "!**/*.map"
       - "!**/*.sqlite"
       - "!**/*.sqlite-journal"
+      - "!**/*.sqlite-wal"
+      - "!**/*.sqlite-shm"
       - "!src/**/*"
       - "!tsconfig.json"
       - "!postcss.config.mjs"
@@ -45,12 +47,18 @@ win:
   target:
     - nsis
   icon: build/icon.png
+  # Code signing: supply WIN_CSC_LINK (base64 PKCS#12) and WIN_CSC_KEY_PASSWORD via CI — do not commit certs.
 
 mac:
   target:
     - dmg
   icon: build/icon.png
   category: public.app-category.developer-tools
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  # Developer ID + notarization: CSC_LINK / CSC_KEY_PASSWORD / APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID
+  notarize:
+    teamId: ${env.APPLE_TEAM_ID}
 
 linux:
   target:

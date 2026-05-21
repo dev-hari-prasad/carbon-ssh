@@ -6,6 +6,7 @@ import { actions, useStore } from "@/lib/store";
 import type { SplitLayout } from "@/lib/types";
 import { SPLIT_LAYOUT_SLOTS } from "@/lib/types";
 import { Tooltip } from "@/components/Tooltip";
+import { TITLE_BAR_ACTION_SIZE } from "@/config/titlebar";
 
 function LayoutThumb({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
@@ -35,7 +36,7 @@ export function SplitLayoutPicker({
   };
 
   const triggerClassTop =
-    "inline-flex h-7 min-w-[28px] flex-col items-center justify-center gap-0 rounded-sm px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45";
+    "inline-flex min-w-[26px] flex-col items-center justify-center gap-0 rounded-sm px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45";
 
   const triggerClassSidebarIcon =
     "inline-flex h-8 w-8 items-center justify-center rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/45";
@@ -54,8 +55,9 @@ export function SplitLayoutPicker({
         aria-label="Split layout options"
         aria-haspopup="dialog"
         className={`${triggerClassTop} ${splitActive ? activeSplit : inactive}`}
+        style={{ width: TITLE_BAR_ACTION_SIZE, height: TITLE_BAR_ACTION_SIZE }}
       >
-        <Squares2X2Icon className={`w-[15px] h-[15px] ${splitActive ? "text-current" : ""}`} strokeWidth={splitActive ? 2.25 : 1.75} />
+        <Squares2X2Icon className={`w-[14px] h-[14px] ${splitActive ? "text-current" : ""}`} strokeWidth={splitActive ? 2.25 : 1.75} />
       </button>
     );
   } else if (variant === "sidebar-collapsed") {

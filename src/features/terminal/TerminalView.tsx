@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { getThemeById, terminalThemeForTheme } from "@/config/themes";
 import { getTerminalFontById } from "@/config/fonts";
@@ -12,6 +12,7 @@ import {
   trackSSHConnectSuccess,
 } from "@/lib/telemetry";
 import { AIBangPalette } from "./AIBangPalette";
+import { RECONNECT_TAB_EVENT } from "@/lib/tab-events";
 
 interface Props {
   tab: Tab;
@@ -69,6 +70,10 @@ async function buildWebSocketUrl() {
   } catch {
     // In dev without Electron, proceed without token
   }
+  const devToken = process.env.NEXT_PUBLIC_WS_TOKEN;
+  if (devToken && !url.searchParams.has("token")) {
+    url.searchParams.set("token", devToken);
+  }
   return url.toString();
 }
 
@@ -78,6 +83,13 @@ function parseServerMessage(data: string): ServerMessage | null {
   } catch {
     return null;
   }
+}
+
+function reconnectShortcutLabel() {
+  if (typeof navigator === "undefined") return "Reconnect (Ctrl+R)";
+  return /Mac|iPhone|iPod|iPad/.test(navigator.platform)
+    ? "Reconnect (⌘R)"
+    : "Reconnect (Ctrl+R)";
 }
 
 export function TerminalView({ tab, conn }: Props) {
@@ -98,6 +110,17 @@ export function TerminalView({ tab, conn }: Props) {
   const terminalFontId = useStore((s) => s.terminalFont);
   const terminalCursorStyle = useStore((s) => s.terminalCursorStyle);
   const bangs = useStore((s) => s.bangs);
+  const activeTabId = useStore((s) => s.activeTabId);
+  const tabSessionStatus = useStore((s) => s.tabSessionStatus[tab.id]);
+
+  const requestReconnect = useCallback(() => {
+    setIsClosed(false);
+    setReconnectKey((k) => k + 1);
+  }, []);
+  const requestReconnectRef = useRef(requestReconnect);
+  requestReconnectRef.current = requestReconnect;
+  const activeTabIdRef = useRef(activeTabId);
+  activeTabIdRef.current = activeTabId;
 
   // Refs for callbacks
   const commandBufferRef = useRef("");
@@ -158,10 +181,19 @@ export function TerminalView({ tab, conn }: Props) {
     term.options.cursorBlink = blink;
   }, [themeId, terminalFontId, terminalCursorStyle]);
 
+  useEffect(() => {
+    const onReconnectTab = (e: Event) => {
+      const tabId = (e as CustomEvent<{ tabId: string }>).detail?.tabId;
+      if (tabId === tab.id) requestReconnectRef.current();
+    };
+    window.addEventListener(RECONNECT_TAB_EVENT, onReconnectTab);
+    return () => window.removeEventListener(RECONNECT_TAB_EVENT, onReconnectTab);
+  }, [tab.id]);
+
   // Main connection effect — only depends on tab.id and connectionSnapshot.id
   useEffect(() => {
     setIsClosed(false);
-    actions.setConnectionStatus(connectionSnapshot.id, { state: "connecting" });
+    actions.setTabSessionStatus(tab.id, { state: "connecting" });
     if (!hostRef.current) return;
     let disposed = false;
     let terminalErrorMessage: string | null = null;
@@ -271,8 +303,8 @@ export function TerminalView({ tab, conn }: Props) {
         if (closed) return;
         closed = true;
         setIsClosed(true);
-        actions.setConnectionStatus(
-          connectionSnapshot.id,
+        actions.setTabSessionStatus(
+          tab.id,
           terminalErrorMessage
             ? { state: "error", message: terminalErrorMessage }
             : { state: "closed", message: "SSH connection closed" },
@@ -325,7 +357,7 @@ export function TerminalView({ tab, conn }: Props) {
             term.write(`\r\x1b[32m■\x1b[0m ${baseMsg}\r\n`);
             term.writeln("connected.");
             trackSSHConnectSuccess();
-            actions.setConnectionStatus(connectionSnapshot.id, { state: "connected" });
+            actions.setTabSessionStatus(tab.id, { state: "connected" });
             actions.log("info", connectionSnapshot.name, `Session ${tab.title} connected`);
             break;
           case "host-key-untrusted": {
@@ -364,7 +396,7 @@ export function TerminalView({ tab, conn }: Props) {
                 "• Check that you provided the correct password, passphrase, or private key.\r\n" +
                 "• Verify the server's sshd_config allows your authentication method (e.g., PasswordAuthentication).\r\n" +
                 "• Verify the user is allowed to log in (e.g., PermitRootLogin yes).\r\n" +
-                "• Once resolved, use the 'Try reconnecting' option below.";
+                `• Once resolved, use ${reconnectShortcutLabel()}.`;
             } else if (errorMsg.includes("Timed out while waiting for handshake")) {
               errorMsg +=
                 "\r\n\r\n\x1b[33mTroubleshooting:\x1b[31m\r\n" +
@@ -374,7 +406,7 @@ export function TerminalView({ tab, conn }: Props) {
                 ".\r\n" +
                 "• Verify your internet connection or check for high network latency.\r\n" +
                 "• The server may be under heavy load or restricting new connections.\r\n" +
-                "• Once resolved, use the 'Try reconnecting' option below.";
+                `• Once resolved, use ${reconnectShortcutLabel()}.`;
             }
             // Ensure any newlines in the base error are \r\n for xterm.js
             errorMsg = errorMsg.replace(/\r?\n/g, "\r\n");
@@ -382,7 +414,7 @@ export function TerminalView({ tab, conn }: Props) {
             terminalErrorMessage = message.message;
             trackSSHConnectFailure(classifySshFailureForTelemetry(message.message));
             actions.log("error", connectionSnapshot.name, message.message);
-            actions.setConnectionStatus(connectionSnapshot.id, {
+            actions.setTabSessionStatus(tab.id, {
               state: "error",
               message: message.message,
             });
@@ -415,7 +447,7 @@ export function TerminalView({ tab, conn }: Props) {
         terminalErrorMessage = "WebSocket error";
         trackSSHConnectFailure(classifySshFailureForTelemetry("WebSocket error"));
         actions.log("error", connectionSnapshot.name, "WebSocket error");
-        actions.setConnectionStatus(connectionSnapshot.id, {
+        actions.setTabSessionStatus(tab.id, {
           state: "error",
           message: "WebSocket error",
         });
@@ -448,6 +480,14 @@ export function TerminalView({ tab, conn }: Props) {
             navigator.clipboard.readText().then((text) => {
               send({ type: "input", data: text });
             });
+          }
+          return false;
+        }
+
+        // Reconnect this session only (active tab)
+        if (mod && !shift && e.key.toLowerCase() === "r") {
+          if (e.type === "keydown" && activeTabIdRef.current === tab.id) {
+            requestReconnectRef.current();
           }
           return false;
         }
@@ -759,18 +799,15 @@ export function TerminalView({ tab, conn }: Props) {
     <div className="h-full w-full bg-bg p-2 relative group">
       <div ref={hostRef} className="h-full w-full" />
 
-      {isClosed && (
+      {isClosed || tabSessionStatus?.state === "error" ? (
         <button
-          onClick={() => {
-            setIsClosed(false);
-            setReconnectKey((k) => k + 1);
-          }}
+          onClick={requestReconnect}
           className="absolute bottom-4 left-4 z-10 flex items-center gap-1.5 text-fg-muted hover:text-fg underline transition-all font-mono text-xs underline-offset-2 cursor-pointer"
         >
           <ArrowPathIcon className="w-3 h-3" />
-          Try reconnecting
+          {reconnectShortcutLabel()}
         </button>
-      )}
+      ) : null}
 
       {/* Search Bar */}
       <AnimatePresence>

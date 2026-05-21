@@ -110,6 +110,33 @@ ipcMain.handle("encrypt-string", (event, text) => {
   throw new Error("Encryption not available: safeStorage is required for secret persistence");
 });
 
+const APP_LOCK_PASSWORD_MAX_CHARS = 1024;
+
+ipcMain.handle("set-app-lock-password", (event, password) => {
+  ensureMainSender(event);
+  if (typeof password !== "string") {
+    throw new Error("Invalid input: password must be a string");
+  }
+  if (password.length > APP_LOCK_PASSWORD_MAX_CHARS) {
+    throw new Error("Password exceeds maximum allowed length");
+  }
+  secureStore.saveAppLockHash(app, safeStorage, password);
+  return true;
+});
+
+ipcMain.handle("verify-app-lock-password", (event, candidate) => {
+  ensureMainSender(event);
+  if (typeof candidate !== "string") return false;
+  if (candidate.length > APP_LOCK_PASSWORD_MAX_CHARS) return false;
+  return secureStore.verifyAppLockPassword(app, safeStorage, candidate);
+});
+
+ipcMain.handle("clear-app-lock-password", (event) => {
+  ensureMainSender(event);
+  secureStore.clearAppLockHash(app);
+  return true;
+});
+
 ipcMain.handle("decrypt-string", (event, encryptedBase64) => {
   if (!encryptedBase64) return "";
   if (typeof encryptedBase64 !== "string") {
@@ -225,7 +252,7 @@ ipcMain.handle("trust-known-host", (event, payload) => {
   if (typeof fingerprint !== "string" || !fingerprint.trim()) {
     throw new Error("Invalid fingerprint");
   }
-  secureStore.trustKnownHost(app, host, Number(port) || 22, String(algorithm || "default"), fingerprint);
+  secureStore.trustKnownHost(app, safeStorage, host, Number(port) || 22, String(algorithm || "default"), fingerprint);
   return true;
 });
 
@@ -415,7 +442,7 @@ function createWindow() {
     titleBarOverlay: {
       color: "#00000000",
       symbolColor: "#a0a0a0",
-      height: 40,
+      height: 36, // sync with src/config/titlebar.ts TITLE_BAR_HEIGHT
     },
     show: false,
     webPreferences: {

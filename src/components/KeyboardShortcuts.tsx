@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { RECONNECT_TAB_EVENT } from "@/lib/tab-events";
 import { actions, useStore } from "@/lib/store";
 
 export function KeyboardShortcuts() {
@@ -14,6 +15,17 @@ export function KeyboardShortcuts() {
       const mod = isMac ? e.metaKey : e.ctrlKey;
       const shift = e.shiftKey;
       const key = e.key.toLowerCase();
+
+      // Reconnect active session tab only: Mod+R
+      if (mod && !shift && key === "r") {
+        if (!activeTabId) return;
+        e.preventDefault();
+        e.stopPropagation();
+        window.dispatchEvent(
+          new CustomEvent(RECONNECT_TAB_EVENT, { detail: { tabId: activeTabId } }),
+        );
+        return;
+      }
 
       // Toggle Activity (Bottom Panel/Logs): Mod+Shift+A
       if (mod && shift && key === "a") {

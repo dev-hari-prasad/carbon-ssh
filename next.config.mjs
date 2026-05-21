@@ -50,7 +50,7 @@ const nextConfig = {
     NEXT_PUBLIC_GIT_COMMIT_FULL: git.full,
     NEXT_PUBLIC_BUILD_DATE: new Date().toISOString(),
   },
-  reactStrictMode: false,
+  reactStrictMode: true,
   outputFileTracingIncludes: {
     "**/*": ["node_modules/ws/**/*", "node_modules/ssh2/**/*", "node_modules/next/**/*"],
   },

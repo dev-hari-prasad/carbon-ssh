@@ -298,6 +298,18 @@ export function cssVariablesForTheme(theme: AppTheme): Record<string, string> {
     editorBg,
     "#007acc",
   );
+  const commandBg = opaque(
+    color(
+      c,
+      [
+        "commandCenter.background",
+        "quickInput.background",
+        "input.background",
+        "dropdown.background",
+      ],
+      dark ? "#3c3c3c" : "#ffffff",
+    ),
+  );
 
   return {
     "--bg": editorBg,
@@ -359,16 +371,8 @@ export function cssVariablesForTheme(theme: AppTheme): Record<string, string> {
       editorFg,
     ),
     "--titlebar-border": `color-mix(in oklab, ${color(c, ["titleBar.border", "sideBar.border", "panel.border"], dark ? "#2b2b2b" : "#d4d4d4")} 45%, ${titleBg})`,
-    "--command-bg": color(
-      c,
-      [
-        "commandCenter.background",
-        "quickInput.background",
-        "input.background",
-        "dropdown.background",
-      ],
-      dark ? "#3c3c3c" : "#ffffff",
-    ),
+    "--command-bg": commandBg,
+    "--tab-strip-active-bg": `color-mix(in oklab, ${commandBg} ${dark ? "74%" : "92%"}, black)`,
     "--command-active-bg": color(
       c,
       [

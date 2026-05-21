@@ -9,6 +9,10 @@ contextBridge.exposeInMainWorld("electron", {
   biometricUnlock: (reason) => ipcRenderer.invoke("biometric-unlock", reason),
   encryptString: (text) => ipcRenderer.invoke("encrypt-string", text),
   decryptString: (encrypted) => ipcRenderer.invoke("decrypt-string", encrypted),
+  setAppLockPassword: (password) => ipcRenderer.invoke("set-app-lock-password", password),
+  verifyAppLockPassword: (candidate) =>
+    ipcRenderer.invoke("verify-app-lock-password", candidate),
+  clearAppLockPassword: () => ipcRenderer.invoke("clear-app-lock-password"),
   getWsToken: () => ipcRenderer.invoke("get-ws-token"),
   saveConnectionSecret: (connectionId, secrets) =>
     ipcRenderer.invoke("save-connection-secret", connectionId, secrets),

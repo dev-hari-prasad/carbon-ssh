@@ -1,4 +1,5 @@
 import { cssVariablesForTheme, getThemeById } from "@/config/themes";
+import { TITLE_BAR_HEIGHT } from "@/config/titlebar";
 import type { ThemeId } from "@/lib/types";
 
 const RUNTIME_STYLE_ID = "theme-vars-runtime";
@@ -53,7 +54,7 @@ export function applyThemeToDocument(t: ThemeId) {
     electron.setTitleBarOverlay({
       color: isOnboarding ? "#00000000" : vars["--titlebar-bg"],
       symbolColor: vars["--titlebar-fg"],
-      height: 40,
+      height: TITLE_BAR_HEIGHT,
     });
   }
 }

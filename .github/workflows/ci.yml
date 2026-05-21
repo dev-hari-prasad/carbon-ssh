@@ -9,12 +9,41 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
+  # ───────────────────────────────────────────────
+  # Dependency review — runs only on PRs
+  # Catches known malware, typo-squatting, license violations
+  # ───────────────────────────────────────────────
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@da24556b548a50705dd671f47852072ea4c105d9 # v4.6.2
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0, AGPL-3.0, BUSL-1.1
+          comment-summary-in-pr: always
+
+  # ───────────────────────────────────────────────
+  # Build, lint, audit, SBOM
+  # ───────────────────────────────────────────────
   build-and-audit:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4.1.0
+        with:
+          fetch-depth: 0 # needed for lockfile diff
 
       - name: Setup pnpm
         uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d # v3.0.0
@@ -30,14 +59,76 @@ jobs:
       - name: Install dependencies (frozen lockfile)
         run: pnpm install --frozen-lockfile
 
+      # ── Lockfile diff (PR only, informational) ──
+      - name: Lockfile Diff
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "### 🔒 Lockfile changes in this PR"
+          git diff origin/${{ github.base_ref }}...HEAD -- pnpm-lock.yaml \
+            | grep '^[+-]' | grep -v '^[+-][+-][+-]' | head -200 || echo "No lockfile changes."
+        continue-on-error: true
+
       - name: Type check
         run: npx tsc --noEmit
 
+      - name: Check for SSH host verifier bypass patterns
+        shell: bash
+        run: |
+          set -euo pipefail
+          PAT_HV=$(grep -RIn --include='*.ts' --include='*.cjs' --include='*.mjs' \
+            -E 'hostVerifier[[:space:]]*:.+return[[:space:]]+true' src electron || true)
+          PAT_ARROW=$(grep -RIn --include='*.ts' --include='*.cjs' --include='*.mjs' \
+            -E 'hostVerifier[[:space:]]*:.+=>\s*true\b' src electron || true)
+          if [[ -n "$PAT_HV" || -n "$PAT_ARROW" ]]; then
+            echo "ERROR: Unconditional host key acceptance detected"
+            printf '%s\n' "$PAT_HV" "$PAT_ARROW"
+            exit 1
+          fi
+          # Callback body that is only `return true` (multiline), e.g. hostVerifier: () => { return true; }
+          if rg -U -n 'hostVerifier\s*:\s*\([^)]*\)\s*=>\s*\{\s*return\s+true\s*;?\s*\}' src electron \
+            --glob '*.ts' --glob '*.cjs' --glob '*.mjs' 2>/dev/null; then
+            echo "ERROR: hostVerifier uses a trivial body that only returns true."
+            exit 1
+          fi
+
+      - name: Check for banned files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f src/lib/ssh.ts ]]; then
+            echo "ERROR: Banned file src/lib/ssh.ts must not exist (dead SSH path with verifier bypass)."
+            exit 1
+          fi
+
+      - name: Check for committed SQLite database files
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git ls-files --cached | grep -qE '\.(sqlite|sqlite-wal|sqlite-shm|sqlite-journal)$'; then
+            echo "ERROR: SQLite database or sidecar files are tracked by git:"
+            git ls-files --cached | grep -E '\.(sqlite|sqlite-wal|sqlite-shm|sqlite-journal)$' || true
+            exit 1
+          fi
+
       - name: Lint
         run: pnpm lint
+
+      - name: Run tests
+        run: pnpm test
 
       - name: Security audit
         run: pnpm audit --audit-level=high
 
       - name: Build
         run: pnpm build
+
+      # ── SBOM generation ──
+      - name: Generate SBOM
+        run: pnpm sbom
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # v4.6.0
+        with:
+          name: sbom
+          path: sbom.json
+          retention-days: 90

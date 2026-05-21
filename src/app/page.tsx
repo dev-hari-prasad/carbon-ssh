@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { TelemetryBoot } from "@/components/TelemetryBoot";
 import { TopBar, VerticalTabBar } from "@/features/layout/TopBar";
 import { MainArea } from "@/features/layout/MainArea";
@@ -11,8 +12,19 @@ import { OnboardingModal } from "@/components/OnboardingModal";
 import { useStore } from "@/lib/store";
 import { getThemeById } from "@/config/themes";
 import { AnimatePresence, motion } from "framer-motion";
+import { migrateAppLockPasswordIfNeeded } from "@/lib/storage";
+import { TITLE_BAR_HEIGHT, TITLE_BAR_OS_CONTROLS_WIDTH } from "@/config/titlebar";
 
 const transition = { duration: 0.22, ease: [0.32, 0.72, 0, 1] as const };
+
+function AppLockMigrationGate({ children }: { children: React.ReactNode }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    void migrateAppLockPasswordIfNeeded().then(() => setReady(true));
+  }, []);
+  if (!ready) return null;
+  return <>{children}</>;
+}
 
 export default function Page() {
   const isUnlocked = useStore((s) => s.isUnlocked);
@@ -20,33 +32,33 @@ export default function Page() {
   const tabBarOrientation = useStore((s) => s.tabBarOrientation);
   const theme = useStore((s) => s.theme);
   const currentTheme = getThemeById(theme);
-  const logoSrc = currentTheme.type === "light" ? "/logo/Carbon logo dark.svg" : "/logo/Carbon logo light.svg";
+  const logoSrc =
+    currentTheme.type === "light" ? "/logo/Carbon logo dark.svg" : "/logo/Carbon logo light.svg";
 
   const showUnlock = !isUnlocked && onboardingCompleted;
 
   return (
-    <>
-      <TelemetryBoot />
+    <AppLockMigrationGate>
+      <>
+        <TelemetryBoot />
 
-    <div className="h-screen w-screen bg-[var(--titlebar-bg)] flex flex-col overflow-hidden">
-      <TelemetryBoot />
-
-        {onboardingCompleted && (
+        <div className="h-screen w-screen bg-[var(--titlebar-bg)] flex flex-col overflow-hidden">
+          {onboardingCompleted && (
           <div 
-            className="w-full shrink-0 flex items-center z-50 select-none h-[40px]" 
-            style={{ WebkitAppRegion: "drag" } as React.CSSProperties}
+            className="w-full shrink-0 flex items-center z-50 select-none" 
+            style={{ height: TITLE_BAR_HEIGHT, WebkitAppRegion: "drag" } as React.CSSProperties}
           >
             {(tabBarOrientation === "horizontal" && isUnlocked) ? (
-              <div className="w-full h-full" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+              <div className="flex-1 min-w-0 h-full overflow-hidden" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
                 <TopBar isTitleBar />
               </div>
             ) : (
-              <div className="flex items-center gap-1.5 opacity-90 pointer-events-none px-3">
-                <img src={logoSrc} alt="" className="h-[18px] w-[18px] object-contain" />
-                <div className="text-[13px] font-semibold tracking-tight text-fg-muted">Carbon</div>
+              <div className="flex items-center gap-1.5 opacity-90 pointer-events-none px-2.5">
+                <img src={logoSrc} alt="" className="h-4 w-4 object-contain" />
+                <div className="text-[12px] font-semibold tracking-tight text-fg-muted">Carbon</div>
               </div>
             )}
-            <div className="w-[135px] shrink-0" />
+            <div className="shrink-0" style={{ width: TITLE_BAR_OS_CONTROLS_WIDTH }} />
           </div>
         )}
 
@@ -87,7 +99,8 @@ export default function Page() {
           {!onboardingCompleted && <OnboardingModal />}
         </AnimatePresence>
       </div>
-    </div>
-    </>
+        </div>
+      </>
+    </AppLockMigrationGate>
   );
 }

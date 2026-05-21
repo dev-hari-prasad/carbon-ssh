@@ -227,6 +227,7 @@ function handleWsConnection(ws) {
             const fingerprint = crypto.createHash("sha256").update(keyBuffer).digest("base64");
             const known = secureStore.readKnownHost(
               app,
+              safeStorage,
               connectionMetadata.host,
               connectionMetadata.port,
               "default",

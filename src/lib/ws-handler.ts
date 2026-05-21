@@ -1,5 +1,9 @@
+import crypto from "node:crypto";
 import { Client, type ClientChannel, type ConnectConfig } from "ssh2";
 import type { WebSocket } from "ws";
+
+/** Session-scoped known-host fingerprints for dev WebSocket SSH (plain Node — no Electron secureStore). */
+const devKnownHosts = new Map<string, string>();
 
 interface ConnectPayload {
   host: string;
@@ -236,13 +240,24 @@ export function handleWsConnection(ws: WebSocket): void {
         keepaliveInterval: 10_000,
         tryKeyboard: true,
         hostVerifier: (hashedKey: any) => {
-          if (hashedKey) {
-            const crypto = require("crypto");
-            const fingerprint = crypto
-              .createHash("sha256")
-              .update(hashedKey)
-              .digest("base64");
-            console.log(`[ws-handler] Host key fingerprint: SHA256:${fingerprint}:${host}`);
+          const keyBuffer = Buffer.isBuffer(hashedKey)
+            ? hashedKey
+            : Buffer.from(String(hashedKey ?? ""), "utf8");
+          const fingerprint = crypto.createHash("sha256").update(keyBuffer).digest("base64");
+          const hostKey = `${host}:${port}`;
+          const known = devKnownHosts.get(hostKey);
+          if (!known) {
+            console.warn(
+              `[ws-handler] New host key for ${hostKey}: SHA256:${fingerprint} (trusted on first use for this dev session)`,
+            );
+            devKnownHosts.set(hostKey, fingerprint);
+            return true;
+          }
+          if (known !== fingerprint) {
+            console.error(
+              `[ws-handler] HOST KEY MISMATCH for ${hostKey}: expected SHA256:${known}, got SHA256:${fingerprint}. Connection blocked.`,
+            );
+            return false;
           }
           return true;
         },

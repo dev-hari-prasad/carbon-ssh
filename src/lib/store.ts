@@ -34,6 +34,7 @@ import {
   applyTelemetryPreference,
   trackFeatureUsed,
 } from "./telemetry";
+import { grantAppUnlock, consumeUnlockGrant } from "./app-lock-gate";
 import {
   DEFAULT_ACCESS_SETTINGS,
   loadAccessSettings,
@@ -71,6 +72,7 @@ import {
   loadClosedTabs,
   saveClosedTabs,
   wipeAllCarbonLocalData,
+  clearStoredAppPassword,
   type TabBarOrientation,
   loadOnboardingCompleted,
   saveOnboardingCompleted,
@@ -79,6 +81,7 @@ import {
 interface State {
   connections: Connection[];
   connectionStatus: Record<string, ConnectionRuntimeStatus>;
+  tabSessionStatus: Record<string, ConnectionRuntimeStatus>;
   groups: HostGroup[];
   tabs: Tab[];
   activeTabId: string | null;
@@ -120,6 +123,7 @@ export function getDefaultInterfaceZoom(): number {
 let state: State = {
   connections: [],
   connectionStatus: {},
+  tabSessionStatus: {},
   groups: [],
   tabs: [],
   activeTabId: null,
@@ -271,6 +275,12 @@ function ensureInit() {
   emit();
 }
 
+async function finishUnlock(extra?: Partial<State>) {
+  const connections = await loadConnectionsAsync();
+  const tabState = getRestoredTabsState(connections, state);
+  setState({ isUnlocked: true, connections, ...tabState, ...extra });
+}
+
 export function useStore<T>(selector: (s: State) => T): T {
   return useSyncExternalStore(
     (cb) => {
@@ -285,11 +295,34 @@ export function useStore<T>(selector: (s: State) => T): T {
 
 export const actions = {
   async unlockApp() {
-    const connections = await loadConnectionsAsync();
-    const tabState = getRestoredTabsState(connections, state);
-    setState({ isUnlocked: true, connections, ...tabState });
+    ensureInit();
+    if (state.isUnlocked) return;
+    if (state.access.appLockEnabled && !consumeUnlockGrant()) {
+      console.warn("[app-lock] unlockApp rejected: authorization required");
+      return;
+    }
+    await finishUnlock();
   },
+
+  /** Call only after password, passkey, or biometric verification succeeded. */
+  async unlockAfterVerifiedAuth() {
+    ensureInit();
+    if (state.isUnlocked) return;
+    grantAppUnlock();
+    await actions.unlockApp();
+  },
+
+  /** Confirmed skip-app-lock flow (onboarding or first-time vault setup). */
+  async skipAppLock() {
+    ensureInit();
+    const access: AccessSettings = { appLockEnabled: false, method: state.access.method };
+    saveAccessSettings(access);
+    await finishUnlock({ access });
+  },
+
   lockApp() {
+    ensureInit();
+    if (!state.access.appLockEnabled) return;
     setState({ isUnlocked: false });
   },
   completeOnboarding() {
@@ -299,8 +332,12 @@ export const actions = {
   },
   setAccessSettings(access: AccessSettings) {
     ensureInit();
+    if (!state.isUnlocked && state.access.appLockEnabled && !access.appLockEnabled) {
+      console.warn("[app-lock] setAccessSettings rejected: cannot disable lock while vault is locked");
+      return;
+    }
     saveAccessSettings(access);
-    setState({ access, isUnlocked: !access.appLockEnabled ? true : state.isUnlocked });
+    setState({ access });
   },
   async upsertConnection(input: Omit<Connection, "id" | "createdAt"> & { id?: string }) {
     ensureInit();
@@ -531,6 +568,10 @@ export const actions = {
         ...state.connectionStatus,
         [connectionId]: { state: "connecting", updatedAt: Date.now() },
       },
+      tabSessionStatus: {
+        ...state.tabSessionStatus,
+        [tab.id]: { state: "connecting", updatedAt: Date.now() },
+      },
     });
     actions.log("info", conn.name, `Opening session ${tab.title}`);
   },
@@ -540,6 +581,15 @@ export const actions = {
       connectionStatus: {
         ...state.connectionStatus,
         [connectionId]: { ...status, updatedAt: Date.now() },
+      },
+    });
+  },
+
+  setTabSessionStatus(tabId: string, status: Omit<ConnectionRuntimeStatus, "updatedAt">) {
+    setState({
+      tabSessionStatus: {
+        ...state.tabSessionStatus,
+        [tabId]: { ...status, updatedAt: Date.now() },
       },
     });
   },
@@ -559,6 +609,8 @@ export const actions = {
     if (!stillOpenForConn) {
       delete connectionStatus[connectionId];
     }
+    const tabSessionStatus = { ...state.tabSessionStatus };
+    delete tabSessionStatus[id];
     const splitTabIds = state.splitTabIds.filter((sid) => sid !== id);
     const closedTabs = [tab.connectionId, ...state.closedTabs].slice(0, 20);
     setState({
@@ -567,6 +619,7 @@ export const actions = {
       splitTabIds,
       closedTabs,
       connectionStatus,
+      tabSessionStatus,
       ...(splitTabIds.length < 2
         ? { splitLayout: "two-columns" as SplitLayout, splitColRatio: 0.5, splitRowRatio: 0.5 }
         : {}),
@@ -964,6 +1017,11 @@ export const actions = {
     if (typeof window === "undefined") return;
     try {
       await fetch("/api/logs", { method: "DELETE" }).catch(() => {});
+    } catch {
+      /* ignore */
+    }
+    try {
+      await clearStoredAppPassword();
     } catch {
       /* ignore */
     }

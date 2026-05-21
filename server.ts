@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { createServer, type IncomingMessage } from "http";
 import { parse } from "url";
 import type { Duplex } from "stream";
@@ -8,6 +9,10 @@ import { handleWsConnection } from "./src/lib/ws-handler";
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
 const port = parseInt(process.env.PORT || "3000", 10);
+
+/** Dev-only WS upgrade secret (same-user local threat model). Exposed to the client via NEXT_PUBLIC_. */
+const wsToken = crypto.randomBytes(32).toString("hex");
+process.env.NEXT_PUBLIC_WS_TOKEN = wsToken;
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -48,8 +53,15 @@ app.prepare().then(() => {
   } as typeof server.on;
 
   originalOn("upgrade", (req: IncomingMessage, socket: Duplex, head: Buffer) => {
-    const { pathname } = parse(req.url || "", true);
+    const { pathname, query } = parse(req.url || "", true);
     if (pathname === "/api/ws") {
+      const raw = query.token;
+      const token = Array.isArray(raw) ? raw[0] : raw;
+      if (token !== wsToken) {
+        socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+        socket.destroy();
+        return;
+      }
       wss.handleUpgrade(req, socket, head, (ws) => {
         console.log("[server] WebSocket upgrade completed for /api/ws");
         wss.emit("connection", ws, req);

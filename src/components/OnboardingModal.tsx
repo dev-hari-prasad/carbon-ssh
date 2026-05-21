@@ -2,8 +2,10 @@ import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useStore, actions } from "@/lib/store";
 import { THEMES, getThemeById, RECOMMENDED_THEME_IDS, cssVariablesForTheme, type AppTheme } from "@/config/themes";
+import { TITLE_BAR_HEIGHT } from "@/config/titlebar";
 import {
   Docker,
+  Linux,
   Slack,
   Spotify,
   VisualStudioCode,
@@ -77,13 +79,12 @@ export function OnboardingModal() {
     try {
       if (canUseElectronTouchId()) {
         await promptElectronTouchId("Set up Carbon biometric unlock");
-        savePasskeyAccess("electron");
+        await savePasskeyAccess("electron");
       } else {
         await createWebAuthnPasskey();
-        savePasskeyAccess("webauthn");
       }
       actions.setAccessSettings({ appLockEnabled: true, method: "passkey" });
-      await actions.unlockApp();
+      await actions.unlockAfterVerifiedAuth();
       setSetupStatus('success');
       handleNext();
     } catch (err: any) {
@@ -141,7 +142,7 @@ export function OnboardingModal() {
       (window as any).electron.setTitleBarOverlay({
         color: "#00000000",
         symbolColor: v["--titlebar-fg"],
-        height: 40,
+        height: TITLE_BAR_HEIGHT,
       });
     }
     return () => {
@@ -174,7 +175,7 @@ export function OnboardingModal() {
   };
 
   const confirmSkipLock = () => {
-    actions.setAccessSettings({ appLockEnabled: false, method: "passkey" });
+    void actions.skipAppLock();
     setShowSkipWarning(false);
     setSetupStatus('skipped');
     handleNext();
@@ -407,7 +408,11 @@ export function OnboardingModal() {
                          </div>
                       </motion.div>
                     ) : (
-                      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                      <Tabs
+                        value={activeTab}
+                        onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+                        className="w-full"
+                      >
                         <TabsList className="grid w-full grid-cols-2 mb-4 bg-[var(--bg-panel)] border border-border h-9 p-1 relative overflow-hidden">
                           <TabsTrigger value="passkey" className="z-10 data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-fg">
                             <FingerPrintIcon className="w-4 h-4 mr-2" /> Passkeys
@@ -900,7 +905,9 @@ function FakeDock({ platform, theme, pinned = true }: { platform: string; theme:
                     <img src={isDark ? "/logo/Carbon logo light.svg" : "/logo/Carbon logo dark.svg"} alt="" className="w-6 h-6" />
                   </div>
                 ) : (
-                  <item.Icon className="w-7 h-7" />
+                  "Icon" in item &&
+                  item.Icon &&
+                  React.createElement(item.Icon, { className: "w-7 h-7" })
                 )}
               </div>
               {item.isCarbon && pinned && (
@@ -960,7 +967,9 @@ function FakeDock({ platform, theme, pinned = true }: { platform: string; theme:
                     <img src={isDark ? "/logo/Carbon logo light.svg" : "/logo/Carbon logo dark.svg"} alt="" className="w-5 h-5" />
                   </div>
                 ) : (
-                  <item.Icon className="w-5 h-5" />
+                  "Icon" in item &&
+                  item.Icon &&
+                  React.createElement(item.Icon, { className: "w-5 h-5" })
                 )}
               </div>
               {item.isCarbon && pinned && (
@@ -1023,7 +1032,9 @@ function FakeDock({ platform, theme, pinned = true }: { platform: string; theme:
                   }}
                 />
               ) : (
-                <item.Icon className="w-5 h-5" />
+                "Icon" in item &&
+                item.Icon &&
+                React.createElement(item.Icon, { className: "w-5 h-5" })
               )}
             </div>
           </div>
@@ -1239,7 +1250,7 @@ function MiniAppPreview({
       transition={{ type: "spring", stiffness: 350, damping: 30 }}
     >
       {/* Title Bar */}
-      <div className="w-full h-10 shrink-0 flex items-center px-4 select-none">
+      <div className="w-full shrink-0 flex items-center px-4 select-none" style={{ height: TITLE_BAR_HEIGHT }}>
         <div className="flex items-center gap-2">
           <img src={theme.type === "light" ? "/logo/Carbon logo dark.svg" : "/logo/Carbon logo light.svg"} alt="" className="h-3.5" />
           <div
@@ -1294,11 +1305,11 @@ function MiniAppPreview({
             {tabBarOrientation === "horizontal" && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 40, opacity: 1 }}
+                animate={{ height: TITLE_BAR_HEIGHT, opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-                className="h-10 shrink-0 flex items-end px-3 gap-1.5 overflow-hidden"
-                style={{ backgroundColor: v["--titlebar-bg"] }}
+                className="shrink-0 flex items-end px-3 gap-1.5 overflow-hidden"
+                style={{ backgroundColor: v["--titlebar-bg"], height: TITLE_BAR_HEIGHT }}
               >
                 <div
                   className="h-9 w-48 rounded-t-[8px] border-t border-x flex items-center px-3 gap-2 shadow-sm"

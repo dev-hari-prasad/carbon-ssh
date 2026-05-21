@@ -3,7 +3,7 @@
  * or arbitrary payloads that might contain hostname/username/key material scraped from errors.
  */
 
-const BLOCKED_KEYS = new Set(
+export const BLOCKED_KEYS = new Set(
   [
     "password",
     "passphrase",

@@ -19,6 +19,15 @@ import {
   Squares2X2Icon as Squares2X2IconSolid,
 } from "@heroicons/react/24/solid";
 import { getThemeById } from "@/config/themes";
+import {
+  TITLE_BAR_ACTION_SIZE,
+  TITLE_BAR_HEIGHT,
+  TITLE_BAR_TAB_STRIP_HEIGHT,
+  HORIZONTAL_TAB_MAX_WIDTH,
+  HORIZONTAL_TAB_MIN_WIDTH,
+  HORIZONTAL_TAB_GROUP_MAX_WIDTH,
+  HORIZONTAL_TAB_GROUP_MIN_WIDTH,
+} from "@/config/titlebar";
 import { actions, useStore } from "@/lib/store";
 import type { Connection, SplitLayout } from "@/lib/types";
 import { SPLIT_LAYOUT_SLOTS } from "@/lib/types";
@@ -113,6 +122,16 @@ function TabFavicon({
   );
 }
 
+function TabStripSeparator({ visible }: { visible: boolean }) {
+  return (
+    <div
+      className={`w-px shrink-0 self-center ${visible ? "bg-[var(--border-strong)]/75" : "bg-transparent"}`}
+      style={{ height: TITLE_BAR_TAB_STRIP_HEIGHT - 12 }}
+      aria-hidden
+    />
+  );
+}
+
 export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
   const tabs = useStore((s) => s.tabs);
   const activeTabId = useStore((s) => s.activeTabId);
@@ -120,6 +139,7 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
   const groups = useStore((s) => s.groups);
   const settingsOpen = useStore((s) => s.settingsOpen);
   const connectionStatus = useStore((s) => s.connectionStatus);
+  const tabSessionStatus = useStore((s) => s.tabSessionStatus);
   const rawSplitTabIds = useStore((s) => s.splitTabIds);
   const splitLayout = useStore((s) => s.splitLayout);
   const splitTabIds = useMemo(() => rawSplitTabIds.slice(0, SPLIT_LAYOUT_SLOTS[splitLayout]), [rawSplitTabIds, splitLayout]);
@@ -180,16 +200,19 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
 
   if (!mounted) {
     return (
-      <div className="bg-[var(--titlebar-bg)] h-[40px] z-40" />
+      <div className="bg-[var(--titlebar-bg)] z-40" style={{ height: TITLE_BAR_HEIGHT }} />
     );
   }
 
   return (
     <div
-      className={`${isTitleBar ? "" : "bg-[var(--titlebar-bg)]"} select-none relative z-40`}
+      className={`${isTitleBar ? "h-full min-w-0 w-full" : "bg-[var(--titlebar-bg)]"} select-none relative z-40`}
       ref={wrapRef}
     >
-      <div className="h-[40px] pl-3 pr-2 flex items-stretch gap-2">
+      <div
+        className="pl-2.5 pr-1 flex items-stretch gap-1.5 min-w-0 h-full"
+        style={{ height: TITLE_BAR_HEIGHT }}
+      >
         <div className="flex items-center pl-0 shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
           <Tooltip label="This is just a logo, click on it for a surprise" side="bottom">
             <a
@@ -201,14 +224,14 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
               <img
                 src={logoSrc}
                 alt="Logo"
-                className="w-6 h-6 rounded-sm object-contain"
+                className="w-5 h-5 rounded-sm object-contain"
               />
             </a>
           </Tooltip>
         </div>
 
         <div className="flex-1 min-w-0 flex items-center gap-1 overflow-hidden">
-          <div style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+          <div className="shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
             <FeaturePill
               icon={<ServerStackIcon className="w-[13px] h-[13px]" />}
               label="Hosts"
@@ -225,20 +248,30 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
                 animate={{ opacity: 0.6, width: 1, marginLeft: 4, marginRight: 4 }}
                 exit={{ opacity: 0, width: 0, marginLeft: 0, marginRight: 0 }}
                 transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                className="h-4 bg-border shrink-0"
+                className="h-3 bg-border shrink-0"
               />
             )}
           </AnimatePresence>
 
           <div
-            ref={tabDnD.stripRef}
-            className="flex items-center shrink min-w-0"
-            onDragOver={tabDnD.handleDragOver}
-            onDrop={tabDnD.handleDrop}
+            className="flex items-center w-fit max-w-full shrink min-w-0 gap-0.5"
             style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           >
-            <AnimatePresence initial={false}>
-            {(() => {
+            <div
+              ref={tabDnD.stripRef}
+              className={`flex items-center min-w-0 overflow-hidden rounded-sm transition-colors ${
+                tabs.length > 0
+                  ? "bg-[var(--command-bg)] border border-border/40"
+                  : ""
+              }`}
+              style={{
+                height: tabs.length > 0 ? TITLE_BAR_TAB_STRIP_HEIGHT : undefined,
+              }}
+              onDragOver={tabDnD.handleDragOver}
+              onDrop={tabDnD.handleDrop}
+            >
+              <AnimatePresence initial={false}>
+              {(() => {
               type Seg = { kind: "tab"; tab: typeof tabs[number] } | { kind: "group"; tabs: typeof tabs };
               const segs: Seg[] = [];
               let i = 0;
@@ -261,11 +294,13 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
                 const c = connections.find((conn) => conn.id === t.connectionId);
                 return (
                   <motion.div
-                    layout
-                    initial={{ opacity: 0, scale: 0.85, width: 0, minWidth: 0, marginRight: 0 }}
-                    animate={{ opacity: 1, scale: 1, width: inGroup ? 160 : 200, minWidth: inGroup ? 40 : 48, marginRight: inGroup ? 0 : 4 }}
-                    exit={{ opacity: 0, scale: 0.85, width: 0, minWidth: 0, paddingLeft: 0, paddingRight: 0, marginLeft: 0, marginRight: 0 }}
-                    transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+                    initial={{ width: 0, minWidth: 0 }}
+                    animate={{
+                      width: inGroup ? HORIZONTAL_TAB_GROUP_MAX_WIDTH : HORIZONTAL_TAB_MAX_WIDTH,
+                      minWidth: inGroup ? HORIZONTAL_TAB_GROUP_MIN_WIDTH : HORIZONTAL_TAB_MIN_WIDTH,
+                    }}
+                    exit={{ width: 0, minWidth: 0 }}
+                    transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
                     style={{ overflow: "hidden" }}
                     key={t.id}
                     className={`shrink flex ${tabDnD.draggingId === t.id ? "opacity-45" : ""}`}
@@ -277,7 +312,7 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
                         multiline
                         matchAnchorWidth
                         minWidth={180}
-                        className={`flex min-w-0 flex-1 h-full overflow-hidden ${inGroup ? "min-h-7" : "min-h-8"}`}
+                        className="flex min-w-0 flex-1 overflow-hidden min-h-[30px]"
                         label={(() => {
                           if (!c) return t.title;
                           const group = c.groupId ? groups.find((g) => g.id === c.groupId) : null;
@@ -312,15 +347,16 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
                           onDragStart={(e) => tabDnD.handleDragStart(e, t.id)}
                           onDragEnd={tabDnD.handleDragEnd}
                           onClick={() => actions.setActiveTab(t.id)}
-                          className={`group relative w-full ${inGroup ? "h-7" : "h-8"} flex items-center gap-1.5 pl-2.5 pr-2 rounded-sm cursor-default text-[12px] font-sans transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                          className={`group relative w-full flex items-center gap-1 rounded-sm pl-2 pr-1 cursor-default text-[12px] font-sans transition-[color,background-color,box-shadow] duration-150 ${
                             active
-                              ? "bg-success/10 text-success"
-                              : "bg-[var(--command-bg)] text-fg-muted hover:bg-[var(--command-active-bg)] hover:text-fg"
+                              ? "bg-[var(--tab-strip-active-bg)] text-fg font-medium shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--border-strong)_55%,transparent)]"
+                              : "text-fg-muted hover:text-fg"
                           }`}
+                          style={{ height: TITLE_BAR_TAB_STRIP_HEIGHT }}
                         >
                           <TabFavicon
                             conn={c}
-                            state={c ? connectionStatus[c.id]?.state : undefined}
+                            state={tabSessionStatus[t.id]?.state}
                             active={active}
                           />
                           <span
@@ -336,11 +372,8 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
                             type="button"
                             draggable={false}
                             onClick={(e) => { e.stopPropagation(); actions.closeTab(t.id); }}
-                            className={`absolute right-1 w-5 h-5 flex items-center justify-center rounded-sm transition-all duration-150 opacity-0 group-hover:opacity-100 bg-[var(--bg-elev)] ${
-                              active
-                                ? "text-success/70 hover:text-success hover:bg-[var(--bg-elev)]"
-                                : "text-fg-dim hover:text-fg hover:bg-[var(--bg-elev)]"
-                            }`}
+                            className={`absolute right-0 flex items-center justify-center rounded-sm transition-all duration-150 opacity-0 group-hover:opacity-100 text-fg-dim hover:text-fg hover:bg-[var(--bg-elev)]`}
+                            style={{ width: 18, height: 18 }}
                             aria-label="Close tab"
                           >
                             <span className="text-[14px] leading-none">×</span>
@@ -352,74 +385,76 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
                 );
               };
 
-              return segs.map((seg) => {
-                if (seg.kind === "group") {
-                  return (
-                    <motion.div
-                      key={`split-group-${seg.tabs[0].id}`}
-                      layout
-                      initial={{ opacity: 0, scale: 0.97, marginRight: 0 }}
-                      animate={{ opacity: 1, scale: 1, marginRight: 4 }}
-                      exit={{ opacity: 0, scale: 0.97, marginRight: 0, paddingLeft: 0, paddingRight: 0 }}
-                      transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                      className="shrink flex items-center rounded-md bg-[var(--command-active-bg)] px-1 py-1 gap-1"
-                    >
-                      <AnimatePresence initial={false}>
-                        {seg.tabs.map((t) => renderTab(t, true))}
-                      </AnimatePresence>
-                    </motion.div>
+              const orderedTabs: typeof tabs = [];
+              for (const seg of segs) {
+                if (seg.kind === "group") orderedTabs.push(...seg.tabs);
+                else orderedTabs.push(seg.tab);
+              }
+
+              const stripItems: React.ReactNode[] = [];
+              for (let i = 0; i < orderedTabs.length; i++) {
+                const t = orderedTabs[i];
+                const prev = i > 0 ? orderedTabs[i - 1] : null;
+                if (prev) {
+                  const showSeparator = prev.id !== activeTabId && t.id !== activeTabId;
+                  stripItems.push(
+                    <TabStripSeparator key={`sep-${prev.id}-${t.id}`} visible={showSeparator} />,
                   );
                 }
-                return renderTab(seg.tab, false);
-              });
+                stripItems.push(renderTab(t, splitTabIds.includes(t.id)));
+              }
+              return stripItems;
             })()}
-            </AnimatePresence>
-          </div>
-
-          <div className="h-4 w-px shrink-0 self-center mx-1 bg-border" aria-hidden />
-
-          <Popover open={open === "machines"} onOpenChange={(o) => setOpen(o ? "machines" : null)}>
-            <div className="relative flex items-center shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-              <Tooltip label="New session" side="bottom">
-                <PopoverTrigger asChild>
-                  <button
-                    aria-label="New tab"
-                    className={`w-7 h-7 grid place-items-center rounded-sm transition-colors ${
-                      open === "machines"
-                        ? "text-fg bg-[var(--command-active-bg)]"
-                        : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
-                    }`}
-                  >
-              <PlusIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
-                  </button>
-                </PopoverTrigger>
-              </Tooltip>
-
-              <PopoverContent
-                align="start"
-                sideOffset={6}
-                collisionPadding={16}
-                onCloseAutoFocus={(e) => e.preventDefault()}
-                className="p-0 border-none shadow-none w-auto bg-transparent z-50"
-              >
-                <MachinesPopover
-                  connections={connections}
-                  groups={groups}
-                  onConnect={(c) => {
-                    actions.openTab(c.id);
-                    setOpen(null);
-                  }}
-                  onEditConn={openEditConn}
-                  onNewConn={openNewConn}
-                  onCancel={() => setOpen(null)}
-                />
-              </PopoverContent>
+              </AnimatePresence>
             </div>
-          </Popover>
+
+            <Popover open={open === "machines"} onOpenChange={(o) => setOpen(o ? "machines" : null)}>
+              <div className="relative flex items-center shrink-0">
+                <Tooltip label="New session" side="bottom">
+                  <PopoverTrigger asChild>
+                    <button
+                      aria-label="New tab"
+                      className={`grid place-items-center rounded-sm transition-colors ${
+                        open === "machines"
+                          ? "text-fg bg-[var(--command-active-bg)]"
+                          : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
+                      }`}
+                      style={{ width: TITLE_BAR_ACTION_SIZE, height: TITLE_BAR_ACTION_SIZE }}
+                    >
+                      <PlusIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
+                    </button>
+                  </PopoverTrigger>
+                </Tooltip>
+
+                <PopoverContent
+                  align="start"
+                  sideOffset={6}
+                  collisionPadding={16}
+                  onCloseAutoFocus={(e) => e.preventDefault()}
+                  className="p-0 border-none shadow-none w-auto bg-transparent z-50"
+                >
+                  <MachinesPopover
+                    connections={connections}
+                    groups={groups}
+                    onConnect={(c) => {
+                      actions.openTab(c.id);
+                      setOpen(null);
+                    }}
+                    onEditConn={openEditConn}
+                    onNewConn={openNewConn}
+                    onCancel={() => setOpen(null)}
+                  />
+                </PopoverContent>
+              </div>
+            </Popover>
+          </div>
         </div>
 
-        <div className="flex items-center shrink-0 relative h-8 self-center" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-          <div className="w-px h-4 bg-border ml-1 mr-0.5 opacity-60" />
+        <div
+          className="flex items-center shrink-0 gap-0.5 relative self-center pl-1"
+          style={{ height: TITLE_BAR_TAB_STRIP_HEIGHT, WebkitAppRegion: "no-drag" } as React.CSSProperties}
+        >
+          <div className="w-px h-3 bg-border opacity-60" />
           <SplitLayoutPicker
             variant="top-bar"
             tabsLength={tabs.length}
@@ -429,18 +464,20 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
             <button
               onClick={() => actions.openSettingsTab("bangs")}
               aria-label="Bangs"
-              className="w-7 h-7 grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+              className="grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+              style={{ width: TITLE_BAR_ACTION_SIZE, height: TITLE_BAR_ACTION_SIZE }}
             >
-              <BoltIcon className="w-[17px] h-[17px]" />
+              <BoltIcon className="w-[15px] h-[15px]" />
             </button>
           </Tooltip>
           <Tooltip label="Lock" side="bottom">
             <button
               onClick={() => actions.lockApp()}
               aria-label="Lock App"
-              className="w-7 h-7 grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+              className="grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+              style={{ width: TITLE_BAR_ACTION_SIZE, height: TITLE_BAR_ACTION_SIZE }}
             >
-              <LockClosedIcon className="w-[17px] h-[17px]" />
+              <LockClosedIcon className="w-[15px] h-[15px]" />
             </button>
           </Tooltip>
           <Tooltip label="Settings" side="bottom">
@@ -449,16 +486,17 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => actions.toggleSettings()}
               aria-label="Toggle settings"
-              className={`w-7 h-7 grid place-items-center rounded-sm transition-colors ${
+              className={`grid place-items-center rounded-sm transition-colors ${
                 settingsOpen
                   ? "text-fg bg-[var(--command-active-bg)]"
                   : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
               }`}
+              style={{ width: TITLE_BAR_ACTION_SIZE, height: TITLE_BAR_ACTION_SIZE }}
             >
               {settingsOpen ? (
-                <Cog6ToothIconSolid className="w-[17px] h-[17px]" />
+                <Cog6ToothIconSolid className="w-[15px] h-[15px]" />
               ) : (
-                <Cog6ToothIcon className="w-[17px] h-[17px]" />
+                <Cog6ToothIcon className="w-[15px] h-[15px]" />
               )}
             </button>
           </Tooltip>
@@ -484,11 +522,12 @@ function FeaturePill({
   return (
     <button
       onClick={onClick}
-      className={`h-8 px-3 inline-flex items-center gap-1 rounded-sm  text-[12px] font-sans transition-colors shrink-0 ${
+      className={`px-2.5 inline-flex items-center gap-1 rounded-sm text-[12px] font-sans transition-colors shrink-0 ${
         active
           ? "bg-[var(--command-active-bg)] border-accent/40 text-fg"
           : "bg-[var(--command-bg)] border-border text-fg hover:bg-[var(--command-active-bg)]"
       }`}
+      style={{ height: TITLE_BAR_TAB_STRIP_HEIGHT }}
     >
       <span className={active ? "text-fg" : "text-fg-muted"}>{icon}</span>
       <span>{label}</span>
@@ -792,6 +831,7 @@ export function VerticalTabBar() {
   const groups = useStore((s) => s.groups);
   const settingsOpen = useStore((s) => s.settingsOpen);
   const connectionStatus = useStore((s) => s.connectionStatus);
+  const tabSessionStatus = useStore((s) => s.tabSessionStatus);
   const rawSplitTabIds = useStore((s) => s.splitTabIds);
   const splitLayout = useStore((s) => s.splitLayout);
   const splitTabIds = useMemo(() => rawSplitTabIds.slice(0, SPLIT_LAYOUT_SLOTS[splitLayout]), [rawSplitTabIds, splitLayout]);
@@ -1076,7 +1116,7 @@ export function VerticalTabBar() {
                       >
                         <TabFavicon
                           conn={c}
-                          state={c ? connectionStatus[c.id]?.state : undefined}
+                          state={tabSessionStatus[t.id]?.state}
                           active={active}
                         />
                         {!sidebarCollapsed && (

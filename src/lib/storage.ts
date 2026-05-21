@@ -29,6 +29,17 @@ const SIDEBAR_WIDTH_KEY = "ssh.sidebar-width.v1";
 const CLOSED_TABS_KEY = "ssh.closed-tabs.v1";
 const ONBOARDING_COMPLETED_KEY = "ssh.onboarding-completed.v1";
 
+const APP_LOCK_BROWSER_PREFIX = "apw1:";
+const PBKDF2_ITERATIONS_BROWSER = 310_000;
+
+type BrowserPwEnvelopeV1 = {
+  v: 1;
+  alg: "PBKDF2-SHA256";
+  iterations: number;
+  saltHex: string;
+  hashHex: string;
+};
+
 const VALID_LOG_RETENTION = new Set<LogRetention>(["24h", "3d", "7d", "30d", "90d", "1y", "off"]);
 
 async function syncConnectionMetadataToElectron(connections: Connection[]): Promise<void> {
@@ -73,10 +84,138 @@ export function loadAccessSettings(): AccessSettings {
   return { appLockEnabled: true, method: "passkey" };
 }
 
+function hexFromBytes(bytes: Uint8Array): string {
+  return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function hexToBytes(hex: string): Uint8Array | null {
+  if (typeof hex !== "string" || !/^[0-9a-fA-F]+$/.test(hex) || hex.length % 2 !== 0) return null;
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) {
+    out[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  }
+  return out;
+}
+
+function timingSafeHexEqual(left: string, right: string): boolean {
+  const a = left.toLowerCase();
+  const b = right.toLowerCase();
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  if (!/^[0-9a-f]+$/.test(a) || !/^[0-9a-f]+$/.test(b)) return false;
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
+
+function serializeBrowserEnvelope(env: BrowserPwEnvelopeV1): string {
+  return APP_LOCK_BROWSER_PREFIX + btoa(JSON.stringify(env));
+}
+
+function parseBrowserEnvelope(raw: string): BrowserPwEnvelopeV1 | null {
+  if (!raw.startsWith(APP_LOCK_BROWSER_PREFIX)) return null;
+  try {
+    const json = JSON.parse(atob(raw.slice(APP_LOCK_BROWSER_PREFIX.length))) as unknown;
+    if (!json || typeof json !== "object") return null;
+    const obj = json as Record<string, unknown>;
+    if (obj.v !== 1 || obj.alg !== "PBKDF2-SHA256") return null;
+    if (
+      typeof obj.saltHex !== "string" ||
+      typeof obj.hashHex !== "string" ||
+      typeof obj.iterations !== "number"
+    ) {
+      return null;
+    }
+    return json as BrowserPwEnvelopeV1;
+  } catch {
+    return null;
+  }
+}
+
+async function hashPasswordBrowser(password: string): Promise<BrowserPwEnvelopeV1> {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const enc = new TextEncoder().encode(password);
+  const imported = await crypto.subtle.importKey("raw", enc, "PBKDF2", false, ["deriveBits"]);
+  const derived = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      salt: salt as unknown as BufferSource,
+      iterations: PBKDF2_ITERATIONS_BROWSER,
+    },
+    imported,
+    256,
+  );
+  return {
+    v: 1,
+    alg: "PBKDF2-SHA256",
+    iterations: PBKDF2_ITERATIONS_BROWSER,
+    saltHex: hexFromBytes(salt),
+    hashHex: hexFromBytes(new Uint8Array(derived)),
+  };
+}
+
+async function verifyPasswordBrowser(candidate: string, storedEnvelopeRaw: string): Promise<boolean> {
+  const envelope = parseBrowserEnvelope(storedEnvelopeRaw);
+  if (!envelope) return false;
+  const salt = hexToBytes(envelope.saltHex);
+  if (!salt) return false;
+  const enc = new TextEncoder().encode(candidate);
+  const imported = await crypto.subtle.importKey("raw", enc, "PBKDF2", false, ["deriveBits"]);
+  const derived = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      salt: salt as unknown as BufferSource,
+      iterations: envelope.iterations,
+    },
+    imported,
+    256,
+  );
+  return timingSafeHexEqual(hexFromBytes(new Uint8Array(derived)), envelope.hashHex);
+}
+
+export async function savePasswordAccess(password: string): Promise<void> {
+  if (typeof window === "undefined") return;
+  if (window.electron?.setAppLockPassword) {
+    await window.electron.setAppLockPassword(password);
+    window.localStorage.removeItem(TEMP_PASSWORD_KEY);
+  } else {
+    const env = await hashPasswordBrowser(password);
+    window.localStorage.setItem(TEMP_PASSWORD_KEY, serializeBrowserEnvelope(env));
+  }
+  saveAccessSettings({ appLockEnabled: true, method: "password" });
+}
+
+export async function verifyAppLockPassword(candidate: string): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  if (window.electron?.verifyAppLockPassword) {
+    return window.electron.verifyAppLockPassword(candidate);
+  }
+  const stored = window.localStorage.getItem(TEMP_PASSWORD_KEY);
+  if (!stored) return false;
+  return verifyPasswordBrowser(candidate, stored);
+}
+
+export async function clearStoredAppPassword(): Promise<void> {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(TEMP_PASSWORD_KEY);
+  try {
+    if (window.electron?.clearAppLockPassword) {
+      await window.electron.clearAppLockPassword();
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 export function saveAccessSettings(settings: AccessSettings) {
   if (typeof window === "undefined") return;
   if (!settings.appLockEnabled) {
     window.localStorage.setItem(VAULT_SETUP_KEY, "disabled");
+    void clearStoredAppPassword();
     return;
   }
   window.localStorage.setItem(
@@ -85,14 +224,35 @@ export function saveAccessSettings(settings: AccessSettings) {
   );
 }
 
-export function savePasswordAccess(password: string) {
+export async function migrateAppLockPasswordIfNeeded(): Promise<void> {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(TEMP_PASSWORD_KEY, password);
-  saveAccessSettings({ appLockEnabled: true, method: "password" });
+  const raw = window.localStorage.getItem(TEMP_PASSWORD_KEY);
+  if (!raw) return;
+
+  if (raw.startsWith(APP_LOCK_BROWSER_PREFIX)) {
+    if (parseBrowserEnvelope(raw)) return;
+    console.warn("[storage] Corrupt app-lock browser envelope; skipping migration.");
+    return;
+  }
+
+  if (window.localStorage.getItem(VAULT_SETUP_KEY) !== "password") return;
+
+  try {
+    if (window.electron?.setAppLockPassword) {
+      await window.electron.setAppLockPassword(raw);
+      window.localStorage.removeItem(TEMP_PASSWORD_KEY);
+    } else {
+      const env = await hashPasswordBrowser(raw);
+      window.localStorage.setItem(TEMP_PASSWORD_KEY, serializeBrowserEnvelope(env));
+    }
+  } catch (e) {
+    console.error("App lock password migration failed", e);
+  }
 }
 
-export function savePasskeyAccess(provider: "electron" | "webauthn", credentialId?: string) {
+export async function savePasskeyAccess(provider: "electron" | "webauthn", credentialId?: string) {
   if (typeof window === "undefined") return;
+  await clearStoredAppPassword();
   if (credentialId) {
     window.localStorage.setItem(PASSKEY_ID_KEY, credentialId);
   }
@@ -310,7 +470,12 @@ export function saveTheme(t: ThemeId) {
 
 export function loadFont(): string {
   if (typeof window === "undefined") return "manrope";
-  return window.localStorage.getItem(FONT_KEY) ?? "manrope";
+  const raw = window.localStorage.getItem(FONT_KEY) ?? "manrope";
+  if (raw === "geist") {
+    window.localStorage.setItem(FONT_KEY, "manrope");
+    return "manrope";
+  }
+  return raw;
 }
 
 export function saveFont(id: string) {

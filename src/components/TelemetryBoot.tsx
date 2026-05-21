@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { coerceReasonToString } from "@/lib/telemetry-sanitize";
 import {
   refreshTelemetryConsentFromStorage,
@@ -13,7 +13,12 @@ import {
  * is respected before anything is emitted.
  */
 export function TelemetryBoot() {
+  const bootStarted = useRef(false);
+
   useEffect(() => {
+    if (bootStarted.current) return;
+    bootStarted.current = true;
+
     refreshTelemetryConsentFromStorage();
     queueMicrotask(() => {
       trackAppOpen();
