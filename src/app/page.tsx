@@ -5,7 +5,7 @@ import { TelemetryBoot } from "@/components/TelemetryBoot";
 import { TopBar, VerticalTabBar } from "@/features/layout/TopBar";
 import { MainArea } from "@/features/layout/MainArea";
 import { BottomPanel } from "@/features/layout/BottomPanel";
-import { SettingsSidebar } from "@/features/layout/SettingsSidebar";
+import { LargeSettingsModal } from "@/features/layout/LargeSettingsModal";
 import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
 import { UnlockVault } from "@/components/UnlockVault";
 import { OnboardingModal } from "@/components/OnboardingModal";
@@ -86,7 +86,7 @@ export default function Page() {
                 <div className="h-full flex flex-col bg-bg rounded-md overflow-hidden border border-border/30">
                   <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
                     <MainArea />
-                    <SettingsSidebar />
+                    <LargeSettingsModal />
                   </div>
                   <BottomPanel />
                 </div>

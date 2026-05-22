@@ -5,6 +5,7 @@ interface Window {
     platform: NodeJS.Platform;
     setTitleBarOverlay?: (overlay: { color: string; symbolColor: string; height?: number }) => void;
     setZoomLevel: (level: number) => void;
+    setVisualZoomLevelLimits: (min: number, max: number) => void;
     biometricUnlock: (reason: string) => Promise<boolean>;
     encryptString: (text: string) => Promise<string>;
     decryptString: (encrypted: string) => Promise<string>;

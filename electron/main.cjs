@@ -55,6 +55,13 @@ ipcMain.on("set-zoom-factor", (event, factor) => {
   }
 });
 
+ipcMain.on("set-visual-zoom-limits", (event, min, max) => {
+  const webContents = event.sender;
+  if (webContents) {
+    webContents.setVisualZoomLevelLimits(min, max);
+  }
+});
+
 ipcMain.on("set-title-bar-overlay", (event, overlay) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   if (win) {
@@ -793,6 +800,7 @@ app.whenReady().then(async () => {
     "decrypt-string",
     "biometric-unlock",
     "set-zoom-factor",
+    "set-visual-zoom-limits",
     "get-ws-token",
     "save-connection-secret",
     "load-connection-secret",

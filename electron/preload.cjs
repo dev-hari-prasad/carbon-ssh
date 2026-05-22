@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld("electron", {
     const factor = level / 100;
     ipcRenderer.send("set-zoom-factor", factor);
   },
+  setVisualZoomLevelLimits: (min, max) => ipcRenderer.send("set-visual-zoom-limits", min, max),
   biometricUnlock: (reason) => ipcRenderer.invoke("biometric-unlock", reason),
   encryptString: (text) => ipcRenderer.invoke("encrypt-string", text),
   decryptString: (encrypted) => ipcRenderer.invoke("decrypt-string", encrypted),

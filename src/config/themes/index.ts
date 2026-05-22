@@ -7,29 +7,15 @@ import lightModern from "./light_modern.json";
 import hcBlack from "./hc_black.json";
 import hcLight from "./hc_light.json";
 import theme2026Light from "./2026-light.json";
-import abyss from "./abyss-color-theme.json";
-import dimmedMonokai from "./dimmed-monokai-color-theme.json";
-import kimbieDark from "./kimbie-dark-color-theme.json";
-import monokai from "./monokai-color-theme.json";
-import quietLight from "./quietlight-color-theme.json";
 import solarizedLight from "./solarized-light-color-theme.json";
-import oneDarkPro from "./OneDark-Pro.json";
-import oneDarkProDarker from "./OneDark-Pro-darker.json";
-import oneDarkProFlat from "./OneDark-Pro-flat.json";
-import oneDarkProMix from "./OneDark-Pro-mix.json";
 import oneDarkProNightFlat from "./OneDark-Pro-night-flat.json";
+
 
 export const DEFAULT_THEME_ID = "dark_modern";
 export const RECOMMENDED_THEME_IDS = [
   "dark_modern",
   "2026-light",
   "light_modern",
-  "dark_vs",
-  "light_vs",
-  "onedark-pro",
-  "onedark-pro-darker",
-  "onedark-pro-flat",
-  "onedark-pro-mix",
   "onedark-pro-night-flat",
 ];
 
@@ -53,41 +39,30 @@ export type AppTheme = {
 
 const entries: Array<{ id: string; file: string; raw: RawTheme }> = [
   { id: "2026-light", file: "2026-light.json", raw: theme2026Light },
-  { id: "abyss", file: "abyss-color-theme.json", raw: abyss },
   { id: "dark_modern", file: "dark_modern.json", raw: darkModern },
   { id: "dark_plus", file: "dark_plus.json", raw: darkPlus },
   { id: "dark_vs", file: "dark_vs.json", raw: darkVs },
-  { id: "dimmed-monokai", file: "dimmed-monokai-color-theme.json", raw: dimmedMonokai },
   { id: "hc_black", file: "hc_black.json", raw: hcBlack },
   { id: "hc_light", file: "hc_light.json", raw: hcLight },
-  { id: "kimbie-dark", file: "kimbie-dark-color-theme.json", raw: kimbieDark },
   { id: "light_modern", file: "light_modern.json", raw: lightModern },
   { id: "light_plus", file: "light_plus.json", raw: lightPlus },
   { id: "light_vs", file: "light_vs.json", raw: lightVs },
-  { id: "monokai", file: "monokai-color-theme.json", raw: monokai },
-  { id: "onedark-pro", file: "OneDark-Pro.json", raw: oneDarkPro },
-  { id: "onedark-pro-darker", file: "OneDark-Pro-darker.json", raw: oneDarkProDarker },
-  { id: "onedark-pro-flat", file: "OneDark-Pro-flat.json", raw: oneDarkProFlat },
-  { id: "onedark-pro-mix", file: "OneDark-Pro-mix.json", raw: oneDarkProMix },
   {
     id: "onedark-pro-night-flat",
     file: "OneDark-Pro-night-flat.json",
     raw: oneDarkProNightFlat,
   },
-  { id: "quietlight", file: "quietlight-color-theme.json", raw: quietLight },
   { id: "solarized-light", file: "solarized-light-color-theme.json", raw: solarizedLight },
+
 ];
 
 const byFile = new Map(entries.map((entry) => [entry.file.toLowerCase(), entry]));
 const nameOverrides: Record<string, string> = {
   dark_modern: "Dark Modern (default)",
   "2026-light": "2026 Light (default)",
-  "onedark-pro": "One Dark Pro",
-  "onedark-pro-darker": "One Dark Pro Darker",
-  "onedark-pro-flat": "One Dark Pro Flat",
-  "onedark-pro-mix": "One Dark Pro Mix",
   "onedark-pro-night-flat": "One Dark Pro Night Flat",
 };
+
 
 function includeFile(path: string) {
   return path.replace(/^\.\//, "").toLowerCase();
@@ -175,9 +150,23 @@ function resolveTheme(
   };
 }
 
+const VISIBLE_THEME_IDS = new Set([
+  "2026-light",
+  "light_modern",
+  "hc_light",
+  "solarized-light",
+  "dark_modern",
+  "onedark-pro-night-flat",
+  "hc_black",
+
+  "dark_plus",
+]);
+
 export const THEMES: AppTheme[] = entries
+  .filter((entry) => VISIBLE_THEME_IDS.has(entry.id))
   .map((entry) => resolveTheme(entry))
   .sort((a, b) => a.name.localeCompare(b.name));
+
 
 export function getThemeById(id: string): AppTheme {
   return (

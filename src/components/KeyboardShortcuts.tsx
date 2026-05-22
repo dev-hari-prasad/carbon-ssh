@@ -37,7 +37,7 @@ export function KeyboardShortcuts() {
       // Settings Panel: Mod+S
       if (mod && !shift && key === "s") {
         e.preventDefault();
-        actions.toggleSettings();
+        actions.toggleLargeSettings();
         return;
       }
 

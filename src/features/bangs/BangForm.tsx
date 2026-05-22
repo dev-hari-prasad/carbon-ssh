@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Modal } from "@/components/Modal";
 import { Button } from "@/components/Button";
-import { Input, Textarea, Field } from "@/components/Input";
+import { Input, Field } from "@/components/Input";
 import type { Bang } from "@/lib/types";
 import { actions } from "@/lib/store";
 
@@ -16,13 +16,11 @@ export function BangForm({
 }) {
   const [trigger, setTrigger] = useState("");
   const [command, setCommand] = useState("");
-  const [description, setDescription] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setTrigger(initial?.trigger ?? "");
     setCommand(initial?.command ?? "");
-    setDescription(initial?.description ?? "");
   }, [open, initial]);
 
   function submit() {
@@ -31,7 +29,6 @@ export function BangForm({
       id: initial?.id,
       trigger: trigger.trim(),
       command: command.trim(),
-      description: description.trim() || undefined,
     });
     onClose();
   }
@@ -67,17 +64,10 @@ export function BangForm({
           </div>
         </Field>
         <Field label="Command">
-          <Textarea
+          <Input
             value={command}
             onChange={(e) => setCommand(e.target.value)}
             placeholder="apt update && apt upgrade -y"
-          />
-        </Field>
-        <Field label="Description" hint="optional">
-          <Input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Update & upgrade packages"
           />
         </Field>
       </div>

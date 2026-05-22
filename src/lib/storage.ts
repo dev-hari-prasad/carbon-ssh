@@ -28,6 +28,7 @@ const SIDEBAR_COLLAPSED_KEY = "ssh.sidebar-collapsed.v1";
 const SIDEBAR_WIDTH_KEY = "ssh.sidebar-width.v1";
 const CLOSED_TABS_KEY = "ssh.closed-tabs.v1";
 const ONBOARDING_COMPLETED_KEY = "ssh.onboarding-completed.v1";
+const PINCH_ZOOM_ENABLED_KEY = "ssh.pinch-zoom-enabled.v1";
 
 const APP_LOCK_BROWSER_PREFIX = "apw1:";
 const PBKDF2_ITERATIONS_BROWSER = 310_000;
@@ -612,10 +613,10 @@ export function saveSidebarCollapsed(v: boolean): void {
 }
 
 export function loadSidebarWidth(orientation?: TabBarOrientation): number {
-  if (typeof window === "undefined") return orientation === "vertical" ? 200 : 140;
+  if (typeof window === "undefined") return orientation === "vertical" ? 170 : 140;
   const v = Number(window.localStorage.getItem(SIDEBAR_WIDTH_KEY));
   if (orientation === "vertical") {
-    return v >= 140 && v <= 400 ? v : 200;
+    return v >= 100 && v <= 400 ? v : 170;
   }
   return v >= 60 && v <= 400 ? v : 140;
 }
@@ -633,9 +634,19 @@ export function loadTelemetryEnabled(): boolean {
   return v === "true";
 }
 
-export function saveTelemetryEnabled(enabled: boolean): void {
+export function saveTelemetryEnabled(enabled: boolean) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(TELEMETRY_ENABLED_KEY, String(enabled));
+  window.localStorage.setItem(TELEMETRY_ENABLED_KEY, enabled ? "1" : "0");
+}
+
+export function loadPinchZoomEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem(PINCH_ZOOM_ENABLED_KEY) === "1";
+}
+
+export function savePinchZoomEnabled(enabled: boolean) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(PINCH_ZOOM_ENABLED_KEY, enabled ? "1" : "0");
 }
 
 export function loadClosedTabs(): string[] {

@@ -53,13 +53,6 @@ export const TERMINAL_FONTS: AppFont[] = [
     category: "mono",
   },
   {
-    id: "cascadia-code",
-    name: "Cascadia Code",
-    family: "Cascadia Code Variable",
-    stack: `"Cascadia Code Variable", ui-monospace, SFMono-Regular, Menlo, monospace`,
-    category: "mono",
-  },
-  {
     id: "fira-code",
     name: "Fira Code",
     family: "Fira Code Variable",

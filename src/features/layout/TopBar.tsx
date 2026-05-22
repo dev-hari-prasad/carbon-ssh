@@ -137,7 +137,7 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
   const activeTabId = useStore((s) => s.activeTabId);
   const connections = useStore((s) => s.connections);
   const groups = useStore((s) => s.groups);
-  const settingsOpen = useStore((s) => s.settingsOpen);
+  const largeSettingsOpen = useStore((s) => s.largeSettingsOpen);
   const connectionStatus = useStore((s) => s.connectionStatus);
   const tabSessionStatus = useStore((s) => s.tabSessionStatus);
   const rawSplitTabIds = useStore((s) => s.splitTabIds);
@@ -484,16 +484,16 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
-              onClick={() => actions.toggleSettings()}
+              onClick={() => actions.toggleLargeSettings()}
               aria-label="Toggle settings"
               className={`grid place-items-center rounded-sm transition-colors ${
-                settingsOpen
+                largeSettingsOpen
                   ? "text-fg bg-[var(--command-active-bg)]"
                   : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
               }`}
               style={{ width: TITLE_BAR_ACTION_SIZE, height: TITLE_BAR_ACTION_SIZE }}
             >
-              {settingsOpen ? (
+              {largeSettingsOpen ? (
                 <Cog6ToothIconSolid className="w-[15px] h-[15px]" />
               ) : (
                 <Cog6ToothIcon className="w-[15px] h-[15px]" />
@@ -829,7 +829,7 @@ export function VerticalTabBar() {
   const activeTabId = useStore((s) => s.activeTabId);
   const connections = useStore((s) => s.connections);
   const groups = useStore((s) => s.groups);
-  const settingsOpen = useStore((s) => s.settingsOpen);
+  const largeSettingsOpen = useStore((s) => s.largeSettingsOpen);
   const connectionStatus = useStore((s) => s.connectionStatus);
   const tabSessionStatus = useStore((s) => s.tabSessionStatus);
   const rawSplitTabIds = useStore((s) => s.splitTabIds);
@@ -927,7 +927,7 @@ export function VerticalTabBar() {
     icon: React.ReactNode;
     label: string;
     active?: boolean;
-    onClick?: () => void;
+    onClick?: (e: React.MouseEvent) => void;
     tooltip?: string;
   }) => (
     <Tooltip label={tooltip ?? label} side={tooltipSide} disabled={!showTooltips}>
@@ -970,7 +970,7 @@ export function VerticalTabBar() {
                     ? "w-8 h-8 justify-center"
                     : "w-full h-8 px-2.5 justify-start"
                 } ${
-                  activeTabId === null && !settingsOpen
+                  activeTabId === null && !largeSettingsOpen
                     ? "bg-[var(--command-active-bg)] text-fg"
                     : "bg-[var(--command-bg)] text-fg hover:bg-[var(--command-active-bg)]"
                 }`}
@@ -1275,7 +1275,7 @@ export function VerticalTabBar() {
           />
           <TabButton
             icon={
-              settingsOpen ? (
+              largeSettingsOpen ? (
                 <Cog6ToothIconSolid className="w-4 h-4" />
               ) : (
                 <Cog6ToothIcon className="w-4 h-4" />
@@ -1283,8 +1283,8 @@ export function VerticalTabBar() {
             }
             label="Settings"
             tooltip="Settings"
-            active={settingsOpen}
-            onClick={() => actions.toggleSettings()}
+            active={largeSettingsOpen}
+            onClick={() => actions.toggleLargeSettings()}
           />
         </div>
 

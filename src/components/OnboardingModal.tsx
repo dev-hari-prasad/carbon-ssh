@@ -281,8 +281,8 @@ export function OnboardingModal() {
                             }}
                             className="flex items-center gap-3"
                           >
-                            <div className="w-6 h-6 rounded-full bg-green-500/10 flex items-center justify-center shrink-0">
-                              <item.icon className="w-3.5 h-3.5 text-green-500" weight="duotone" />
+                            <div className="w-6 h-6 rounded-full bg-green-500/15 flex items-center justify-center shrink-0">
+                              <item.icon className="w-4 h-4 text-green-500" weight="duotone" />
                             </div>
                             <span className="text-[14px] text-fg-muted">{item.text}</span>
                           </motion.div>

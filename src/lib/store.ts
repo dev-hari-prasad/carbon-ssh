@@ -76,6 +76,8 @@ import {
   type TabBarOrientation,
   loadOnboardingCompleted,
   saveOnboardingCompleted,
+  loadPinchZoomEnabled,
+  savePinchZoomEnabled,
 } from "./storage";
 
 interface State {
@@ -92,9 +94,10 @@ interface State {
   font: string;
   terminalFont: string;
   settingsOpen: boolean;
+  largeSettingsOpen: boolean;
   ai: AISettings;
   logRetention: LogRetention;
-  settingsTab: "general" | "shortcuts" | "logs" | "bangs" | "display" | "ai" | "security";
+  settingsTab: "general" | "shortcuts" | "logs" | "bangs" | "display" | "ai" | "security" | "about";
   settingsOpenCount: number;
   selectedHostId: string | null;
   closedTabs: string[];
@@ -112,6 +115,7 @@ interface State {
   splitColRatio: number;
   splitRowRatio: number;
   onboardingCompleted: boolean;
+  pinchZoomEnabled: boolean;
 }
 
 /** Default UI scale: 100% in Electron; 110% in the browser. */
@@ -134,6 +138,7 @@ let state: State = {
   font: DEFAULT_FONT_ID,
   terminalFont: DEFAULT_TERMINAL_FONT_ID,
   settingsOpen: false,
+  largeSettingsOpen: false,
   ai: { ...DEFAULT_AI_SETTINGS },
   logRetention: DEFAULT_LOG_RETENTION,
   settingsTab: "display",
@@ -154,6 +159,7 @@ let state: State = {
   splitColRatio: 0.5,
   splitRowRatio: 0.5,
   onboardingCompleted: false,
+  pinchZoomEnabled: false,
 };
 
 const SETTINGS_OPEN_COUNT_KEY = "ssh.settings-open-count.v1";
@@ -254,6 +260,7 @@ function ensureInit() {
     sidebarWidth: loadSidebarWidth(tabBarOrientation),
     closedTabs: loadClosedTabs(),
     onboardingCompleted: loadOnboardingCompleted(),
+    pinchZoomEnabled: loadPinchZoomEnabled(),
   };
   applyTheme(theme);
   applyFont(font);
@@ -263,6 +270,9 @@ function ensureInit() {
 
   if (typeof window !== "undefined" && (window as any).electron?.setZoomLevel) {
     (window as any).electron.setZoomLevel(state.zoomLevel);
+    if ((window as any).electron.setVisualZoomLevelLimits) {
+      (window as any).electron.setVisualZoomLevelLimits(1, state.pinchZoomEnabled ? 3 : 1);
+    }
   }
 
   if (!access.appLockEnabled) {
@@ -660,6 +670,15 @@ export const actions = {
     }
   },
 
+  setPinchZoomEnabled(enabled: boolean) {
+    ensureInit();
+    savePinchZoomEnabled(enabled);
+    setState({ pinchZoomEnabled: enabled });
+    if (typeof window !== "undefined" && (window as any).electron?.setVisualZoomLevelLimits) {
+      (window as any).electron.setVisualZoomLevelLimits(1, enabled ? 3 : 1);
+    }
+  },
+
   incrementCommandCount(tabId: string) {
     setState((s) => ({
       tabs: s.tabs.map((t) =>
@@ -714,6 +733,13 @@ export const actions = {
         selectedHostId: null,
       };
     });
+  },
+
+  toggleLargeSettings() {
+    setState((s) => ({
+      largeSettingsOpen: !s.largeSettingsOpen,
+      settingsOpen: s.largeSettingsOpen ? s.settingsOpen : false,
+    }));
   },
 
   setSettingsOpen(open: boolean) {
@@ -884,8 +910,8 @@ export const actions = {
   setTabBarOrientation(o: TabBarOrientation) {
     ensureInit();
     saveTabBarOrientation(o);
-    if (o === "vertical" && state.sidebarWidth < 200) {
-      setState({ tabBarOrientation: o, sidebarWidth: 260 });
+    if (o === "vertical" && state.sidebarWidth < 170) {
+      setState({ tabBarOrientation: o, sidebarWidth: 170 });
     } else {
       setState({ tabBarOrientation: o });
     }
@@ -907,7 +933,7 @@ export const actions = {
   setSidebarWidth(w: number) {
     ensureInit();
     const isVertical = state.tabBarOrientation === "vertical";
-    const minW = isVertical ? 160 : 60;
+    const minW = isVertical ? 100 : 60;
     const clamped = Math.max(minW, Math.min(400, Math.round(w)));
     saveSidebarWidth(clamped);
     setState({ sidebarWidth: clamped });

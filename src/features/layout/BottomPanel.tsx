@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
-  ArrowsUpDownIcon,
   CheckIcon,
   ChevronDownIcon,
   ChevronUpIcon,
@@ -435,8 +434,6 @@ export function BottomPanel() {
   const reduceMotion = useReducedMotion();
   const open = useStore((s) => s.bottomOpen);
   const logs = useStore((s) => s.logs);
-  /** Matches "99+" in header — suppress centered resize chrome above a busy log list. */
-  const manyLogs = logs.length > 99;
   const connections = useStore((s) => s.connections);
   const [sourceFilter, setSourceFilter] = useState<string>("__all__");
   const [logSearchQuery, setLogSearchQuery] = useState("");
@@ -447,39 +444,9 @@ export function BottomPanel() {
       : logsBodyFallbackMaxPx(),
   );
   const [resizeActive, setResizeActive] = useState(false);
-  const [showResizeHint, setShowResizeHint] = useState(false);
-  const hintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const triggerHint = useCallback(() => {
-    setShowResizeHint(true);
-    if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
-    hintTimeoutRef.current = setTimeout(() => {
-      setShowResizeHint(false);
-    }, 3000);
-  }, []);
-
   const resizeStartRef = useRef({ clientY: 0, height: DEFAULT_LOGS_BODY_PX });
   const captureResizeRef = useRef<{ node: HTMLElement; pointerId: number } | null>(null);
   const skipHeightPersist = useRef(true);
-
-  useEffect(() => {
-    if (open && !manyLogs) {
-      triggerHint();
-    }
-  }, [open, triggerHint, manyLogs]);
-
-  useEffect(() => {
-    if (manyLogs) setShowResizeHint(false);
-  }, [manyLogs]);
-
-  useEffect(() => {
-    if (resizeActive) {
-      setShowResizeHint(!manyLogs);
-      if (hintTimeoutRef.current) clearTimeout(hintTimeoutRef.current);
-    } else if (!manyLogs) {
-      triggerHint();
-    }
-  }, [resizeActive, triggerHint, manyLogs]);
 
   useEffect(() => {
     skipHeightPersist.current = true;
@@ -699,7 +666,7 @@ export function BottomPanel() {
               side="top"
               delay={200}
               multiline
-              disabled={resizeActive || manyLogs}
+              disabled={resizeActive}
               className="block w-full shrink-0"
             >
               <div
@@ -718,9 +685,6 @@ export function BottomPanel() {
                   if (e.button !== 0) return;
                   onResizePointerDown(e);
                 }}
-                onMouseEnter={() => {
-                  if (!manyLogs) triggerHint();
-                }}
                 onKeyDown={(e) => {
                   if (e.key === "ArrowUp" || e.key === "ArrowDown") {
                     e.preventDefault();
@@ -729,22 +693,6 @@ export function BottomPanel() {
                   }
                 }}
               >
-                <AnimatePresence>
-                  {showResizeHint && !manyLogs && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: 2 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: 2 }}
-                      transition={{ duration: 0.16, ease: [0.32, 0.72, 0, 1] }}
-                      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-none"
-                    >
-                      <div className="px-2 py-0.5 rounded-full bg-accent/70 text-[9px] text-white tracking-wider shadow-lg border border-white/10 whitespace-nowrap flex items-center gap-1">
-                        <ArrowsUpDownIcon className="w-2.5 h-2.5" strokeWidth={2.5} />
-                        Resize
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
               </div>
             </Tooltip>
             <div

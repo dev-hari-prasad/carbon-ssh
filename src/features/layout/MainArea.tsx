@@ -843,7 +843,6 @@ function EditGroupPopover({
 
 function HostsView({ connections }: { connections: Connection[] }) {
   const groups = useStore((s) => s.groups);
-  const settingsOpen = useStore((s) => s.settingsOpen);
   const connectionStatus = useStore((s) => s.connectionStatus);
   const groupCounts = useMemo(() => {
     const m: Record<string, number> = {};
@@ -869,10 +868,9 @@ function HostsView({ connections }: { connections: Connection[] }) {
         : connections.filter((c) => c.groupId === groupFilter);
 
   const selected = connections.find((c) => c.id === selectedId) ?? null;
-  const sidePanelOpen = settingsOpen || selected !== null;
+  const sidePanelOpen = selected !== null;
 
   const dismissSidebars = () => {
-    actions.setSettingsOpen(false);
     actions.setSelectedHostId(null);
   };
 
@@ -883,7 +881,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
         layout
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
         style={{
-          paddingRight: settingsOpen ? "calc(340px + 1.5rem)" : selected ? "calc(320px + 1.5rem)" : "1.5rem",
+          paddingRight: selected ? "calc(320px + 1.5rem)" : "1.5rem",
           paddingLeft: "1.5rem",
           paddingTop: "1.5rem",
           paddingBottom: "1.5rem",
@@ -1030,7 +1028,6 @@ function HostsView({ connections }: { connections: Connection[] }) {
             <button
               type="button"
               onClick={() => {
-                dismissSidebars();
                 if (typeof window !== "undefined") {
                   window.dispatchEvent(new CustomEvent("tm:new-connection"));
                 }
@@ -1073,7 +1070,7 @@ function HostsView({ connections }: { connections: Connection[] }) {
       </LayoutGroup>
 
       <AnimatePresence>
-        {!settingsOpen && selected ? (
+        {selected ? (
           <motion.aside
             key="host-details"
             initial={{ x: "100%", opacity: 0 }}
@@ -1179,7 +1176,6 @@ function EmptyHosts() {
     <div className="flex justify-center py-8 px-1">
       <button
         onClick={() => {
-          actions.setSettingsOpen(false);
           if (typeof window !== "undefined") {
             window.dispatchEvent(new CustomEvent("tm:new-connection"));
           }
@@ -1682,7 +1678,6 @@ function ActionsAndDanger({
 
       <button
         onClick={() => {
-          actions.setSettingsOpen(false);
           actions.openTab(conn.id);
         }}
         disabled={isConnecting}
