@@ -14,6 +14,37 @@ Thank you for your interest in contributing to Carbon SSH! To maintain code qual
    - > [!IMPORTANT]
      > **Avoid using `npm` or `yarn`**. Do NOT delete or modify package lock files (like `pnpm-lock.yaml`) unless you are explicitly upgrading dependencies.
 
+3. **Development Mode**:
+   - For running the desktop Electron application locally (recommended):
+     ```bash
+     pnpm dev:electron
+     ```
+   - For running only the Next.js web application in development mode:
+     ```bash
+     pnpm dev
+     ```
+
+4. **Building**:
+   - To compile and build the Electron application locally:
+     ```bash
+     pnpm build:electron
+     ```
+   - To build the standalone Next.js web production bundle:
+     ```bash
+     pnpm build
+     ```
+
+5. **Auditing**:
+   - To run a high-level security audit on project dependencies:
+     ```bash
+     pnpm audit
+     ```
+   - To run a complete moderate/high audit and generate a list of licenses:
+     ```bash
+     pnpm audit:full
+     ```
+
+
 ## Branching Guidelines
 
 - **Branching is a must**: Do not submit pull requests directly from your `main` or `master` branch.
