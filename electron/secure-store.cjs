@@ -3,6 +3,8 @@ const fs = require("fs");
 const path = require("path");
 
 const STORE_FILE = "secure-store.v1.json";
+const storeCache = new Map();
+const storeWriteQueues = new Map();
 
 function defaultStore() {
   return {
@@ -18,6 +20,21 @@ function getStorePath(app) {
   return path.join(app.getPath("userData"), STORE_FILE);
 }
 
+function normalizeStore(parsed) {
+  return {
+    ...defaultStore(),
+    ...(parsed || {}),
+    connections: { ...(parsed?.connections || {}) },
+    connectionMeta: { ...(parsed?.connectionMeta || {}) },
+    aiKeys: { ...(parsed?.aiKeys || {}) },
+    knownHosts: { ...(parsed?.knownHosts || {}) },
+  };
+}
+
+function cloneStore(store) {
+  return normalizeStore(JSON.parse(JSON.stringify(store || defaultStore())));
+}
+
 function ensureSafeStorageAvailable(safeStorage) {
   if (!safeStorage.isEncryptionAvailable()) {
     throw new Error("Secure storage is unavailable on this system");
@@ -26,30 +43,50 @@ function ensureSafeStorageAvailable(safeStorage) {
 
 function readStore(app) {
   const file = getStorePath(app);
+  const cached = storeCache.get(file);
+  if (cached) return cloneStore(cached);
+
   try {
-    if (!fs.existsSync(file)) return defaultStore();
+    if (!fs.existsSync(file)) {
+      const fresh = defaultStore();
+      storeCache.set(file, cloneStore(fresh));
+      return fresh;
+    }
     const raw = fs.readFileSync(file, "utf8");
     const parsed = JSON.parse(raw);
-    return {
-      ...defaultStore(),
-      ...parsed,
-      connections: { ...(parsed?.connections || {}) },
-      connectionMeta: { ...(parsed?.connectionMeta || {}) },
-      aiKeys: { ...(parsed?.aiKeys || {}) },
-      knownHosts: { ...(parsed?.knownHosts || {}) },
-    };
+    const normalized = normalizeStore(parsed);
+    storeCache.set(file, cloneStore(normalized));
+    return normalized;
   } catch {
-    return defaultStore();
+    const fresh = defaultStore();
+    storeCache.set(file, cloneStore(fresh));
+    return fresh;
   }
 }
 
 function writeStore(app, store) {
   const file = getStorePath(app);
   const dir = path.dirname(file);
-  fs.mkdirSync(dir, { recursive: true });
   const tmp = `${file}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(store, null, 2), "utf8");
-  fs.renameSync(tmp, file);
+  const normalized = normalizeStore(store);
+  const serialized = JSON.stringify(normalized, null, 2);
+
+  storeCache.set(file, cloneStore(normalized));
+
+  const previous = storeWriteQueues.get(file) || Promise.resolve();
+  const next = previous
+    .catch(() => {})
+    .then(async () => {
+      await fs.promises.mkdir(dir, { recursive: true });
+      await fs.promises.writeFile(tmp, serialized, "utf8");
+      await fs.promises.rename(tmp, file);
+    })
+    .catch((error) => {
+      console.error("[secure-store] Failed to persist secure store", error);
+      throw error;
+    });
+  storeWriteQueues.set(file, next.catch(() => {}));
+  return next;
 }
 
 function encryptJson(safeStorage, value) {
@@ -74,14 +111,24 @@ function normalizeHost(host) {
   return String(host || "").trim().toLowerCase();
 }
 
+function normalizePort(port) {
+  const parsed = Number(port);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) return 22;
+  return parsed;
+}
+
+function normalizeFingerprint(fingerprint) {
+  return String(fingerprint || "").trim().replace(/^SHA256:/i, "");
+}
+
 function knownHostKey(host, port, algorithm) {
-  return `${normalizeHost(host)}:${Number(port) || 22}:${String(algorithm || "")}`;
+  return `${normalizeHost(host)}:${normalizePort(port)}:${String(algorithm || "")}`;
 }
 
 function saveConnectionSecrets(app, safeStorage, connectionId, secrets) {
   const store = readStore(app);
   store.connections[connectionId] = encryptJson(safeStorage, secrets);
-  writeStore(app, store);
+  return writeStore(app, store);
 }
 
 function loadConnectionSecrets(app, safeStorage, connectionId) {
@@ -93,8 +140,9 @@ function deleteConnectionSecrets(app, connectionId) {
   const store = readStore(app);
   if (store.connections[connectionId]) {
     delete store.connections[connectionId];
-    writeStore(app, store);
+    return writeStore(app, store);
   }
+  return Promise.resolve();
 }
 
 function saveConnectionMetadata(app, connectionId, metadata) {
@@ -103,12 +151,12 @@ function saveConnectionMetadata(app, connectionId, metadata) {
     id: String(metadata.id || connectionId),
     name: String(metadata.name || ""),
     host: String(metadata.host || ""),
-    port: Number(metadata.port) || 22,
+    port: normalizePort(metadata.port),
     username: String(metadata.username || ""),
     authType: metadata.authType === "privateKey" ? "privateKey" : "password",
     updatedAt: Date.now(),
   };
-  writeStore(app, store);
+  return writeStore(app, store);
 }
 
 function loadConnectionMetadata(app, connectionId) {
@@ -120,8 +168,9 @@ function deleteConnectionMetadata(app, connectionId) {
   const store = readStore(app);
   if (store.connectionMeta[connectionId]) {
     delete store.connectionMeta[connectionId];
-    writeStore(app, store);
+    return writeStore(app, store);
   }
+  return Promise.resolve();
 }
 
 function saveAiApiKey(app, safeStorage, provider, apiKey, baseUrl) {
@@ -130,14 +179,13 @@ function saveAiApiKey(app, safeStorage, provider, apiKey, baseUrl) {
   if (!providerKey) throw new Error("Provider is required");
   if (!apiKey) {
     delete store.aiKeys[providerKey];
-    writeStore(app, store);
-    return;
+    return writeStore(app, store);
   }
   store.aiKeys[providerKey] = encryptJson(safeStorage, { 
     apiKey: String(apiKey),
     baseUrl: typeof baseUrl === "string" ? baseUrl : undefined
   });
-  writeStore(app, store);
+  return writeStore(app, store);
 }
 
 function loadAiApiKey(app, safeStorage, provider) {
@@ -187,7 +235,7 @@ function getOrCreateKnownHostMacKey(app, safeStorage) {
   const keyHex = crypto.randomBytes(32).toString("hex");
   const fresh = readStore(app);
   fresh.knownHostMacKey = safeStorage.encryptString(keyHex).toString("base64");
-  writeStore(app, fresh);
+  void writeStore(app, fresh).catch(() => {});
   return keyHex;
 }
 
@@ -216,11 +264,22 @@ function trustKnownHost(app, safeStorage, host, port, algorithm, fingerprint) {
   const macKey = getOrCreateKnownHostMacKey(app, safeStorage);
   // Re-read immediately before writing to avoid clobbering concurrent changes.
   const store = readStore(app);
-  const key = knownHostKey(host, port, algorithm);
+  const normalizedFingerprint = normalizeFingerprint(fingerprint);
+  if (!normalizedFingerprint) {
+    throw new Error("Fingerprint is required");
+  }
+  const key = knownHostKey(host, normalizePort(port), algorithm);
   const trustedAt = Date.now();
-  const mac = computeKnownHostMac(macKey, host, port, algorithm, fingerprint, trustedAt);
-  store.knownHosts[key] = { fingerprint, trustedAt, mac };
-  writeStore(app, store);
+  const mac = computeKnownHostMac(
+    macKey,
+    host,
+    normalizePort(port),
+    algorithm,
+    normalizedFingerprint,
+    trustedAt,
+  );
+  store.knownHosts[key] = { fingerprint: normalizedFingerprint, trustedAt, mac };
+  return writeStore(app, store);
 }
 
 function readKnownHost(app, safeStorage, host, port, algorithm) {
@@ -243,9 +302,9 @@ function readKnownHost(app, safeStorage, host, port, algorithm) {
     const expectedMac = computeKnownHostMac(
       macKey,
       host,
-      port,
+      normalizePort(port),
       algorithm,
-      entry.fingerprint,
+      normalizeFingerprint(entry.fingerprint),
       entry.trustedAt,
     );
     const entryBuf    = Buffer.from(entry.mac,   "hex");
@@ -273,10 +332,19 @@ function readKnownHost(app, safeStorage, host, port, algorithm) {
 
 const SCRYPT_APP_LOCK_OPTS = { N: 16384, r: 8, p: 1 };
 
-function saveAppLockHash(app, safeStorage, password) {
+function scryptAsync(password, salt, keylen, options) {
+  return new Promise((resolve, reject) => {
+    crypto.scrypt(password, salt, keylen, options, (error, derivedKey) => {
+      if (error) reject(error);
+      else resolve(derivedKey);
+    });
+  });
+}
+
+async function saveAppLockHash(app, safeStorage, password) {
   ensureSafeStorageAvailable(safeStorage);
   const saltBuf = crypto.randomBytes(16);
-  const hashBuf = crypto.scryptSync(password, saltBuf, 32, SCRYPT_APP_LOCK_OPTS);
+  const hashBuf = await scryptAsync(password, saltBuf, 32, SCRYPT_APP_LOCK_OPTS);
   const inner = JSON.stringify({
     alg: "scrypt-N16384-r8-p1",
     saltHex: saltBuf.toString("hex"),
@@ -284,10 +352,10 @@ function saveAppLockHash(app, safeStorage, password) {
   });
   const store = readStore(app);
   store.appLockHash = safeStorage.encryptString(inner).toString("base64");
-  writeStore(app, store);
+  await writeStore(app, store);
 }
 
-function verifyAppLockPassword(app, safeStorage, candidatePassword) {
+async function verifyAppLockPassword(app, safeStorage, candidatePassword) {
   const store = readStore(app);
   const encryptedBase64 = store.appLockHash;
   if (!encryptedBase64 || typeof encryptedBase64 !== "string") return false;
@@ -303,7 +371,7 @@ function verifyAppLockPassword(app, safeStorage, candidatePassword) {
       return false;
     const salt = Buffer.from(saltHex, "hex");
     const storedHash = Buffer.from(storedHashHex, "hex");
-    const candidateBuf = crypto.scryptSync(candidatePassword, salt, 32, SCRYPT_APP_LOCK_OPTS);
+    const candidateBuf = await scryptAsync(candidatePassword, salt, 32, SCRYPT_APP_LOCK_OPTS);
     if (candidateBuf.length !== storedHash.length) return false;
     return crypto.timingSafeEqual(candidateBuf, storedHash);
   } catch {
@@ -313,12 +381,24 @@ function verifyAppLockPassword(app, safeStorage, candidatePassword) {
 
 function clearAppLockHash(app) {
   const store = readStore(app);
-  if (!store.appLockHash) return;
+  if (!store.appLockHash) return Promise.resolve();
   delete store.appLockHash;
-  writeStore(app, store);
+  return writeStore(app, store);
+}
+
+function factoryReset(app) {
+  try {
+    const f = getStorePath(app);
+    if (fs.existsSync(f)) {
+      fs.unlinkSync(f);
+    }
+  } catch {
+    // ignore
+  }
 }
 
 module.exports = {
+  factoryReset,
   saveConnectionSecrets,
   loadConnectionSecrets,
   deleteConnectionSecrets,

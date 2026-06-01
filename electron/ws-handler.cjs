@@ -4,6 +4,10 @@ const crypto = require("crypto");
 const { app, safeStorage } = require("electron");
 const secureStore = require("./secure-store.cjs");
 
+const WS_HIGH_WATER_BYTES = 4 * 1024 * 1024;
+const WS_LOW_WATER_BYTES = 512 * 1024;
+const WS_DRAIN_POLL_MS = 25;
+
 function resolveAuthMethod(data) {
   if (data.authMethod === "privateKey") return "privateKey";
   if (!data.authMethod && data.privateKey) return "privateKey";
@@ -16,6 +20,10 @@ function normalizePrivateKey(privateKey) {
     .replace(/\\n/g, "\n")
     .replace(/\r\n/g, "\n")
     .replace(/\r/g, "\n");
+}
+
+function normalizeFingerprint(value) {
+  return String(value || "").trim().replace(/^SHA256:/i, "");
 }
 
 function formatSshError(error, authMethod) {
@@ -60,9 +68,62 @@ function handleWsConnection(ws) {
   let shell = null;
   let client = null;
   let closed = false;
+  const pausedStreams = new Set();
+  let drainTimer = null;
 
   function sendMsg(message) {
     if (ws.readyState === 1) ws.send(JSON.stringify(message));
+  }
+
+  function stopDrainTimerIfIdle() {
+    if (pausedStreams.size > 0 || !drainTimer) return;
+    clearInterval(drainTimer);
+    drainTimer = null;
+  }
+
+  function resumePausedStreams() {
+    if (ws.readyState !== 1) {
+      for (const stream of pausedStreams) {
+        try {
+          stream.resume();
+        } catch {}
+      }
+      pausedStreams.clear();
+      stopDrainTimerIfIdle();
+      return;
+    }
+    if (ws.bufferedAmount > WS_LOW_WATER_BYTES) return;
+    for (const stream of pausedStreams) {
+      try {
+        stream.resume();
+      } catch {}
+    }
+    pausedStreams.clear();
+    stopDrainTimerIfIdle();
+  }
+
+  function pauseUntilSocketDrains(stream) {
+    if (!stream || pausedStreams.has(stream)) return;
+    try {
+      stream.pause();
+      pausedStreams.add(stream);
+    } catch {
+      return;
+    }
+    if (!drainTimer) {
+      drainTimer = setInterval(resumePausedStreams, WS_DRAIN_POLL_MS);
+    }
+  }
+
+  function sendStreamData(stream, data) {
+    if (ws.readyState !== 1) return;
+    ws.send(JSON.stringify({ type: "data", data: data.toString("utf8") }), (error) => {
+      if (error) handleClose();
+      else resumePausedStreams();
+    });
+    if (ws.bufferedAmount > WS_HIGH_WATER_BYTES) {
+      pauseUntilSocketDrains(stream);
+    }
   }
 
   function handleClose() {
@@ -80,6 +141,11 @@ function handleWsConnection(ws) {
       } catch {}
       client = null;
     }
+    if (drainTimer) {
+      clearInterval(drainTimer);
+      drainTimer = null;
+    }
+    pausedStreams.clear();
     sendMsg({ type: "closed" });
   }
 
@@ -185,12 +251,10 @@ function handleWsConnection(ws) {
             }
             shell = stream;
             sendMsg({ type: "connected" });
-            stream.on("data", (data) => sendMsg({ type: "data", data: data.toString("utf8") }));
+            stream.on("data", (data) => sendStreamData(stream, data));
             stream.on("close", () => handleClose());
             if (stream.stderr) {
-              stream.stderr.on("data", (data) =>
-                sendMsg({ type: "data", data: data.toString("utf8") }),
-              );
+              stream.stderr.on("data", (data) => sendStreamData(stream.stderr, data));
             }
           },
         );
@@ -246,7 +310,7 @@ function handleWsConnection(ws) {
               });
               return false;
             }
-            const matches = known.fingerprint === fingerprint;
+            const matches = normalizeFingerprint(known.fingerprint) === normalizeFingerprint(fingerprint);
             if (!matches) {
               console.warn(
                 `[security] SSH host key mismatch blocked for ${connectionMetadata.host}:${connectionMetadata.port}`,

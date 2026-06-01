@@ -18,6 +18,8 @@ interface Props {
 export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQuery = "", conn, history, terminalOutput }: Props) {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const historyRef = useRef(history);
+  const terminalOutputRef = useRef(terminalOutput);
   const bangs = useStore((s) => s.bangs);
   const ai = useStore((s) => s.ai);
   const aiEnabled = ai.autocompleteEnabled; // or isAIConfigured(ai)
@@ -35,6 +37,14 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
       b.description?.toLowerCase().includes(query.replace(/^!/, "").toLowerCase()) ||
       b.command.toLowerCase().includes(query.replace(/^!/, "").toLowerCase())
   );
+
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
+
+  useEffect(() => {
+    terminalOutputRef.current = terminalOutput;
+  }, [terminalOutput]);
 
   useEffect(() => {
     if (open && position && containerRef.current) {
@@ -88,8 +98,8 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
           },
           context: {
             username: conn.username,
-            history: history,
-            terminalOutput: terminalOutput,
+            history: historyRef.current,
+            terminalOutput: terminalOutputRef.current,
           },
         };
 
@@ -97,7 +107,8 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
           const data = await window.electron.aiAutocomplete(payload);
           setAiSuggestions(data.suggestions || []);
         } else {
-          const res = await fetch("/api/ai/autocomplete", {
+          const { apiFetch } = await import("@/lib/api-client");
+          const res = await apiFetch("/api/ai/autocomplete", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

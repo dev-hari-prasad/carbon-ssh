@@ -1,9 +1,7 @@
-/**
- * GitHub Actions CI/CD workflow for Carbon SSH
- */
+# GitHub Actions CI/CD workflow for Carbon SSH
 name: CI
 
-on:
+"on":
   push:
     branches: [main]
   pull_request:

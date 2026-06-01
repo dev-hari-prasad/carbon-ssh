@@ -24,11 +24,12 @@ export function BangForm({
   }, [open, initial]);
 
   function submit() {
-    if (!trigger.trim() || !command.trim()) return;
+    const normalizedCommand = command.replace(/\r\n?/g, "\n").trim();
+    if (!trigger.trim() || !normalizedCommand || /[\n\r]/.test(normalizedCommand)) return;
     actions.upsertBang({
       id: initial?.id,
       trigger: trigger.trim(),
-      command: command.trim(),
+      command: normalizedCommand,
     });
     onClose();
   }
@@ -66,7 +67,7 @@ export function BangForm({
         <Field label="Command">
           <Input
             value={command}
-            onChange={(e) => setCommand(e.target.value)}
+            onChange={(e) => setCommand(e.target.value.replace(/[\r\n]+/g, " "))}
             placeholder="apt update && apt upgrade -y"
           />
         </Field>

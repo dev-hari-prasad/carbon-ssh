@@ -16,8 +16,8 @@ export function KeyboardShortcuts() {
       const shift = e.shiftKey;
       const key = e.key.toLowerCase();
 
-      // Reconnect active session tab only: Mod+R
-      if (mod && !shift && key === "r") {
+      // Reconnect active session tab only: Mod+Shift+R
+      if (mod && shift && key === "r") {
         if (!activeTabId) return;
         e.preventDefault();
         e.stopPropagation();
@@ -34,43 +34,43 @@ export function KeyboardShortcuts() {
         return;
       }
 
-      // Settings Panel: Mod+S
-      if (mod && !shift && key === "s") {
+      // Settings Panel: Mod+Shift+S
+      if (mod && shift && key === "s") {
         e.preventDefault();
         actions.toggleLargeSettings();
         return;
       }
 
-      // View Hosts: Mod+H
-      if (mod && !shift && key === "h") {
+      // View Hosts: Mod+Shift+H
+      if (mod && shift && key === "h") {
         e.preventDefault();
         actions.goHome();
         return;
       }
 
-      // New Session: Mod+T or Quick Switch: Mod+K, Mod+P
-      if (mod && !shift && (key === "t" || key === "k" || key === "p")) {
+      // New Session: Mod+Shift+T or Quick Switch: Mod+Shift+K, Mod+Shift+P
+      if (mod && shift && (key === "t" || key === "k" || key === "p")) {
         e.preventDefault();
         window.dispatchEvent(new CustomEvent("tm:focus-search"));
         return;
       }
 
-      // Toggle Sidebar: Mod+B
-      if (mod && !shift && key === "b") {
+      // Toggle Sidebar: Mod+Shift+B
+      if (mod && shift && key === "b") {
         e.preventDefault();
         actions.toggleSidebarCollapsed();
         return;
       }
 
-      // AI/Bang Palette: Mod+I
-      if (mod && !shift && key === "i") {
+      // AI/Bang Palette: Mod+Shift+I
+      if (mod && shift && key === "i") {
         e.preventDefault();
         window.dispatchEvent(new CustomEvent("tm:open-ai-bang"));
         return;
       }
 
-      // Close Active Session: Mod+W
-      if (mod && key === "w") {
+      // Close Active Session: Mod+Shift+W
+      if (mod && shift && key === "w") {
         if (activeTabId) {
           e.preventDefault();
           actions.closeTab(activeTabId);
@@ -78,15 +78,15 @@ export function KeyboardShortcuts() {
         return;
       }
 
-      // Restore Closed Tab: Mod+Shift+T
-      if (mod && shift && key === "t") {
+      // Restore Closed Tab: Mod+Shift+U
+      if (mod && shift && key === "u") {
         e.preventDefault();
         actions.restoreTab();
         return;
       }
 
-      // Zoom Controls: Mod+Plus, Mod+Minus, Mod+0
-      if (mod && (key === "=" || key === "+" || key === "-" || key === "0")) {
+      // Zoom Controls: Mod+Shift+Plus, Mod+Shift+Minus, Mod+Shift+0
+      if (mod && shift && (key === "=" || key === "+" || key === "-" || key === "0")) {
         e.preventDefault();
         if (key === "=" || key === "+") actions.setZoomLevel(Math.min(135, zoomLevel + 5));
         if (key === "-") actions.setZoomLevel(Math.max(75, zoomLevel - 5));
@@ -94,8 +94,8 @@ export function KeyboardShortcuts() {
         return;
       }
 
-      // New Bang: Mod+Shift+B
-      if (mod && shift && key === "b") {
+      // New Bang: Mod+Shift+E
+      if (mod && shift && key === "e") {
         e.preventDefault();
         actions.openSettingsTab("bangs");
         // Trigger specific event to open the form

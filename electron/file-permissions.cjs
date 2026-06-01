@@ -8,13 +8,12 @@
  */
 const fs = require("fs");
 const path = require("path");
-const { app } = require("electron");
 
-function setRestrictivePermissions(appDataPath) {
+async function setRestrictivePermissions(appDataPath) {
   if (process.platform === "win32") {
     // On Windows, we skip chmod (not meaningful) but ensure the directory exists
     try {
-      fs.mkdirSync(appDataPath, { recursive: true });
+      await fs.promises.mkdir(appDataPath, { recursive: true });
     } catch {
       /* already exists */
     }
@@ -22,38 +21,38 @@ function setRestrictivePermissions(appDataPath) {
   }
 
   try {
-    fs.mkdirSync(appDataPath, { recursive: true, mode: 0o700 });
+    await fs.promises.mkdir(appDataPath, { recursive: true, mode: 0o700 });
   } catch {
     /* already exists */
   }
 
   try {
-    fs.chmodSync(appDataPath, 0o700);
+    await fs.promises.chmod(appDataPath, 0o700);
     console.log(`[security] Set 0o700 permissions on ${appDataPath}`);
 
     // Recursively chmod all files
-    function walk(dir) {
+    async function walk(dir) {
       let entries;
       try {
-        entries = fs.readdirSync(dir, { withFileTypes: true });
+        entries = await fs.promises.readdir(dir, { withFileTypes: true });
       } catch {
         return;
       }
-      for (const entry of entries) {
+      await Promise.all(entries.map(async (entry) => {
         const full = path.join(dir, entry.name);
         try {
           if (entry.isDirectory()) {
-            fs.chmodSync(full, 0o700);
-            walk(full);
+            await fs.promises.chmod(full, 0o700);
+            await walk(full);
           } else {
-            fs.chmodSync(full, 0o600);
+            await fs.promises.chmod(full, 0o600);
           }
         } catch {
           /* best effort */
         }
-      }
+      }));
     }
-    walk(appDataPath);
+    await walk(appDataPath);
   } catch (e) {
     console.warn(`[security] Could not set restrictive permissions: ${e.message}`);
   }

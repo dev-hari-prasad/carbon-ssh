@@ -1,10 +1,8 @@
-/**
- * Tagged releases: signed Windows/macOS artifacts, SBOM, and checksums.
- * Requires repo secrets for signing/notarization (see electron-builder.yml comments).
- */
+# Tagged releases: signed Windows/macOS artifacts, SBOM, and checksums.
+# Requires repo secrets for signing/notarization (see electron-builder.yml comments).
 name: Release
 
-on:
+"on":
   push:
     tags:
       - "v*"
@@ -37,7 +35,7 @@ jobs:
         run: pnpm sbom
 
       - name: Build Electron release (Windows)
-        run: pnpm build:electron-release
+        run: pnpm build:release-win
         env:
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}

@@ -48,6 +48,7 @@ export const BLOCKED_KEYS = new Set(
 );
 
 const IPV4 = /\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d{1,2})\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d{1,2})\b/g;
+const IPV6 = /(?:[a-fA-F0-9]{1,4}:){7}[a-fA-F0-9]{1,4}|(?:[a-fA-F0-9]{1,4}:){1,7}:|(?:[a-fA-F0-9]{1,4}:){1,6}:[a-fA-F0-9]{1,4}|(?:[a-fA-F0-9]{0,4}:){2,7}[a-fA-F0-9]{1,4}/g;
 
 /** Rough Windows path segment removal */
 const WIN_PATH_CHUNK = /\b[A-Za-z]:\\(?:[\w.-]+\\)+[\w.-]+\b/g;
@@ -55,7 +56,7 @@ const WIN_PATH_CHUNK = /\b[A-Za-z]:\\(?:[\w.-]+\\)+[\w.-]+\b/g;
 const NIX_PATH_CHUNK = /\B\/(?:[\w.-]+\/)+[\w.-]+\b/g;
 
 export function scrubFreeformString(input: string, maxLen = 280): string {
-  let s = input.replace(IPV4, "[ip]").replace(WIN_PATH_CHUNK, "[path]").replace(NIX_PATH_CHUNK, "[path]");
+  let s = input.replace(IPV4, "[ip]").replace(IPV6, "[ip]").replace(WIN_PATH_CHUNK, "[path]").replace(NIX_PATH_CHUNK, "[path]");
   s = s.replace(/\S+@\S+/g, "[user@]");
   if (s.length > maxLen) {
     return s.slice(0, maxLen) + "…";
@@ -67,6 +68,7 @@ function isBlockedKey(key: string): boolean {
   const lower = key.toLowerCase();
   if (BLOCKED_KEYS.has(lower)) return true;
   if (lower.includes("password")) return true;
+  if (lower.includes("pwd")) return true;
   if (lower.includes("secret")) return true;
   if (lower.includes("token")) return true;
   if (lower.includes("private")) return true;

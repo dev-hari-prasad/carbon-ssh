@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { getThemeById, THEMES, DEFAULT_THEME_ID } from "@/config/themes";
+import { apiFetch } from "@/lib/api-client";
 import {
   getFontById,
   getTerminalFontById,
@@ -95,12 +96,14 @@ interface State {
   terminalFont: string;
   settingsOpen: boolean;
   largeSettingsOpen: boolean;
+  largeSettingsOnlyTab: "bangs" | null;
   ai: AISettings;
   logRetention: LogRetention;
   settingsTab: "general" | "shortcuts" | "logs" | "bangs" | "display" | "ai" | "security" | "about";
   settingsOpenCount: number;
   selectedHostId: string | null;
   closedTabs: string[];
+  largeSettingsOnlyTabVal?: null; // placeholder for alignment
   zoomLevel: number;
   autoOpenTabs: boolean;
   terminalCursorStyle: string;
@@ -139,6 +142,7 @@ let state: State = {
   terminalFont: DEFAULT_TERMINAL_FONT_ID,
   settingsOpen: false,
   largeSettingsOpen: false,
+  largeSettingsOnlyTab: null,
   ai: { ...DEFAULT_AI_SETTINGS },
   logRetention: DEFAULT_LOG_RETENTION,
   settingsTab: "display",
@@ -736,10 +740,34 @@ export const actions = {
   },
 
   toggleLargeSettings() {
-    setState((s) => ({
-      largeSettingsOpen: !s.largeSettingsOpen,
-      settingsOpen: s.largeSettingsOpen ? s.settingsOpen : false,
-    }));
+    setState((s) => {
+      if (s.largeSettingsOpen && s.largeSettingsOnlyTab === "bangs") {
+        return {
+          largeSettingsOnlyTab: null,
+        };
+      }
+      return {
+        largeSettingsOpen: !s.largeSettingsOpen,
+        settingsOpen: s.largeSettingsOpen ? s.settingsOpen : false,
+        largeSettingsOnlyTab: null,
+      };
+    });
+  },
+
+  openLargeSettings(tab?: "bangs" | null, onlyThisTab?: boolean) {
+    setState((s) => {
+      if (s.largeSettingsOpen && s.largeSettingsOnlyTab === "bangs" && onlyThisTab) {
+        return {
+          largeSettingsOpen: false,
+          largeSettingsOnlyTab: null,
+        };
+      }
+      return {
+        largeSettingsOpen: true,
+        settingsOpen: false,
+        largeSettingsOnlyTab: onlyThisTab ? "bangs" : null,
+      };
+    });
   },
 
   setSettingsOpen(open: boolean) {
@@ -776,7 +804,7 @@ export const actions = {
 
   async initializeLogs() {
     try {
-      const res = await fetch(`/api/logs?retention=${state.logRetention}`);
+      const res = await apiFetch(`/api/logs?retention=${state.logRetention}`);
       const data = await res.json();
       if (data.logs) {
         setState({ logs: data.logs });
@@ -795,7 +823,7 @@ export const actions = {
     const entry: LogEntry = { id: uid(), ts: now, level, source, message };
 
     // Save to server SQLite
-    fetch("/api/logs", {
+    apiFetch("/api/logs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(entry),
@@ -803,12 +831,12 @@ export const actions = {
 
     setState((s) => {
       const merged = [...s.logs, entry].filter((l) => l.ts >= min);
-      return { logs: merged.slice(-499) };
+      return { logs: merged.slice(-500) };
     });
   },
 
   clearLogs() {
-    fetch("/api/logs", { method: "DELETE" }).catch((e) =>
+    apiFetch("/api/logs", { method: "DELETE" }).catch((e) =>
       console.error("Failed to clear logs:", e),
     );
     setState({ logs: [] });
@@ -825,13 +853,14 @@ export const actions = {
 
   upsertBang(input: Omit<Bang, "id" | "createdAt"> & { id?: string }) {
     ensureInit();
-    const trigger = input.trigger.replace(/^!/, "").trim();
-    if (!trigger || !input.command.trim()) return;
+    const trigger = input.trigger.replace(/^!/, "").replace(/[^a-zA-Z0-9_-]/g, "").trim();
+    const command = input.command.replace(/\r\n?/g, "\n").trim();
+    if (!trigger || !command || /[\n\r]/.test(command)) return;
     const existing = input.id ? state.bangs.find((b) => b.id === input.id) : null;
     let next: Bang[];
     if (existing) {
       next = state.bangs.map((b) =>
-        b.id === existing.id ? { ...existing, ...input, trigger, id: existing.id } : b,
+        b.id === existing.id ? { ...existing, ...input, trigger, command, id: existing.id } : b,
       );
     } else {
       next = [
@@ -839,7 +868,7 @@ export const actions = {
         {
           id: uid(),
           trigger,
-          command: input.command,
+          command,
           description: input.description,
           createdAt: Date.now(),
         },
@@ -1042,12 +1071,16 @@ export const actions = {
   async fullFactoryResetAndReload() {
     if (typeof window === "undefined") return;
     try {
-      await fetch("/api/logs", { method: "DELETE" }).catch(() => {});
+      await apiFetch("/api/logs", { method: "DELETE" }).catch(() => {});
     } catch {
       /* ignore */
     }
     try {
       await clearStoredAppPassword();
+      const electron = (window as any).electron;
+      if (electron?.factoryReset) {
+        await electron.factoryReset();
+      }
     } catch {
       /* ignore */
     }

@@ -45,7 +45,7 @@ asarUnpack:
 
 win:
   target:
-    - nsis
+    - dir
   icon: build/icon.png
   # Code signing: supply WIN_CSC_LINK (base64 PKCS#12) and WIN_CSC_KEY_PASSWORD via CI — do not commit certs.
 
@@ -67,8 +67,5 @@ linux:
   icon: build/icon.png
   category: Development
 
-nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
-  createDesktopShortcut: true
-  createStartMenuShortcut: true
+# Inno Setup handles installer creation — see installer/carbon-ssh.iss
+# Build with:  pnpm build:release-win

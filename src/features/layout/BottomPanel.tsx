@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type UIEvent } from "react";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -13,13 +13,12 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { ExclamationTriangleIcon, TrashIcon as TrashIconSolid } from "@heroicons/react/24/solid";
-import { GitHubDark } from "@ridemountainpig/svgl-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { HostIcon } from "@/components/HostIcon";
 import { Tooltip } from "@/components/Tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { actions, useStore } from "@/lib/store";
-import type { Connection } from "@/lib/types";
+import type { Connection, LogEntry } from "@/lib/types";
 
 const LOGS_HEIGHT_STORAGE_KEY = "carbon.logs-panel-height.v1";
 const DEFAULT_LOGS_BODY_PX = 160;
@@ -77,6 +76,8 @@ const levelColor = {
 const LOG_ROW_GRID_TEMPLATE =
   "minmax(4.875rem,5.375rem) minmax(2.625rem,3.25rem) minmax(6.75rem,9.25rem) minmax(4.25rem,5.75rem) minmax(9rem,12.5rem) minmax(0,1fr) minmax(4.5rem,6rem)";
 const LOG_ROW_CELL = "min-w-0 pr-4 sm:pr-6 last:pr-0";
+const LOG_ROW_HEIGHT_PX = 30;
+const LOG_ROW_OVERSCAN = 6;
 
 function logMatchesSearch(log: { source: string; level: string; message: string }, raw: string) {
   const tokens = raw.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -415,28 +416,75 @@ function ClearLogsButton() {
   );
 }
 
-function GithubLink() {
-  return (
-    <Tooltip label="Star or contribute on GitHub" side="top" delay={400}>
-      <a
-        href="https://github.com/CarbonSSH/carbon"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center justify-center w-6 h-6 rounded-md text-fg-dim hover:text-fg hover:bg-[var(--menu-hover-bg)]/50 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-border"
-      >
-        <GitHubDark className="w-3.5 h-3.5" fill="currentColor" />
-      </a>
-    </Tooltip>
-  );
-}
+export const BottomPanel = memo(BottomPanelComponent);
 
-export function BottomPanel() {
+type PreparedLogRow = {
+  log: LogEntry;
+  rowConn: Connection | null;
+  timeStr: string;
+  actionKind: string;
+  sessionAddr: string;
+  cmdDetail: string;
+};
+
+const LogRow = memo(function LogRow({ row, top }: { row: PreparedLogRow; top: number }) {
+  const { log, rowConn, timeStr, actionKind, sessionAddr, cmdDetail } = row;
+  return (
+    <div
+      className="absolute left-0 right-0 grid items-start gap-x-4 py-1 border-b border-border/40 text-[11.75px] sm:text-[12px] leading-snug"
+      style={{
+        gridTemplateColumns: LOG_ROW_GRID_TEMPLATE,
+        height: LOG_ROW_HEIGHT_PX,
+        transform: `translateY(${top}px)`,
+      }}
+    >
+      <div className={`${LOG_ROW_CELL} text-fg-dim whitespace-nowrap font-mono tabular-nums`}>
+        {timeStr}
+      </div>
+      <div className={`${LOG_ROW_CELL} uppercase text-xxs font-sans tracking-wide ${levelColor[log.level]}`}>
+        {log.level}
+      </div>
+      <div className={`${LOG_ROW_CELL} text-fg-dim inline-flex items-center gap-1.5`}>
+        <span className="shrink-0">
+          <LogSourceGlyph source={log.source} conn={rowConn} />
+        </span>
+        <span className="truncate font-mono">{log.source}</span>
+      </div>
+      <div className={`${LOG_ROW_CELL} text-fg-muted uppercase text-xxs font-sans tracking-wide truncate font-semibold`}>
+        {actionKind}
+      </div>
+      <div
+        title={sessionAddr || undefined}
+        className={`${LOG_ROW_CELL} text-fg-dim font-mono truncate block`}
+      >
+        {sessionAddr || (
+          <span className="text-fg-muted/55 select-none" aria-hidden="true">
+            â€”
+          </span>
+        )}
+      </div>
+      <div className={`${LOG_ROW_CELL} min-w-0 text-fg font-mono text-[11.5px] sm:text-[12px] truncate`}>
+        {cmdDetail}
+      </div>
+      <div className="min-w-0 text-fg-dim font-mono truncate uppercase text-xxs tracking-wider">
+        {rowConn?.username || (
+          <span className="text-fg-muted/55 select-none" aria-hidden="true">
+            â€”
+          </span>
+        )}
+      </div>
+    </div>
+  );
+});
+
+function BottomPanelComponent() {
   const reduceMotion = useReducedMotion();
   const open = useStore((s) => s.bottomOpen);
   const logs = useStore((s) => s.logs);
   const connections = useStore((s) => s.connections);
   const [sourceFilter, setSourceFilter] = useState<string>("__all__");
   const [logSearchQuery, setLogSearchQuery] = useState("");
+  const [logScrollTop, setLogScrollTop] = useState(0);
   const [logsBodyPx, setLogsBodyPx] = useState(DEFAULT_LOGS_BODY_PX);
   const [viewportMaxLogs, setViewportMaxLogs] = useState(() =>
     typeof window !== "undefined"
@@ -533,17 +581,56 @@ export function BottomPanel() {
     sourceFilter === "__all__" || sources.includes(sourceFilter) ? sourceFilter : "__all__";
 
   const sourceFilteredLogs = useMemo(
-    () => (resolvedFilter === "__all__" ? logs : logs.filter((l) => l.source === resolvedFilter)),
-    [logs, resolvedFilter],
+    () => {
+      if (!open) return logs;
+      return resolvedFilter === "__all__" ? logs : logs.filter((l) => l.source === resolvedFilter);
+    },
+    [logs, open, resolvedFilter],
   );
 
   const filteredLogs = useMemo(
-    () =>
-      SHOW_LOGS_TOOLBAR_SEARCH
+    () => {
+      if (!open) return sourceFilteredLogs;
+      return SHOW_LOGS_TOOLBAR_SEARCH
         ? sourceFilteredLogs.filter((l) => logMatchesSearch(l, logSearchQuery))
-        : sourceFilteredLogs,
-    [sourceFilteredLogs, logSearchQuery],
+        : sourceFilteredLogs;
+    },
+    [sourceFilteredLogs, logSearchQuery, open],
   );
+
+  const connectionBySource = useMemo(() => {
+    const map = new Map<string, Connection>();
+    for (const connection of connections) {
+      map.set(connection.name, connection);
+    }
+    return map;
+  }, [connections]);
+
+  const preparedRows = useMemo<PreparedLogRow[]>(() => {
+    if (!open) return [];
+    return [...filteredLogs].reverse().map((log) => {
+      const { kind, target, detail } = parseLogCells(log.message);
+      return {
+        log,
+        rowConn: connectionBySource.get(log.source) ?? null,
+        timeStr: new Date(log.ts).toLocaleTimeString([], { hour12: false }),
+        actionKind: kind,
+        sessionAddr: target,
+        cmdDetail: detail,
+      };
+    });
+  }, [connectionBySource, filteredLogs, open]);
+
+  const virtualStart = Math.max(0, Math.floor(logScrollTop / LOG_ROW_HEIGHT_PX) - LOG_ROW_OVERSCAN);
+  const virtualEnd = Math.min(
+    preparedRows.length,
+    Math.ceil((logScrollTop + logsBodyPx) / LOG_ROW_HEIGHT_PX) + LOG_ROW_OVERSCAN,
+  );
+  const visibleRows = preparedRows.slice(virtualStart, virtualEnd);
+
+  const handleLogsScroll = useCallback((event: UIEvent<HTMLDivElement>) => {
+    setLogScrollTop(event.currentTarget.scrollTop);
+  }, []);
 
   const showTotalInHeader =
     resolvedFilter !== "__all__" || (SHOW_LOGS_TOOLBAR_SEARCH && logSearchQuery.trim().length > 0);
@@ -577,9 +664,7 @@ export function BottomPanel() {
               {showTotalInHeader ? `/${logs.length > 99 ? "99+" : logs.length}` : null})
             </span>
           </button>
-          <div className="flex items-center gap-1.5 border-l border-border/60 pl-2 pr-1 h-full bg-bg-panel shrink-0">
-            <GithubLink />
-          </div>
+
         </>
         ) : (
           <>
@@ -632,7 +717,6 @@ export function BottomPanel() {
                 onChange={setSourceFilter}
               />
               <ClearLogsButton />
-              <GithubLink />
             </div>
           </>
         )}
@@ -700,6 +784,7 @@ export function BottomPanel() {
               role="region"
               aria-label="Application logs"
               className="min-h-0 flex-1 flex flex-col overflow-y-auto px-3 pb-2 font-mono text-[12px] leading-relaxed bg-bg box-border"
+              onScroll={handleLogsScroll}
             >
               {logs.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center min-h-[10rem] w-full px-4 py-8 text-center gap-3">
@@ -736,7 +821,22 @@ export function BottomPanel() {
                     <div className={LOG_ROW_CELL}>Details</div>
                     <div className="min-w-0">User</div>
                   </div>
-                  {[...filteredLogs].reverse().map((l) => {
+                  <div
+                    className="relative min-w-0"
+                    style={{ height: preparedRows.length * LOG_ROW_HEIGHT_PX }}
+                  >
+                    {visibleRows.map((row, offset) => {
+                      const index = virtualStart + offset;
+                      return (
+                        <LogRow
+                          key={row.log.id}
+                          row={row}
+                          top={index * LOG_ROW_HEIGHT_PX}
+                        />
+                      );
+                    })}
+                  </div>
+                  {false && [...filteredLogs].reverse().map((l) => {
                     const rowConn = connectionForSource(connections, l.source);
                     const timeStr = new Date(l.ts).toLocaleTimeString([], { hour12: false });
                     const {

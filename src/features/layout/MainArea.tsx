@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ArrowDownOnSquareIcon,
   ArrowsPointingOutIcon,
@@ -194,7 +194,7 @@ function SplitPane({
   );
 }
 
-export function MainArea() {
+function MainAreaComponent() {
   const tabs = useStore((s) => s.tabs);
   const activeTabId = useStore((s) => s.activeTabId);
   const connections = useStore((s) => s.connections);
@@ -382,6 +382,8 @@ export function MainArea() {
     </div>
   );
 }
+
+export const MainArea = memo(MainAreaComponent);
 
 function AddHostsToGroupPopover({
   group,

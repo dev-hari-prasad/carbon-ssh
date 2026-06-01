@@ -196,17 +196,17 @@ export function UnlockVault() {
 
   if (isFirstTime) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-bg text-fg">
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-bg text-fg pb-12">
         <div className="max-w-2xl w-full p-8 px-10 border border-border bg-panel flex rounded-xl space-x-8">
           {/* Left Side */}
           <div className="flex-1 flex flex-col justify-center space-y-6 shrink-0">
             <div className="space-y-4">
-              <div className="h-16 w-16 rounded-full bg-primary/5 flex items-center justify-center">
+              <div className="h-16 w-16 rounded-full bg-primary/5 flex items-center justify-center mb-2">
                 <LockClosedIcon className="h-10 w-10 text-primary" />
               </div>
               <div className="space-y-2 text-left">
-                <h1 className="text-3xl font-bold tracking-tight">Lock Carbon</h1>
-                <p className="text-muted-foreground text-sm  leading-tight">
+                <h1 className="text-2xl font-bold tracking-tight">Lock Carbon</h1>
+                <p className="text-muted-foreground text-sm leading-tight">
                   <b>Carbon locks your data.</b>
                   <br /> Choose how you want to unlock it.
                 </p>
@@ -355,12 +355,12 @@ export function UnlockVault() {
     typeof window !== "undefined" && window.localStorage.getItem("ssh.vault-setup") === "password";
 
   return (
-    <div className="h-screen w-screen flex flex-col items-center justify-center bg-bg text-fg">
+    <div className="h-screen w-screen flex flex-col items-center justify-center bg-bg text-fg pb-12">
       <div className="max-w-2xl w-full p-8 px-10 border border-border bg-panel flex rounded-xl space-x-8">
         {/* Left Side */}
         <div className="flex-1 flex flex-col justify-center space-y-6 shrink-0 relative">
           <div className="space-y-4">
-            <div className="h-16 w-16 rounded-full bg-primary/5 flex items-center justify-center">
+            <div className="h-16 w-16 rounded-full bg-primary/5 flex items-center justify-center mb-2">
               {isPasswordMode ? (
                 <KeyIcon className="h-10 w-10 text-primary" />
               ) : (
@@ -368,10 +368,13 @@ export function UnlockVault() {
               )}
             </div>
 
-            <div className="space-y-2 text-left">
-              <h1 className="text-3xl font-bold tracking-tight">
-                Let's decrypt <br /> Carbon!
+            <div className="space-y-1 text-left">
+              <h1 className="text-[26px] font-bold tracking-tight whitespace-nowrap">
+                Decrypt Carbon!
               </h1>
+              <p className="text-[13px] text-muted-foreground leading-normal mt-0.5">
+                {isPasswordMode ? "Use password to unlock Carbon" : "Use your passkey to unlock Carbon"}
+              </p>
             </div>
           </div>
         </div>
@@ -390,11 +393,6 @@ export function UnlockVault() {
             <div className="space-y-4 w-full">
               {isPasswordMode ? (
                 <div className="space-y-4 text-left">
-                  <div className="space-y-2 text-center mb-4">
-                    <p className="text-xs font-medium text-fg text-center border-1 border-dashed rounded-md p-2">
-                      Use password to unlock Carbon
-                    </p>
-                  </div>
                   <div className="space-y-2">
                     <div className="relative">
                       <Input
@@ -443,9 +441,6 @@ export function UnlockVault() {
                 </div>
               ) : (
                 <div className="flex flex-col gap-4">
-                  <p className="text-xs font-medium text-fg text-center border-1 border-dashed rounded-md p-2">
-                    Use your passkey to unlock Carbon
-                  </p>
                   <Button
                     onClick={attemptBiometricUnlock}
                     disabled={loading}

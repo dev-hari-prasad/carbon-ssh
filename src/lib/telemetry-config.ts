@@ -5,10 +5,10 @@
  */
 
 export const POSTHOG_API_KEY =
-  typeof process !== "undefined" ? (process.env.NEXT_PUBLIC_POSTHOG_KEY ?? "").trim() : "";
+  typeof process !== "undefined" ? (process.env.POSTHOG_API_KEY_PUBLIC ?? "").trim() : "";
 
 /** PostHog ingest host (EU: https://eu.i.posthog.com). Empty uses SDK default for your region/project. */
-export const POSTHOG_HOST_RAW = (process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "").trim();
+export const POSTHOG_HOST_RAW = (process.env.POSTHOG_HOST_PUBLIC ?? "").trim();
 
 export const APP_VERSION_PUBLIC =
   typeof process !== "undefined" ? process.env.NEXT_PUBLIC_APP_VERSION || "unknown" : "unknown";

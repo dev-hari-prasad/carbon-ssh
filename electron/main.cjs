@@ -22,9 +22,92 @@ if (process.platform === "win32") {
 const crypto = require("crypto");
 const secureStore = require("./secure-store.cjs");
 
+const HOP_BY_HOP_REQUEST_HEADERS = new Set([
+  "connection",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "te",
+  "trailers",
+  "transfer-encoding",
+  "upgrade",
+]);
+
+const BLOCKED_PROXY_REQUEST_HEADERS = new Set([
+  "x-carbon-internal-ai",
+  "x-forwarded-for",
+  "x-forwarded-host",
+  "x-forwarded-proto",
+  "x-original-url",
+  "x-rewrite-url",
+  "x-real-ip",
+]);
+
+const MIN_UI_ZOOM_FACTOR = 0.75;
+const MAX_UI_ZOOM_FACTOR = 1.35;
+const MIN_VISUAL_ZOOM_LEVEL = 1;
+const MAX_VISUAL_ZOOM_LEVEL = 3;
+const APP_LOCK_VERIFY_WINDOW_MS = 10 * 60 * 1000;
+const APP_LOCK_VERIFY_BASE_DELAY_MS = 250;
+const APP_LOCK_VERIFY_MAX_DELAY_MS = 8000;
+
 function ensureMainSender(event) {
   if (event.sender.id !== mainWindow?.webContents?.id) {
     throw new Error("Unauthorized sender");
+  }
+}
+
+function internalApiHeaders(extraHeaders = {}) {
+  return wsToken
+    ? { "x-api-token": wsToken, ...extraHeaders }
+    : { ...extraHeaders };
+}
+
+function sanitizeProxyRequestHeaders(rawHeaders) {
+  const sanitized = {};
+  for (const [name, value] of Object.entries(rawHeaders || {})) {
+    const key = String(name).toLowerCase();
+    if (HOP_BY_HOP_REQUEST_HEADERS.has(key)) continue;
+    if (BLOCKED_PROXY_REQUEST_HEADERS.has(key)) continue;
+    sanitized[key] = value;
+  }
+  return sanitized;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
+}
+
+function clampNumber(value, min, max) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function toSafePort(value) {
+  const port = Number(value);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return null;
+  return port;
+}
+
+function normalizeKnownHostFingerprint(raw) {
+  return String(raw || "").trim().replace(/^SHA256:/i, "");
+}
+
+function allowedAppOrigins() {
+  const ports = new Set([DEFAULT_PORT, appEntryPort].filter((p) => Number.isInteger(p) && p > 0));
+  const origins = new Set();
+  for (const port of ports) {
+    origins.add(`http://localhost:${port}`);
+    origins.add(`http://127.0.0.1:${port}`);
+  }
+  return origins;
+}
+
+function isAllowedAppNavigation(navigationUrl) {
+  try {
+    const parsed = new URL(navigationUrl);
+    return allowedAppOrigins().has(parsed.origin);
+  } catch {
+    return false;
   }
 }
 
@@ -32,7 +115,7 @@ async function postLocalJson(pathname, body, extraHeaders = {}) {
   const port = appEntryPort || DEFAULT_PORT;
   const response = await fetch(`http://127.0.0.1:${port}${pathname}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...extraHeaders },
+    headers: internalApiHeaders({ "Content-Type": "application/json", ...extraHeaders }),
     body: JSON.stringify(body),
   });
   const text = await response.text();
@@ -49,16 +132,29 @@ async function postLocalJson(pathname, body, extraHeaders = {}) {
 }
 
 ipcMain.on("set-zoom-factor", (event, factor) => {
+  ensureMainSender(event);
+  const normalized = Number(factor);
+  if (!Number.isFinite(normalized)) {
+    return;
+  }
   const webContents = event.sender;
   if (webContents) {
-    webContents.setZoomFactor(factor);
+    webContents.setZoomFactor(clampNumber(normalized, MIN_UI_ZOOM_FACTOR, MAX_UI_ZOOM_FACTOR));
   }
 });
 
 ipcMain.on("set-visual-zoom-limits", (event, min, max) => {
+  ensureMainSender(event);
+  const minNumber = Number(min);
+  const maxNumber = Number(max);
+  if (!Number.isFinite(minNumber) || !Number.isFinite(maxNumber)) {
+    return;
+  }
+  const safeMin = clampNumber(Math.min(minNumber, maxNumber), MIN_VISUAL_ZOOM_LEVEL, MAX_VISUAL_ZOOM_LEVEL);
+  const safeMax = clampNumber(Math.max(minNumber, maxNumber), MIN_VISUAL_ZOOM_LEVEL, MAX_VISUAL_ZOOM_LEVEL);
   const webContents = event.sender;
   if (webContents) {
-    webContents.setVisualZoomLevelLimits(min, max);
+    webContents.setVisualZoomLevelLimits(safeMin, safeMax);
   }
 });
 
@@ -118,8 +214,32 @@ ipcMain.handle("encrypt-string", (event, text) => {
 });
 
 const APP_LOCK_PASSWORD_MAX_CHARS = 1024;
+let appLockVerifyState = {
+  failures: 0,
+  lastFailureAt: 0,
+  blockedUntil: 0,
+};
 
-ipcMain.handle("set-app-lock-password", (event, password) => {
+function resetAppLockVerifyState() {
+  appLockVerifyState = { failures: 0, lastFailureAt: 0, blockedUntil: 0 };
+}
+
+function noteAppLockFailureAndGetDelayMs() {
+  const now = Date.now();
+  if (now - appLockVerifyState.lastFailureAt > APP_LOCK_VERIFY_WINDOW_MS) {
+    appLockVerifyState.failures = 0;
+  }
+  appLockVerifyState.failures += 1;
+  appLockVerifyState.lastFailureAt = now;
+  const delay = Math.min(
+    APP_LOCK_VERIFY_MAX_DELAY_MS,
+    APP_LOCK_VERIFY_BASE_DELAY_MS * 2 ** Math.max(0, appLockVerifyState.failures - 1),
+  );
+  appLockVerifyState.blockedUntil = now + delay;
+  return delay;
+}
+
+ipcMain.handle("set-app-lock-password", async (event, password) => {
   ensureMainSender(event);
   if (typeof password !== "string") {
     throw new Error("Invalid input: password must be a string");
@@ -127,20 +247,43 @@ ipcMain.handle("set-app-lock-password", (event, password) => {
   if (password.length > APP_LOCK_PASSWORD_MAX_CHARS) {
     throw new Error("Password exceeds maximum allowed length");
   }
-  secureStore.saveAppLockHash(app, safeStorage, password);
+  await secureStore.saveAppLockHash(app, safeStorage, password);
+  resetAppLockVerifyState();
   return true;
 });
 
-ipcMain.handle("verify-app-lock-password", (event, candidate) => {
+ipcMain.handle("verify-app-lock-password", async (event, candidate) => {
   ensureMainSender(event);
   if (typeof candidate !== "string") return false;
   if (candidate.length > APP_LOCK_PASSWORD_MAX_CHARS) return false;
-  return secureStore.verifyAppLockPassword(app, safeStorage, candidate);
+  const now = Date.now();
+  if (appLockVerifyState.blockedUntil > now) {
+    await sleep(appLockVerifyState.blockedUntil - now);
+    return false;
+  }
+
+  const ok = await secureStore.verifyAppLockPassword(app, safeStorage, candidate);
+  if (ok) {
+    resetAppLockVerifyState();
+    return true;
+  }
+
+  const delayMs = noteAppLockFailureAndGetDelayMs();
+  await sleep(delayMs);
+  return false;
 });
 
-ipcMain.handle("clear-app-lock-password", (event) => {
+ipcMain.handle("factory-reset", async (event) => {
   ensureMainSender(event);
-  secureStore.clearAppLockHash(app);
+  secureStore.factoryReset(app);
+  resetAppLockVerifyState();
+  return true;
+});
+
+ipcMain.handle("clear-app-lock-password", async (event) => {
+  ensureMainSender(event);
+  await secureStore.clearAppLockHash(app);
+  resetAppLockVerifyState();
   return true;
 });
 
@@ -171,7 +314,7 @@ ipcMain.handle("get-ws-token", (event) => {
   return wsToken;
 });
 
-ipcMain.handle("save-connection-secret", (event, connectionId, secrets) => {
+ipcMain.handle("save-connection-secret", async (event, connectionId, secrets) => {
   ensureMainSender(event);
   if (typeof connectionId !== "string" || !connectionId.trim()) {
     throw new Error("Invalid connectionId");
@@ -185,7 +328,7 @@ ipcMain.handle("save-connection-secret", (event, connectionId, secrets) => {
     privateKey: typeof secrets.privateKey === "string" ? secrets.privateKey : undefined,
     passphrase: typeof secrets.passphrase === "string" ? secrets.passphrase : undefined,
   };
-  secureStore.saveConnectionSecrets(app, safeStorage, connectionId, payload);
+  await secureStore.saveConnectionSecrets(app, safeStorage, connectionId, payload);
   return true;
 });
 
@@ -197,16 +340,16 @@ ipcMain.handle("load-connection-secret", (event, connectionId) => {
   return secureStore.loadConnectionSecrets(app, safeStorage, connectionId);
 });
 
-ipcMain.handle("delete-connection-secret", (event, connectionId) => {
+ipcMain.handle("delete-connection-secret", async (event, connectionId) => {
   ensureMainSender(event);
   if (typeof connectionId !== "string" || !connectionId.trim()) {
     throw new Error("Invalid connectionId");
   }
-  secureStore.deleteConnectionSecrets(app, connectionId);
+  await secureStore.deleteConnectionSecrets(app, connectionId);
   return true;
 });
 
-ipcMain.handle("save-connection-metadata", (event, connectionId, metadata) => {
+ipcMain.handle("save-connection-metadata", async (event, connectionId, metadata) => {
   ensureMainSender(event);
   if (typeof connectionId !== "string" || !connectionId.trim()) {
     throw new Error("Invalid connectionId");
@@ -214,20 +357,20 @@ ipcMain.handle("save-connection-metadata", (event, connectionId, metadata) => {
   if (!metadata || typeof metadata !== "object") {
     throw new Error("Invalid metadata payload");
   }
-  secureStore.saveConnectionMetadata(app, connectionId, metadata);
+  await secureStore.saveConnectionMetadata(app, connectionId, metadata);
   return true;
 });
 
-ipcMain.handle("delete-connection-metadata", (event, connectionId) => {
+ipcMain.handle("delete-connection-metadata", async (event, connectionId) => {
   ensureMainSender(event);
   if (typeof connectionId !== "string" || !connectionId.trim()) {
     throw new Error("Invalid connectionId");
   }
-  secureStore.deleteConnectionMetadata(app, connectionId);
+  await secureStore.deleteConnectionMetadata(app, connectionId);
   return true;
 });
 
-ipcMain.handle("save-ai-api-key", (event, provider, apiKey, baseUrl) => {
+ipcMain.handle("save-ai-api-key", async (event, provider, apiKey, baseUrl) => {
   ensureMainSender(event);
   if (typeof provider !== "string" || !provider.trim()) {
     throw new Error("Invalid provider");
@@ -235,7 +378,7 @@ ipcMain.handle("save-ai-api-key", (event, provider, apiKey, baseUrl) => {
   if (typeof apiKey !== "string") {
     throw new Error("Invalid apiKey");
   }
-  secureStore.saveAiApiKey(app, safeStorage, provider, apiKey, baseUrl);
+  await secureStore.saveAiApiKey(app, safeStorage, provider, apiKey, baseUrl);
   return true;
 });
 
@@ -247,19 +390,29 @@ ipcMain.handle("has-ai-api-key", (event, provider) => {
   return secureStore.hasAiApiKey(app, safeStorage, provider);
 });
 
-ipcMain.handle("trust-known-host", (event, payload) => {
+ipcMain.handle("trust-known-host", async (event, payload) => {
   ensureMainSender(event);
   const host = payload?.host;
-  const port = payload?.port;
+  const safePort = toSafePort(payload?.port);
   const algorithm = payload?.algorithm;
-  const fingerprint = payload?.fingerprint;
+  const fingerprint = normalizeKnownHostFingerprint(payload?.fingerprint);
   if (typeof host !== "string" || !host.trim()) {
     throw new Error("Invalid host");
+  }
+  if (!safePort) {
+    throw new Error("Invalid port");
   }
   if (typeof fingerprint !== "string" || !fingerprint.trim()) {
     throw new Error("Invalid fingerprint");
   }
-  secureStore.trustKnownHost(app, safeStorage, host, Number(port) || 22, String(algorithm || "default"), fingerprint);
+  await secureStore.trustKnownHost(
+    app,
+    safeStorage,
+    host,
+    safePort,
+    String(algorithm || "default"),
+    fingerprint,
+  );
   return true;
 });
 
@@ -278,7 +431,7 @@ ipcMain.handle("ai-autocomplete", async (event, payload) => {
       ...(baseUrl ? { baseUrl } : {}) // Override renderer baseUrl if we safely stored one
     },
   };
-  return postLocalJson("/api/ai/autocomplete", body, { "x-carbon-internal-ai": "1" });
+  return postLocalJson("/api/ai/autocomplete", body);
 });
 
 ipcMain.handle("ai-test-connection", async (event, payload) => {
@@ -295,7 +448,6 @@ ipcMain.handle("ai-test-connection", async (event, payload) => {
       apiKey,
       ...(baseUrl ? { baseUrl } : {}) // Override renderer baseUrl if we safely stored one
     },
-    { "x-carbon-internal-ai": "1" },
   );
 });
 const { createServer } = require("http");
@@ -319,7 +471,7 @@ if (!isDev) {
 
 let mainWindow = null;
 let nextProcess = null;
-let wsToken = null; // WebSocket auth token for renderer-to-main auth
+let wsToken = process.env.INTERNAL_API_TOKEN || null; // Shared internal API token (dev may inject via env)
 let appEntryPort = DEFAULT_PORT;
 
 function renderSplashHtml() {
@@ -482,10 +634,9 @@ function createWindow() {
     return { action: "deny" };
   });
 
-  // Restrict navigation to localhost only
+  // Restrict navigation to the app's exact local origin.
   mainWindow.webContents.on("will-navigate", (event, navigationUrl) => {
-    const parsed = new URL(navigationUrl);
-    if (parsed.hostname !== "localhost" && parsed.hostname !== "127.0.0.1") {
+    if (!isAllowedAppNavigation(navigationUrl)) {
       console.warn(`[security] Blocked navigation to: ${navigationUrl}`);
       event.preventDefault();
     }
@@ -586,6 +737,9 @@ async function startProductionServer(preferredPort) {
   const nextPort = await getFreePort();
   const logs = [];
 
+  // Generate WebSocket auth token early to pass to Next.js
+  const wsTokenLocal = crypto.randomBytes(32).toString("hex");
+
   const addLog = (msg) => {
     const line = msg.toString().trim();
     if (!line) return;
@@ -603,6 +757,8 @@ async function startProductionServer(preferredPort) {
           PORT: nextPort.toString(),
           HOSTNAME: "127.0.0.1",
           NODE_ENV: "production",
+          INTERNAL_API_TOKEN: wsTokenLocal,
+          DB_PATH: path.join(app.getPath("userData"), "carbon-database.sqlite"),
         },
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,
@@ -651,18 +807,17 @@ async function startProductionServer(preferredPort) {
             const { WebSocketServer } = require("ws");
             const { handleWsConnection } = require("./ws-handler.cjs");
 
-            // Generate WebSocket auth token
-            const wsTokenLocal = crypto.randomBytes(32).toString("hex");
-            console.log("[main] WebSocket auth token generated");
+            console.log("[main] WebSocket auth token prepared for proxy");
 
             const srv = createServer((req, res) => {
+              const safeRequestHeaders = sanitizeProxyRequestHeaders(req.headers);
               const proxyReq = http.request(
                 {
                   hostname: "127.0.0.1",
                   port: nextPort,
                   path: req.url,
                   method: req.method,
-                  headers: req.headers,
+                  headers: safeRequestHeaders,
                 },
                 (proxyRes) => {
                   // Strip X-Frame-Options for Electron (not needed)
@@ -736,7 +891,7 @@ app.whenReady().then(async () => {
   // --- SECURITY: Restrict file permissions on app data (D3.1) ---
   if (!isDev) {
     const { setRestrictivePermissions } = require("./file-permissions.cjs");
-    setRestrictivePermissions(app.getPath("userData"));
+    void setRestrictivePermissions(app.getPath("userData"));
   }
 
   // --- SECURITY: Web preferences (nodeIntegration: false, contextIsolation: true, sandbox)
@@ -770,9 +925,18 @@ app.whenReady().then(async () => {
     (details, callback) => {
       try {
         const url = new URL(details.url);
-        // Allow all localhost/loopback traffic
-        if (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]") {
-          callback({});
+        // Loopback egress is restricted to app-owned local ports only.
+        if (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1" || url.hostname === "[::1]") {
+          const safePort = toSafePort(url.port);
+          const allowedPorts = new Set(
+            [DEFAULT_PORT, appEntryPort].filter((p) => Number.isInteger(p) && p > 0),
+          );
+          if (safePort && allowedPorts.has(safePort)) {
+            callback({});
+          } else {
+            console.warn(`[security] Blocked loopback egress to ${url.hostname}:${url.port || "(default)"}`);
+            callback({ cancel: true });
+          }
           return;
         }
         // Only allow HTTPS for external traffic
@@ -815,6 +979,7 @@ app.whenReady().then(async () => {
     "set-title-bar-overlay",
     "pin-to-taskbar",
     "maximize-window",
+    "factory-reset",
   ]);
 
   const originalHandle = ipcMain.handle.bind(ipcMain);

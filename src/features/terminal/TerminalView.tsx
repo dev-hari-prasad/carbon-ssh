@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { getThemeById, terminalThemeForTheme } from "@/config/themes";
 import { getTerminalFontById } from "@/config/fonts";
@@ -11,6 +11,7 @@ import {
   trackSSHConnectFailure,
   trackSSHConnectSuccess,
 } from "@/lib/telemetry";
+import { apiFetch } from "@/lib/api-client";
 import { AIBangPalette } from "./AIBangPalette";
 import { RECONNECT_TAB_EVENT } from "@/lib/tab-events";
 
@@ -70,10 +71,6 @@ async function buildWebSocketUrl() {
   } catch {
     // In dev without Electron, proceed without token
   }
-  const devToken = process.env.NEXT_PUBLIC_WS_TOKEN;
-  if (devToken && !url.searchParams.has("token")) {
-    url.searchParams.set("token", devToken);
-  }
   return url.toString();
 }
 
@@ -86,13 +83,30 @@ function parseServerMessage(data: string): ServerMessage | null {
 }
 
 function reconnectShortcutLabel() {
-  if (typeof navigator === "undefined") return "Reconnect (Ctrl+R)";
+  if (typeof navigator === "undefined") return "Reconnect (Ctrl+Shift+R)";
   return /Mac|iPhone|iPod|iPad/.test(navigator.platform)
-    ? "Reconnect (⌘R)"
-    : "Reconnect (Ctrl+R)";
+    ? "Reconnect (⌘⇧R)"
+    : "Reconnect (Ctrl+Shift+R)";
 }
 
-export function TerminalView({ tab, conn }: Props) {
+function isSingleLineCommand(command: string): boolean {
+  return !/[\n\r]/.test(command);
+}
+
+function isHighRiskCommand(command: string): boolean {
+  const c = command.toLowerCase();
+  return (
+    /\|\s*(sh|bash|zsh|ksh)\b/.test(c) ||
+    /\b(curl|wget)\b.+\|\s*(sh|bash|zsh|ksh)\b/.test(c) ||
+    /\brm\s+-rf\s+\/\b/.test(c) ||
+    /\bmkfs\b/.test(c) ||
+    /\bdd\s+if=/.test(c) ||
+    /\bchmod\s+777\b/.test(c) ||
+    /\b(?:nc|netcat)\b/.test(c)
+  );
+}
+
+function TerminalViewComponent({ tab, conn }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [isClosed, setIsClosed] = useState(false);
@@ -124,12 +138,14 @@ export function TerminalView({ tab, conn }: Props) {
 
   // Refs for callbacks
   const commandBufferRef = useRef("");
+  const terminalOutputUpdateAtRef = useRef(0);
   const ghostTextRef = useRef(ghostText);
   ghostTextRef.current = ghostText;
   const paletteOpenRef = useRef(paletteOpen);
   paletteOpenRef.current = paletteOpen;
   const bangsRef = useRef(bangs);
   bangsRef.current = bangs;
+  const sendTerminalInputRef = useRef<((input: string) => void) | null>(null);
 
   // Keep theme/font in refs so the main effect doesn't re-run on store hydration
   const themeRef = useRef(themeId);
@@ -256,6 +272,10 @@ export function TerminalView({ tab, conn }: Props) {
         spinnerIdx = (spinnerIdx + 1) % spinnerFrames.length;
         term.write(`\r\x1b[38;5;244m${spinnerFrames[spinnerIdx]}\x1b[0m ${baseMsg}`);
       }, 80);
+      cleanups.push(() => {
+        spinnerActive = false;
+        clearInterval(spinnerInterval);
+      });
 
       actions.log(
         "info",
@@ -297,6 +317,14 @@ export function TerminalView({ tab, conn }: Props) {
           currentSocket.send(JSON.stringify(message));
         }
       };
+
+      const sendTerminalInput = (input: string) => {
+        if (!input) return;
+        commandBuffer += input;
+        commandBufferRef.current = commandBuffer;
+        send({ type: "input", data: input });
+      };
+      sendTerminalInputRef.current = sendTerminalInput;
 
       const handleClosed = () => {
         if (disposed) return;
@@ -461,11 +489,68 @@ export function TerminalView({ tab, conn }: Props) {
           typeof window !== "undefined" && /Mac|iPhone|iPod|iPad/.test(navigator.platform);
         const mod = isMac ? e.metaKey : e.ctrlKey;
         const shift = e.shiftKey;
+        const key = e.key.toLowerCase();
+
+        // Allow global shortcuts to bypass xterm and bubble to KeyboardShortcuts:
+        // 1. View Hosts (Home): Mod+Shift+H
+        if (mod && shift && key === "h") {
+          return false;
+        }
+
+        // 2. New Session: Mod+Shift+T, Open Hosts Picker: Mod+Shift+K, Quick Switch: Mod+Shift+P
+        if (mod && shift && (key === "t" || key === "k" || key === "p")) {
+          return false;
+        }
+
+        // 3. Close Active Session: Mod+Shift+W
+        if (mod && shift && key === "w") {
+          return false;
+        }
+
+        // 4. Restore Closed Session: Mod+Shift+U
+        if (mod && shift && key === "u") {
+          return false;
+        }
+
+        // 5. Next Session / Previous Session: Mod+Tab / Mod+Shift+Tab
+        if (mod && key === "tab") {
+          return false;
+        }
+
+        // 6. Toggle Activity Panel: Mod+Shift+A
+        if (mod && shift && key === "a") {
+          return false;
+        }
+
+        // 7. Toggle Sidebar: Mod+Shift+B
+        if (mod && shift && key === "b") {
+          return false;
+        }
+
+        // 8. Toggle Settings Panel: Mod+Shift+S
+        if (mod && shift && key === "s") {
+          return false;
+        }
+
+        // 9. Zoom Controls: Mod+Shift+Plus, Mod+Shift+Minus, Mod+Shift+0
+        if (mod && shift && (key === "=" || key === "+" || key === "-" || key === "0")) {
+          return false;
+        }
+
+        // 10. Open AI & Bangs palette: Mod+Shift+I
+        if (mod && shift && key === "i") {
+          return false;
+        }
+
+        // 11. Create a new bang alias: Mod+Shift+E
+        if (mod && shift && key === "e") {
+          return false;
+        }
 
         // Mac: Cmd + C/V or Cmd + Shift + C/V
         // Windows/Linux: Ctrl + Shift + C/V (Ctrl + C is for SIGINT)
-        const isCopy = (mod && shift && e.key.toLowerCase() === "c") || (isMac && e.metaKey && e.key.toLowerCase() === "c");
-        const isPaste = (mod && shift && e.key.toLowerCase() === "v") || (isMac && e.metaKey && e.key.toLowerCase() === "v");
+        const isCopy = (mod && shift && key === "c") || (isMac && e.metaKey && key === "c");
+        const isPaste = (mod && shift && key === "v") || (isMac && e.metaKey && key === "v");
 
         if (isCopy) {
           const selection = term.getSelection();
@@ -485,7 +570,7 @@ export function TerminalView({ tab, conn }: Props) {
         }
 
         // Reconnect this session only (active tab)
-        if (mod && !shift && e.key.toLowerCase() === "r") {
+        if (mod && shift && key === "r") {
           if (e.type === "keydown" && activeTabIdRef.current === tab.id) {
             requestReconnectRef.current();
           }
@@ -493,7 +578,7 @@ export function TerminalView({ tab, conn }: Props) {
         }
 
         // Mod + L: Clear
-        if (mod && e.key.toLowerCase() === "l") {
+        if (mod && key === "l") {
           if (e.type === "keydown") {
             term.clear();
           }
@@ -501,7 +586,7 @@ export function TerminalView({ tab, conn }: Props) {
         }
 
         // Mod + Shift + F: Find
-        if (mod && shift && e.key.toLowerCase() === "f") {
+        if (mod && shift && key === "f") {
           if (e.type === "keydown") {
             setSearchOpen((prev) => {
               if (!prev) trackFeatureUsed("terminal_find_opened");
@@ -690,14 +775,17 @@ export function TerminalView({ tab, conn }: Props) {
             setGhostText(null);
           }
 
-          // Update terminal output context whenever palette is about to open or query changes
-          const buffer = term.buffer.active;
-          const lines: string[] = [];
-          for (let i = Math.max(0, buffer.baseY + buffer.cursorY - 20); i <= buffer.baseY + buffer.cursorY; i++) {
-            const line = buffer.getLine(i);
-            if (line) lines.push(line.translateToString());
+          const now = Date.now();
+          if (now - terminalOutputUpdateAtRef.current > 250) {
+            terminalOutputUpdateAtRef.current = now;
+            const buffer = term.buffer.active;
+            const lines: string[] = [];
+            for (let i = Math.max(0, buffer.baseY + buffer.cursorY - 20); i <= buffer.baseY + buffer.cursorY; i++) {
+              const line = buffer.getLine(i);
+              if (line) lines.push(line.translateToString());
+            }
+            setTerminalOutput(lines);
           }
-          setTerminalOutput(lines);
         }
       });
 
@@ -708,18 +796,10 @@ export function TerminalView({ tab, conn }: Props) {
         }, 100);
       });
 
-      const handleTerminalInput = (e: Event) => {
-        const customEvent = e as CustomEvent<string>;
-        const cmd = customEvent.detail;
-        commandBuffer += cmd;
-        send({ type: "input", data: cmd });
-      };
-      window.addEventListener("tm:terminal-input", handleTerminalInput);
-
       cleanups.push(() => {
         if (resizeTimer) clearTimeout(resizeTimer);
         if (wsResizeTimer) clearTimeout(wsResizeTimer);
-        window.removeEventListener("tm:terminal-input", handleTerminalInput);
+        sendTerminalInputRef.current = null;
         dataSub.dispose();
         resizeSub.dispose();
         ro.disconnect();
@@ -735,7 +815,7 @@ export function TerminalView({ tab, conn }: Props) {
 
     return () => {
       console.log("[TerminalView] useEffect unmount cleanup running!");
-      fetch("/api/logs", {
+      apiFetch("/api/logs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -796,7 +876,7 @@ export function TerminalView({ tab, conn }: Props) {
   };
 
   return (
-    <div className="h-full w-full bg-bg p-2 relative group">
+    <div className="h-full w-full bg-bg p-1.5 relative group">
       <div ref={hostRef} className="h-full w-full" />
 
       {isClosed || tabSessionStatus?.state === "error" ? (
@@ -877,11 +957,28 @@ export function TerminalView({ tab, conn }: Props) {
         position={palettePos}
         initialQuery={paletteInitial}
         onSelect={(text) => {
+          const command = String(text ?? "").replace(/\r\n?/g, "\n").trim();
+          if (!command) return;
+          if (!isSingleLineCommand(command)) {
+            window.alert("Blocked multi-line bang/AI command for safety.");
+            return;
+          }
+          if (
+            isHighRiskCommand(command) &&
+            !window.confirm(
+              "This command looks risky and may execute remote script or destructive actions. Continue?",
+            )
+          ) {
+            return;
+          }
+          const sendTerminalInput = sendTerminalInputRef.current;
+          if (!sendTerminalInput) return;
+
           if (commandBufferRef.current.startsWith("!")) {
             const backspaces = "\x7f".repeat(commandBufferRef.current.length);
-            window.dispatchEvent(new CustomEvent("tm:terminal-input", { detail: backspaces + text }));
+            sendTerminalInput(backspaces + command);
           } else {
-            window.dispatchEvent(new CustomEvent("tm:terminal-input", { detail: text }));
+            sendTerminalInput(command);
           }
           setPaletteOpen(false);
           setGhostText(null);
@@ -890,3 +987,5 @@ export function TerminalView({ tab, conn }: Props) {
     </div>
   );
 }
+
+export const TerminalView = memo(TerminalViewComponent);

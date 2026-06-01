@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld("electron", {
   verifyAppLockPassword: (candidate) =>
     ipcRenderer.invoke("verify-app-lock-password", candidate),
   clearAppLockPassword: () => ipcRenderer.invoke("clear-app-lock-password"),
+  factoryReset: () => ipcRenderer.invoke("factory-reset"),
   getWsToken: () => ipcRenderer.invoke("get-ws-token"),
   saveConnectionSecret: (connectionId, secrets) =>
     ipcRenderer.invoke("save-connection-secret", connectionId, secrets),

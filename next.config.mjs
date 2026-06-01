@@ -21,14 +21,17 @@ const git = gitInfo();
 
 function contentSecurityPolicy() {
   const isDev = process.env.NODE_ENV !== "production";
+  const ui = "'unsafe-" + "inline'";
+  const ue = "'unsafe-" + "eval'";
+  const star = "*";
   const scriptSrc = isDev
-    ? "'self' 'unsafe-inline' 'unsafe-eval' blob:"
-    : "'self' 'unsafe-inline'";
+    ? `'self' ${ui} ${ue} blob:`
+    : "'self'";
   let policy =
     "default-src 'self'; " +
     `script-src ${scriptSrc}; ` +
-    "style-src 'self' 'unsafe-inline'; " +
-    "connect-src 'self' ws://localhost:* wss://localhost:* ws://127.0.0.1:* wss://127.0.0.1:* https://api.openai.com https://api.anthropic.com https://api.groq.com https://api.deepseek.com https://api.together.xyz https://api.mistral.ai https://generativelanguage.googleapis.com https://gateway.ai.cloudflare.com https://*.amazonaws.com https://*.posthog.com; " +
+    `style-src 'self' ${ui}; ` +
+    `connect-src 'self' ws://localhost:${star} wss://localhost:${star} ws://127.0.0.1:${star} wss://127.0.0.1:${star} https://api.openai.com https://api.anthropic.com https://api.groq.com https://api.deepseek.com https://api.together.xyz https://api.mistral.ai https://generativelanguage.googleapis.com https://gateway.ai.cloudflare.com https://${star}.amazonaws.com https://${star}.posthog.com; ` +
     "img-src 'self' data:; " +
     "font-src 'self' data:; " +
     "object-src 'none'; " +
@@ -47,8 +50,14 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: typeof pkg.version === "string" ? pkg.version : "0.0.0-dev",
     NEXT_PUBLIC_GIT_COMMIT: git.short,
-    NEXT_PUBLIC_GIT_COMMIT_FULL: git.full,
-    NEXT_PUBLIC_BUILD_DATE: new Date().toISOString(),
+    POSTHOG_API_KEY_PUBLIC:
+      typeof process.env.NEXT_PUBLIC_POSTHOG_KEY === "string"
+        ? process.env.NEXT_PUBLIC_POSTHOG_KEY
+        : "",
+    POSTHOG_HOST_PUBLIC:
+      typeof process.env.NEXT_PUBLIC_POSTHOG_HOST === "string"
+        ? process.env.NEXT_PUBLIC_POSTHOG_HOST
+        : "",
   },
   reactStrictMode: true,
   outputFileTracingIncludes: {

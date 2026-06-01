@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { TelemetryBoot } from "@/components/TelemetryBoot";
 import { TopBar, VerticalTabBar } from "@/features/layout/TopBar";
 import { MainArea } from "@/features/layout/MainArea";
 import { BottomPanel } from "@/features/layout/BottomPanel";
-import { LargeSettingsModal } from "@/features/layout/LargeSettingsModal";
 import { KeyboardShortcuts } from "@/components/KeyboardShortcuts";
 import { UnlockVault } from "@/components/UnlockVault";
 import { OnboardingModal } from "@/components/OnboardingModal";
@@ -16,6 +15,12 @@ import { migrateAppLockPasswordIfNeeded } from "@/lib/storage";
 import { TITLE_BAR_HEIGHT, TITLE_BAR_OS_CONTROLS_WIDTH } from "@/config/titlebar";
 
 const transition = { duration: 0.22, ease: [0.32, 0.72, 0, 1] as const };
+
+const LargeSettingsModal = lazy(() =>
+  import("@/features/layout/LargeSettingsModal").then((module) => ({
+    default: module.LargeSettingsModal,
+  })),
+);
 
 function AppLockMigrationGate({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
@@ -30,6 +35,7 @@ export default function Page() {
   const isUnlocked = useStore((s) => s.isUnlocked);
   const onboardingCompleted = useStore((s) => s.onboardingCompleted);
   const tabBarOrientation = useStore((s) => s.tabBarOrientation);
+  const largeSettingsOpen = useStore((s) => s.largeSettingsOpen);
   const theme = useStore((s) => s.theme);
   const currentTheme = getThemeById(theme);
   const logoSrc =
@@ -49,7 +55,7 @@ export default function Page() {
             style={{ height: TITLE_BAR_HEIGHT, WebkitAppRegion: "drag" } as React.CSSProperties}
           >
             {(tabBarOrientation === "horizontal" && isUnlocked) ? (
-              <div className="flex-1 min-w-0 h-full overflow-hidden" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+              <div className="flex-1 min-w-0 h-full overflow-hidden">
                 <TopBar isTitleBar />
               </div>
             ) : (
@@ -86,7 +92,11 @@ export default function Page() {
                 <div className="h-full flex flex-col bg-bg rounded-md overflow-hidden border border-border/30">
                   <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
                     <MainArea />
-                    <LargeSettingsModal />
+                    {largeSettingsOpen ? (
+                      <Suspense fallback={null}>
+                        <LargeSettingsModal />
+                      </Suspense>
+                    ) : null}
                   </div>
                   <BottomPanel />
                 </div>

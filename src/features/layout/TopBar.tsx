@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, memo, useEffect, useMemo, useRef, useState } from "react";
 import {
   BoltIcon,
   ChevronLeftIcon,
@@ -31,7 +31,6 @@ import {
 import { actions, useStore } from "@/lib/store";
 import type { Connection, SplitLayout } from "@/lib/types";
 import { SPLIT_LAYOUT_SLOTS } from "@/lib/types";
-import { ConnectionForm } from "@/features/connections/ConnectionForm";
 import { Tooltip } from "@/components/Tooltip";
 import { HostIcon } from "@/components/HostIcon";
 import { TabIcon } from "@/components/TabIcon";
@@ -44,6 +43,12 @@ import { useTabStripDnD } from "./tabStripDnD";
 import { Kbd } from "@/components/Kbd";
 
 type Popover = "machines" | null;
+
+const ConnectionForm = lazy(() =>
+  import("@/features/connections/ConnectionForm").then((module) => ({
+    default: module.ConnectionForm,
+  })),
+);
 
 function TabFavicon({
   conn,
@@ -132,12 +137,13 @@ function TabStripSeparator({ visible }: { visible: boolean }) {
   );
 }
 
-export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
+function TopBarComponent({ isTitleBar }: { isTitleBar?: boolean }) {
   const tabs = useStore((s) => s.tabs);
   const activeTabId = useStore((s) => s.activeTabId);
   const connections = useStore((s) => s.connections);
   const groups = useStore((s) => s.groups);
   const largeSettingsOpen = useStore((s) => s.largeSettingsOpen);
+  const largeSettingsOnlyTab = useStore((s) => s.largeSettingsOnlyTab);
   const connectionStatus = useStore((s) => s.connectionStatus);
   const tabSessionStatus = useStore((s) => s.tabSessionStatus);
   const rawSplitTabIds = useStore((s) => s.splitTabIds);
@@ -462,9 +468,13 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
           />
           <Tooltip label="Bangs" side="bottom">
             <button
-              onClick={() => actions.openSettingsTab("bangs")}
+              onClick={() => actions.openLargeSettings("bangs", true)}
               aria-label="Bangs"
-              className="grid place-items-center rounded-sm text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors"
+              className={`grid place-items-center rounded-sm transition-colors ${
+                largeSettingsOpen && largeSettingsOnlyTab === "bangs"
+                  ? "text-fg bg-[var(--command-active-bg)]"
+                  : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
+              }`}
               style={{ width: TITLE_BAR_ACTION_SIZE, height: TITLE_BAR_ACTION_SIZE }}
             >
               <BoltIcon className="w-[15px] h-[15px]" />
@@ -487,13 +497,13 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
               onClick={() => actions.toggleLargeSettings()}
               aria-label="Toggle settings"
               className={`grid place-items-center rounded-sm transition-colors ${
-                largeSettingsOpen
+                largeSettingsOpen && largeSettingsOnlyTab !== "bangs"
                   ? "text-fg bg-[var(--command-active-bg)]"
                   : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
               }`}
               style={{ width: TITLE_BAR_ACTION_SIZE, height: TITLE_BAR_ACTION_SIZE }}
             >
-              {largeSettingsOpen ? (
+              {largeSettingsOpen && largeSettingsOnlyTab !== "bangs" ? (
                 <Cog6ToothIconSolid className="w-[15px] h-[15px]" />
               ) : (
                 <Cog6ToothIcon className="w-[15px] h-[15px]" />
@@ -503,7 +513,11 @@ export function TopBar({ isTitleBar }: { isTitleBar?: boolean }) {
         </div>
       </div>
 
-      <ConnectionForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} />
+      {formOpen ? (
+        <Suspense fallback={null}>
+          <ConnectionForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} />
+        </Suspense>
+      ) : null}
     </div>
   );
 }
@@ -534,6 +548,8 @@ function FeaturePill({
     </button>
   );
 }
+
+export const TopBar = memo(TopBarComponent);
 
 function MachinesPopover({
   connections,
@@ -824,12 +840,13 @@ function GroupItem({
   );
 }
 
-export function VerticalTabBar() {
+function VerticalTabBarComponent() {
   const tabs = useStore((s) => s.tabs);
   const activeTabId = useStore((s) => s.activeTabId);
   const connections = useStore((s) => s.connections);
   const groups = useStore((s) => s.groups);
   const largeSettingsOpen = useStore((s) => s.largeSettingsOpen);
+  const largeSettingsOnlyTab = useStore((s) => s.largeSettingsOnlyTab);
   const connectionStatus = useStore((s) => s.connectionStatus);
   const tabSessionStatus = useStore((s) => s.tabSessionStatus);
   const rawSplitTabIds = useStore((s) => s.splitTabIds);
@@ -1265,7 +1282,8 @@ export function VerticalTabBar() {
             icon={<BoltIcon className="w-4 h-4" />}
             label="Bangs"
             tooltip="Bangs"
-            onClick={() => actions.openSettingsTab("bangs")}
+            active={largeSettingsOpen && largeSettingsOnlyTab === "bangs"}
+            onClick={() => actions.openLargeSettings("bangs", true)}
           />
           <TabButton
             icon={<LockClosedIcon className="w-4 h-4" />}
@@ -1275,7 +1293,7 @@ export function VerticalTabBar() {
           />
           <TabButton
             icon={
-              largeSettingsOpen ? (
+              largeSettingsOpen && largeSettingsOnlyTab !== "bangs" ? (
                 <Cog6ToothIconSolid className="w-4 h-4" />
               ) : (
                 <Cog6ToothIcon className="w-4 h-4" />
@@ -1283,7 +1301,7 @@ export function VerticalTabBar() {
             }
             label="Settings"
             tooltip="Settings"
-            active={largeSettingsOpen}
+            active={largeSettingsOpen && largeSettingsOnlyTab !== "bangs"}
             onClick={() => actions.toggleLargeSettings()}
           />
         </div>
@@ -1302,10 +1320,16 @@ export function VerticalTabBar() {
         )}
       </motion.div>
 
-      <ConnectionForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} />
+      {formOpen ? (
+        <Suspense fallback={null}>
+          <ConnectionForm open={formOpen} onClose={() => setFormOpen(false)} initial={editing} />
+        </Suspense>
+      ) : null}
     </>
   );
 }
+
+export const VerticalTabBar = memo(VerticalTabBarComponent);
 
 function IconBtn({
   children,

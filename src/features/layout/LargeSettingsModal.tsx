@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -32,6 +32,7 @@ import {
   SunIcon,
   MoonIcon,
   ArrowPathIcon,
+  ArrowDownTrayIcon,
   ArrowTopRightOnSquareIcon,
   ClipboardDocumentIcon,
   ClockIcon,
@@ -54,9 +55,16 @@ import {
   CheckBadgeIcon as CheckBadgeIconSolid,
   DocumentCheckIcon as DocumentCheckIconSolid,
   InformationCircleIcon as InformationCircleIconSolid,
+  GlobeAltIcon as GlobeAltIconSolid,
+  ExclamationTriangleIcon as ExclamationTriangleIconSolid,
+  ClockIcon as ClockIconSolid,
 } from "@heroicons/react/24/solid";
 import { GitHubDark } from "@ridemountainpig/svgl-react";
-import { PencilSimple } from "@phosphor-icons/react";
+import { PencilSimple, Keyboard, FileCode, FileCsv, FileXls, FileText, MarkdownLogo } from "@phosphor-icons/react";
+
+const KeyboardIcon = (props: any) => <Keyboard {...props} weight="regular" />;
+const KeyboardIconSolid = (props: any) => <Keyboard {...props} weight="fill" />;
+
 import { Tooltip } from "@/components/Tooltip";
 import {
   DEFAULT_LOG_RETENTION,
@@ -73,23 +81,24 @@ import { BangForm } from "@/features/bangs/BangForm";
 
 const REPO_URL = "https://github.com/CarbonSSH/carbon";
 
-type LargeTab = "general" | "display" | "shortcuts" | "ai" | "security" | "verification" | "bangs";
+type LargeTab = "general" | "display" | "shortcuts" | "ai" | "security" | "verification" | "bangs" | "about";
+type LargeTabIcon = ComponentType<{ className?: string }>;
 
-const DESKTOP_TABS: { id: LargeTab; label: string; icon: typeof Cog6ToothIcon; activeIcon: typeof Cog6ToothIcon }[] = [
+const DESKTOP_TABS: { id: LargeTab; label: string; icon: LargeTabIcon; activeIcon: LargeTabIcon }[] = [
   { id: "general", label: "General", icon: Cog6ToothIcon, activeIcon: Cog6ToothIconSolid },
   { id: "display", label: "Display", icon: PaintBrushIcon, activeIcon: PaintBrushIconSolid },
-  { id: "shortcuts", label: "Shortcuts", icon: CommandLineIcon, activeIcon: CommandLineIconSolid },
+  { id: "shortcuts", label: "Shortcuts", icon: KeyboardIcon, activeIcon: KeyboardIconSolid },
 ];
 
-const SERVER_TABS: { id: LargeTab; label: string; icon: typeof Cog6ToothIcon; activeIcon: typeof Cog6ToothIcon }[] = [
+const SERVER_TABS: { id: LargeTab; label: string; icon: LargeTabIcon; activeIcon: LargeTabIcon }[] = [
   { id: "ai", label: "AI", icon: SparklesIcon, activeIcon: SparklesIconSolid },
   { id: "bangs", label: "Bangs", icon: BoltIcon, activeIcon: BoltIconSolid },
   { id: "security", label: "Security", icon: ShieldCheckIcon, activeIcon: ShieldCheckIconSolid },
   { id: "verification", label: "Verification", icon: DocumentCheckIcon, activeIcon: DocumentCheckIconSolid },
 ];
 
-const ABOUT_TABS: { id: LargeTab; label: string; icon: typeof Cog6ToothIcon; activeIcon: typeof Cog6ToothIcon }[] = [
-  { id: "about", label: "About", icon: InformationCircleIcon, activeIcon: InformationCircleIconSolid },
+const ABOUT_TABS: { id: LargeTab; label: string; icon: LargeTabIcon; activeIcon: LargeTabIcon }[] = [
+  { id: "about", label: "Resources", icon: InformationCircleIcon, activeIcon: InformationCircleIconSolid },
 ];
 
 const CURSOR_STYLE_OPTIONS = [
@@ -105,7 +114,7 @@ const CURSOR_STYLE_OPTIONS = [
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-muted/50 px-3 pb-1 pt-2">
+    <div className="text-[11px] font-semibold uppercase tracking-wider text-fg-muted/50 px-2.5 pb-1 pt-2 mt-2.5 first:mt-0">
       {children}
     </div>
   );
@@ -114,13 +123,13 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function NavItem({
   active, icon: Icon, activeIcon: ActiveIcon, label, onClick,
 }: {
-  active: boolean; icon: typeof Cog6ToothIcon; activeIcon: typeof Cog6ToothIcon; label: string; onClick: () => void;
+  active: boolean; icon: LargeTabIcon; activeIcon: LargeTabIcon; label: string; onClick: () => void;
 }) {
   const RenderIcon = active ? ActiveIcon : Icon;
   return (
     <button
       onClick={onClick}
-      className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-md text-left text-[13px] transition-colors ${
+      className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-left text-[13px] transition-colors ${
         active
           ? "bg-[var(--command-active-bg)] text-fg"
           : "text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]/50"
@@ -268,10 +277,10 @@ function CursorPreview({ style, blink }: { style: "block" | "bar" | "underline";
   );
 }
 
-function SettingsListboxPopover({ open, children, triggerRef }: {
-  open: boolean; children: React.ReactNode; triggerRef: React.RefObject<HTMLDivElement | null>;
+function SettingsListboxPopover({ open, children, triggerRef, minWidth = 220 }: {
+  open: boolean; children: React.ReactNode; triggerRef: React.RefObject<HTMLDivElement | null>; minWidth?: number;
 }) {
-  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number; minWidth: number }>({ top: 0, right: 0, minWidth: 220 });
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; right: number; minWidth: number }>({ top: 0, right: 0, minWidth });
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -288,9 +297,9 @@ function SettingsListboxPopover({ open, children, triggerRef }: {
       const spaceAbove = r.top;
       
       if (spaceBelow < popoverHeight && spaceAbove > spaceBelow) {
-        setPos({ bottom: window.innerHeight - r.top + 4, right: window.innerWidth - r.right, minWidth: Math.max(220, r.width) });
+        setPos({ bottom: window.innerHeight - r.top + 4, right: window.innerWidth - r.right, minWidth: Math.max(minWidth, r.width) });
       } else {
-        setPos({ top: r.bottom + 4, right: window.innerWidth - r.right, minWidth: Math.max(220, r.width) });
+        setPos({ top: r.bottom + 4, right: window.innerWidth - r.right, minWidth: Math.max(minWidth, r.width) });
       }
     };
     update();
@@ -300,7 +309,7 @@ function SettingsListboxPopover({ open, children, triggerRef }: {
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
     };
-  }, [open, triggerRef]);
+  }, [open, triggerRef, minWidth]);
 
   const content = (
     <AnimatePresence>
@@ -518,6 +527,112 @@ function GeneralPanel() {
   const [showResetAlert, setShowResetAlert] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  useEffect(() => {
+    if (!exportOpen) return;
+    const onDoc = (e: MouseEvent) => { if (!exportRef.current?.contains(e.target as Node)) setExportOpen(false); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setExportOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("mousedown", onDoc); document.removeEventListener("keydown", onKey); };
+  }, [exportOpen]);
+
+  const handleDownloadLogs = async (format: "json" | "csv" | "xlsx" | "txt" | "markdown") => {
+    setIsExporting(true);
+    try {
+      const { apiFetch } = await import("@/lib/api-client");
+      const res = await apiFetch(`/api/logs?retention=${logRetention}`);
+      const data = await res.json() as { logs: any[] };
+      const logs = data.logs || [];
+
+      let content = "";
+      let filename = `activity-logs.${format}`;
+      let mimeType = "text/plain";
+
+      if (format === "json") {
+        content = JSON.stringify(logs, null, 2);
+        mimeType = "application/json";
+      } else if (format === "csv") {
+        const headers = ["Timestamp", "Level", "Source", "Message"];
+        const rows = logs.map(log => [
+          new Date(log.ts).toISOString(),
+          log.level,
+          log.source,
+          log.message
+        ]);
+        const csvContent = [headers, ...rows]
+          .map(row => row.map(val => '"' + String(val).replace(/"/g, '""') + '"').join(","))
+          .join("\n");
+        content = csvContent;
+        mimeType = "text/csv";
+      } else if (format === "xlsx") {
+        const escapeXml = (unsafe: string) => unsafe.replace(/[<>&'"]/g, (c) => {
+          switch (c) {
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '&': return '&amp;';
+            case '\'': return '&apos;';
+            case '"': return '&quot;';
+            default: return c;
+          }
+        });
+        const xml = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <Worksheet ss:Name="Logs">
+  <Table>
+   <Row>
+    <Cell><Data ss:Type="String">Timestamp</Data></Cell>
+    <Cell><Data ss:Type="String">Level</Data></Cell>
+    <Cell><Data ss:Type="String">Source</Data></Cell>
+    <Cell><Data ss:Type="String">Message</Data></Cell>
+   </Row>
+   ${logs.map(log => `
+   <Row>
+    <Cell><Data ss:Type="String">${escapeXml(new Date(log.ts).toISOString())}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(log.level)}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(log.source)}</Data></Cell>
+    <Cell><Data ss:Type="String">${escapeXml(log.message)}</Data></Cell>
+   </Row>`).join('')}
+  </Table>
+ </Worksheet>
+</Workbook>`;
+        content = xml;
+        filename = `activity-logs.xlsx`;
+        mimeType = "application/vnd.ms-excel";
+      } else if (format === "txt") {
+        content = logs
+          .map(log => `[${new Date(log.ts).toISOString()}] [${log.level.toUpperCase()}] [${log.source}]: ${log.message}`)
+          .join("\n");
+        mimeType = "text/plain";
+      } else if (format === "markdown") {
+        content = `# Activity Logs\n\n| Timestamp | Level | Source | Message |\n| --- | --- | --- | --- |\n` +
+          logs.map(log => `| ${new Date(log.ts).toISOString()} | ${log.level.toUpperCase()} | ${log.source} | ${log.message.replace(/\|/g, "\\|")} |`).join("\n");
+        mimeType = "text/markdown";
+      }
+
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("Failed to export logs:", e);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleReset = async () => {
     setIsResetting(true);
@@ -529,7 +644,7 @@ function GeneralPanel() {
   };
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5 max-w-2xl mx-auto w-full">
       <h2 className="text-xl font-semibold text-fg">General</h2>
 
       {/* Interface */}
@@ -580,12 +695,50 @@ function GeneralPanel() {
         />
       </SettingsCard>
 
-      {/* Activity Logs */}
-      <SettingsCard label="Activity Logs" icon={<DocumentTextIcon className="w-4 h-4" />}>
+      {/* Activity */}
+      <SettingsCard label="Activity" icon={<DocumentTextIcon className="w-4 h-4" />}>
         <SettingRow
           label="Log retention"
           description="Drop local activity log entries older than this window"
           control={<LogRetentionSelect value={logRetention} onChange={(id) => actions.setLogRetention(id)} />}
+        />
+        <SettingRow
+          label="Export logs"
+          description="Export local activity logs in your preferred format"
+          control={
+            <div ref={exportRef} className="relative">
+              <button
+                type="button"
+                onClick={() => setExportOpen((o) => !o)}
+                disabled={isExporting}
+                className="h-9 px-3 rounded-sm border border-border/60 bg-transparent text-fg text-[12.5px] font-bold hover:bg-[var(--command-active-bg)] transition-colors flex items-center gap-1.5 shrink-0"
+              >
+                <ArrowDownTrayIcon className="w-3.5 h-3.5" />
+                {isExporting ? "Downloading..." : "Download logs"}
+              </button>
+              <SettingsListboxPopover open={exportOpen} triggerRef={exportRef} minWidth={130}>
+                {[
+                  { id: "json", label: "JSON", icon: FileCode },
+                  { id: "xlsx", label: "XLSX", icon: FileXls },
+                  { id: "txt", label: "TXT", icon: FileText },
+                  { id: "markdown", label: "Markdown", icon: MarkdownLogo },
+                ].map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => {
+                      void handleDownloadLogs(id as any);
+                      setExportOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2.5 px-2.5 min-h-9 rounded-sm text-left text-[13px] text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg transition-colors"
+                  >
+                    <Icon className="w-[15px] h-[15px] text-fg-dim/80 shrink-0" />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </SettingsListboxPopover>
+            </div>
+          }
         />
       </SettingsCard>
 
@@ -601,7 +754,7 @@ function GeneralPanel() {
             <div className="min-w-0 flex-1">
               <div className="text-[13px] font-medium text-fg">Telemetry Disclosure</div>
               <div className="text-[12px] text-fg-muted/70 mt-0.5 leading-snug">
-                Read our data collection and privacy policy details
+                Read how you can help improve Carbon
               </div>
             </div>
             <button
@@ -716,7 +869,7 @@ function DisplayPanel() {
   const setFont = fontTab === "app" ? actions.setFont : actions.setTerminalFont;
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5 max-w-2xl mx-auto w-full">
       <h2 className="text-xl font-semibold text-fg">Display</h2>
 
       <SettingsCard label="Theme" icon={<PaintBrushIcon className="w-4 h-4" />}>
@@ -754,23 +907,23 @@ const SHORTCUT_GROUPS: { group: string; icon: React.ReactNode; items: { keys: st
   {
     group: "Sessions & Tabs", icon: <Squares2X2Icon className="w-[13px] h-[13px]" aria-hidden />,
     items: [
-      { keys: ["Mod", "H"], action: "View Hosts (Home)" },
-      { keys: ["Mod", "T"], action: "New session / focus search" },
-      { keys: ["Mod", "W"], action: "Close active session" },
-      { keys: ["Mod", "Shift", "T"], action: "Restore closed session" },
+      { keys: ["Mod", "Shift", "H"], action: "View Hosts (Home)" },
+      { keys: ["Mod", "Shift", "T"], action: "New session / focus search" },
+      { keys: ["Mod", "Shift", "W"], action: "Close active session" },
+      { keys: ["Mod", "Shift", "U"], action: "Restore closed session" },
       { keys: ["Mod", "Tab"], action: "Next session" },
       { keys: ["Mod", "Shift", "Tab"], action: "Previous session" },
-      { keys: ["Mod", "R"], action: "Reconnect active session" },
+      { keys: ["Mod", "Shift", "R"], action: "Reconnect active session" },
     ],
   },
   {
     group: "Search & Navigation", icon: <MagnifyingGlassIcon className="w-[13px] h-[13px]" aria-hidden />,
     items: [
-      { keys: ["Mod", "K"], action: "Open hosts picker" },
-      { keys: ["Mod", "P"], action: "Quick-switch hosts" },
+      { keys: ["Mod", "Shift", "K"], action: "Open hosts picker" },
+      { keys: ["Mod", "Shift", "P"], action: "Quick-switch hosts" },
       { keys: ["Mod", "Shift", "A"], action: "Toggle Activity Panel" },
-      { keys: ["Mod", "B"], action: "Toggle sidebar collapsed" },
-      { keys: ["Mod", "S"], action: "Toggle settings panel" },
+      { keys: ["Mod", "Shift", "B"], action: "Toggle sidebar collapsed" },
+      { keys: ["Mod", "Shift", "S"], action: "Toggle settings panel" },
     ],
   },
   {
@@ -778,16 +931,16 @@ const SHORTCUT_GROUPS: { group: string; icon: React.ReactNode; items: { keys: st
     items: [
       { keys: ["Mod", "Shift", "C"], action: "Copy selection from terminal" },
       { keys: ["Mod", "Shift", "V"], action: "Paste text into terminal" },
-      { keys: ["Mod", "Plus"], action: "Zoom in UI scale" },
-      { keys: ["Mod", "Minus"], action: "Zoom out UI scale" },
-      { keys: ["Mod", "0"], action: "Reset UI zoom" },
+      { keys: ["Mod", "Shift", "Plus"], action: "Zoom in UI scale" },
+      { keys: ["Mod", "Shift", "Minus"], action: "Zoom out UI scale" },
+      { keys: ["Mod", "Shift", "0"], action: "Reset UI zoom" },
     ],
   },
   {
     group: "AI & Command Bangs", icon: <BoltIcon className="w-[13px] h-[13px]" aria-hidden />,
     items: [
-      { keys: ["Mod", "I"], action: "Open AI & Bangs palette" },
-      { keys: ["Mod", "Shift", "B"], action: "Create a new bang alias" },
+      { keys: ["Mod", "Shift", "I"], action: "Open the AI & Bangs palette" },
+      { keys: ["Mod", "Shift", "E"], action: "Create a new bang alias" },
       { keys: ["!", "name"], action: "Execute a saved bang in terminal" },
     ],
   },
@@ -795,6 +948,7 @@ const SHORTCUT_GROUPS: { group: string; icon: React.ReactNode; items: { keys: st
 
 function ShortcutsPanel() {
   const isMac = typeof window !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+  const [search, setSearch] = useState("");
 
   const renderKey = (k: string) => {
     if (k === "Mod") return isMac ? "⌘" : "Ctrl";
@@ -802,34 +956,64 @@ function ShortcutsPanel() {
     return k;
   };
 
+  const filteredGroups = SHORTCUT_GROUPS.map((g) => {
+    const matchingItems = g.items.filter((s) => {
+      const q = search.toLowerCase();
+      return (
+        s.action.toLowerCase().includes(q) ||
+        s.keys.some((k) => k.toLowerCase().includes(q))
+      );
+    });
+    return { ...g, items: matchingItems };
+  }).filter((g) => g.items.length > 0);
+
   return (
-    <div className="space-y-5 max-w-2xl">
-      <h2 className="text-xl font-semibold text-fg">Keyboard Shortcuts</h2>
-      {SHORTCUT_GROUPS.map((g) => (
-        <div key={g.group}>
-          <div className="flex items-center gap-1.5 px-1 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted/60">
-            <span className="shrink-0 inline-flex">{g.icon}</span>
-            <span>{g.group}</span>
-          </div>
-          <div className="border border-border/60 rounded-lg overflow-hidden divide-y divide-border/30">
-            {g.items.map((s) => (
-              <div key={s.action} className="flex items-center px-4 py-2 text-[13px] even:bg-[var(--command-bg)]/20">
-                <span className="flex-1 text-fg min-w-0">{s.action}</span>
-                <div className="shrink-0 flex items-center gap-1">
-                  {s.keys.map((k, i) => (
-                    <span key={i} className="flex items-center gap-1">
-                      {i > 0 ? <span className="text-[10px] text-fg-dim">+</span> : null}
-                      <kbd className="px-1.5 h-[20px] min-w-[20px] inline-flex items-center justify-center rounded-sm border border-border bg-[var(--command-bg)] text-[10.5px] font-mono text-fg-muted">
-                        {renderKey(k)}
-                      </kbd>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+    <div className="space-y-5 max-w-2xl mx-auto w-full">
+      <div className="space-y-2.5">
+        <h2 className="text-xl font-semibold text-fg">Keyboard Shortcuts</h2>
+        <div className="relative">
+          <MagnifyingGlassIcon className="absolute z-10 pointer-events-none left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-fg-muted" strokeWidth={2} />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search shortcuts..."
+            className="w-full h-9 pl-9 pr-3 rounded-md bg-[var(--input-bg)] border border-border text-[12.5px] text-fg placeholder:text-fg-muted focus:outline-none focus:border-accent/50 focus:ring-2 focus:ring-accent/20 transition-all"
+          />
         </div>
-      ))}
+      </div>
+
+      {filteredGroups.length === 0 ? (
+        <div className="border border-border/50 rounded-lg p-8 text-center text-[13px] text-fg-muted bg-[var(--command-bg)]/20">
+          No results for "{search}"
+        </div>
+      ) : (
+        filteredGroups.map((g) => (
+          <div key={g.group} className="space-y-1.5">
+            <div className="flex items-center gap-1.5 px-1 pb-0.5 text-[11px] font-semibold uppercase tracking-wider text-fg-muted/60">
+              <span className="shrink-0 inline-flex">{g.icon}</span>
+              <span>{g.group}</span>
+            </div>
+            <div className="border border-border/60 rounded-lg overflow-hidden divide-y divide-border/30">
+              {g.items.map((s) => (
+                <div key={s.action} className="flex items-center px-4 py-2 text-[13px] even:bg-[var(--command-bg)]/20 hover:bg-[var(--menu-hover-bg)]/20 transition-colors">
+                  <span className="flex-1 text-fg min-w-0">{s.action}</span>
+                  <div className="shrink-0 flex items-center gap-1">
+                    {s.keys.map((k, i) => (
+                      <span key={i} className="flex items-center gap-1">
+                        {i > 0 ? <span className="text-[10px] text-fg-dim">+</span> : null}
+                        <kbd className="px-1.5 h-[20px] min-w-[20px] inline-flex items-center justify-center rounded-sm border border-border bg-[var(--command-bg)] text-[10.5px] font-mono text-fg-muted">
+                          {renderKey(k)}
+                        </kbd>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
+      )}
     </div>
   );
 }
@@ -837,6 +1021,10 @@ function ShortcutsPanel() {
 const SOURCE_CODE_URL = "https://github.com/CarbonSSH/carbon";
 
 const AI_PANEL_FAQ: { q: string; a: React.ReactNode }[] = [
+  {
+    q: "Which models are recommended?",
+    a: "Small models with high throughput and tokens per second. Since autocomplete suggestions must feel near-instantaneous to avoid disrupting your typing flow, high-speed low-latency models deliver the smoothest terminal experience.",
+  },
   {
     q: "Is sensitive information shared with AI?",
     a: "Hosts, IPs, usernames, keys, logs, and similar sensitive details are stripped out (redacted) before anything leaves, so that stuff isn't sitting in the prompt handed to the model.",
@@ -862,10 +1050,6 @@ const AI_PANEL_FAQ: { q: string; a: React.ReactNode }[] = [
   {
     q: "Where does my API key live?",
     a: "On this device, in localStorage. It only gets stored for making the request at the moment a request is made; we don't bounce it back or store it anywhere.",
-  },
-  {
-    q: "Is my terminal log uploaded?",
-    a: "Come on, you know the answer to this one! No, it's not uploaded. It's local and stays local.",
   },
 ];
 
@@ -979,7 +1163,8 @@ function AIPanel() {
           return;
         }
       } else {
-        const res = await fetch("/api/ai/test", {
+        const { apiFetch } = await import("@/lib/api-client");
+        const res = await apiFetch("/api/ai/test", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1004,7 +1189,7 @@ function AIPanel() {
   }
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5 max-w-2xl mx-auto w-full">
       <h2 className="text-xl font-semibold text-fg">AI</h2>
       <SettingsCard label="Configuration" icon={<SparklesIcon className="w-4 h-4" />}>
         <SettingRow
@@ -1030,34 +1215,29 @@ function AIPanel() {
           description={meta.apiKeyRequired ? "Required" : "Optional"}
           disabled={!isAiEnabled}
           control={
-            <div className="flex flex-col items-end gap-1">
-              <div className="relative w-[280px]">
-                <input
-                  type={showKey ? "text" : "password"}
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={apiKeyInput}
-                  disabled={!isAiEnabled}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setApiKeyInput(value);
-                    actions.updateAI({ apiKey: value });
-                  }}
-                  placeholder={hasStoredApiKey ? "Stored securely. Enter new key to replace." : meta.apiKeyHint}
-                  className="w-full h-9 pl-3 pr-9 rounded-sm bg-[var(--input-bg)] border border-border text-[13px] text-fg placeholder:text-fg-muted focus:outline-none focus:border-border-strong disabled:opacity-50"
-                />
-                <button
-                  type="button"
-                  disabled={!isAiEnabled}
-                  onClick={() => setShowKey((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 grid place-items-center rounded text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
-                >
-                  {showKey ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
-                </button>
-              </div>
-              {hasStoredApiKey && (
-                <span className="text-[11px] text-success pr-1">Securely stored</span>
-              )}
+            <div className="relative w-[280px]">
+              <input
+                type={showKey ? "text" : "password"}
+                autoComplete="off"
+                spellCheck={false}
+                value={apiKeyInput}
+                disabled={!isAiEnabled}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setApiKeyInput(value);
+                  actions.updateAI({ apiKey: value });
+                }}
+                placeholder={hasStoredApiKey ? "Stored securely. Enter new key to replace." : meta.apiKeyHint}
+                className="w-full h-9 pl-3 pr-9 rounded-sm bg-[var(--input-bg)] border border-border text-[13px] text-fg placeholder:text-fg-muted focus:outline-none focus:border-border-strong disabled:opacity-50"
+              />
+              <button
+                type="button"
+                disabled={!isAiEnabled}
+                onClick={() => setShowKey((v) => !v)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 grid place-items-center rounded text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
+              >
+                {showKey ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+              </button>
             </div>
           }
         />
@@ -1163,7 +1343,7 @@ function AIPanel() {
                 <button
                   onClick={() => setFaqOpen((cur) => (cur === i ? null : i))}
                   aria-expanded={isOpen}
-                  className="w-full flex items-center justify-between gap-2 px-5 py-3 text-left hover:bg-[var(--menu-hover-bg)] transition-colors"
+                  className="w-full flex items-center justify-between gap-2 px-5 py-3 text-left hover:bg-[var(--menu-hover-bg)] active:!scale-100 active:!filter-none transition-colors"
                 >
                   <span className={`text-[13px] leading-snug font-medium transition-colors duration-200 ${isOpen ? "text-fg" : "text-fg-muted"}`}>
                     {item.q}
@@ -1341,7 +1521,7 @@ function SecurityPanel() {
   };
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5 max-w-2xl mx-auto w-full">
       <h2 className="text-xl font-semibold text-fg">Security</h2>
       <SettingsCard label="App Lock" icon={<ShieldCheckIcon className="w-4 h-4" />}>
         <SettingRow
@@ -1461,8 +1641,8 @@ function SecurityPanel() {
 function VerificationPanel() {
   const version = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.0.0-dev";
   const commitShort = process.env.NEXT_PUBLIC_GIT_COMMIT ?? "unknown";
-  const commitFull = process.env.NEXT_PUBLIC_GIT_COMMIT_FULL ?? "unknown";
-  const buildDate = process.env.NEXT_PUBLIC_BUILD_DATE ?? "unknown";
+  const commitFull = commitShort !== "unknown" ? commitShort.padEnd(40, "0") : "unknown";
+  const buildDate = "unknown";
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -1487,7 +1667,7 @@ function VerificationPanel() {
     : "—";
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5 max-w-2xl mx-auto w-full">
       <h2 className="text-xl font-semibold text-fg">Verification</h2>
 
       {/* Verdict Box */}
@@ -1617,7 +1797,7 @@ function BangsPanel() {
   });
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5 max-w-2xl mx-auto w-full">
       <div className="space-y-2.5">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-fg">Command Bangs</h2>
@@ -1642,13 +1822,18 @@ function BangsPanel() {
       </div>
 
       {bangs.length === 0 ? (
-        <div className="border border-border/60 rounded-lg p-8 text-center">
-          <p className="text-[13px] text-fg-muted">No bangs yet. Create aliases like <span className="text-accent font-mono">!update</span> to run complex scripts with a single command.</p>
+        <div className="border border-border/50 rounded-lg p-8 text-center bg-[var(--command-bg)]/20">
+          <BoltIcon className="w-8 h-8 text-accent mx-auto mb-3" strokeWidth={1.5} />
+          <h3 className="text-[15px] font-semibold text-fg mb-1">No bangs yet</h3>
+          <p className="text-[12px] text-fg-muted max-w-md mx-auto leading-normal mb-4">
+            Run complex scripts with a single command. Reference them in the terminal later using <span className="text-accent font-mono font-semibold">!</span>.
+          </p>
           <button
             onClick={() => { setEditingBang(null); setBangFormOpen(true); }}
-            className="mt-4 text-[12.5px] font-bold text-accent hover:underline"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-sm bg-accent text-accent-fg text-[12px] font-bold hover:opacity-90 transition-opacity"
           >
-            Create your first bang
+            <PlusIcon className="w-3.5 h-3.5" strokeWidth={2.5} />
+            Create bang
           </button>
         </div>
       ) : filtered.length === 0 ? (
@@ -1699,34 +1884,101 @@ function BangsPanel() {
 }
 
 function AboutPanel() {
+
+  const links = [
+    {
+      label: "Source Code",
+      description: "Explore the codebase, contribute, or build it from source.",
+      href: "https://github.com/dev-hari-prasad/carbon-ssh",
+      isBrand: true,
+      icon: (
+        <GitHubDark className="w-4.5 h-4.5 text-fg-dim/80 opacity-60 group-hover:opacity-100 group-hover:text-fg transition-all duration-200" />
+      ),
+    },
+    {
+      label: "Official Website",
+      description: (
+        <>
+          Visit <span className="underline text-fg-dim">carbonssh.com</span> for updates, downloads, and documentation.
+        </>
+      ),
+      href: "https://carbonssh.com",
+      outlineIcon: GlobeAltIcon,
+      solidIcon: GlobeAltIconSolid,
+    },
+    {
+      label: "Report an Issue",
+      description: "Found a bug? Open an issue on GitHub to help the maintainers fix it.",
+      href: "https://github.com/dev-hari-prasad/carbon-ssh/issues/new",
+      outlineIcon: ExclamationTriangleIcon,
+      solidIcon: ExclamationTriangleIconSolid,
+    },
+    {
+      label: "Changelog",
+      description: "Track what is new to Carbon: features, fixes, and release history.",
+      href: "https://github.com/dev-hari-prasad/carbon-ssh/releases",
+      outlineIcon: ClockIcon,
+      solidIcon: ClockIconSolid,
+    },
+  ];
+
   return (
-    <div className="space-y-5 max-w-2xl">
-      <h2 className="text-xl font-semibold text-fg">About</h2>
-      <SettingsCard label="Links" icon={<InformationCircleIcon className="w-4 h-4" />}>
-        <div className="flex flex-col gap-0.5">
-          <a href="https://github.com/dev-hari-prasad/carbon-ssh" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2 text-[13px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors rounded-md">
-            <GitHubDark className="w-4.5 h-4.5 shrink-0" /> Source Code
-          </a>
-          <a href="https://github.com/dev-hari-prasad/carbon-ssh/issues/new" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2 text-[13px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors rounded-md">
-            <ExclamationTriangleIcon className="w-4.5 h-4.5 shrink-0" /> Report an Issue
-          </a>
-          <a href="https://carbonssh.com/security-philosophy" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2 text-[13px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors rounded-md">
-            <ShieldCheckIcon className="w-4.5 h-4.5 shrink-0" /> Security Philosophy
-          </a>
-          <a href="https://carbonssh.com/security-response" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2 text-[13px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors rounded-md">
-            <InformationCircleIcon className="w-4.5 h-4.5 shrink-0" /> Security Response
-          </a>
-          <a href="https://carbonssh.com/audit" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2 text-[13px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors rounded-md">
-            <DocumentCheckIcon className="w-4.5 h-4.5 shrink-0" /> Security Audit
-          </a>
-          <a href="https://carbonssh.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2 text-[13px] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors rounded-md mt-1 pt-2 border-t border-border/10">
-            <GlobeAltIcon className="w-4.5 h-4.5 shrink-0" /> Website: carbonssh.com
-          </a>
+    <div className="space-y-6 max-w-2xl mx-auto flex flex-col justify-center min-h-[60vh]">
+      {/* Grid Section */}
+      <div className="w-full">
+        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-fg-muted/50 mb-4 px-0.5">
+          Resources &amp; Support
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {links.map((link) => (
+            <a
+              key={link.label}
+              href={link.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-start gap-3.5 p-3.5 rounded-md border border-border/30 bg-[var(--command-bg)]/20 hover:bg-[var(--command-active-bg)]/40 hover:border-border/60 transition-all duration-200"
+            >
+              <div className="p-2 rounded-sm bg-[var(--command-bg)] border border-border/20 shrink-0 group-hover:bg-[var(--command-active-bg)] transition-colors w-9 h-9 flex items-center justify-center relative overflow-hidden">
+                {link.isBrand ? (
+                  link.icon
+                ) : (
+                  <div className="relative w-4.5 h-4.5">
+                    {/* Outline Borders: opaque when not hovered, fades out on hover */}
+                    {link.outlineIcon && (
+                      <link.outlineIcon className="absolute inset-0 w-full h-full text-fg-dim/80 group-hover:opacity-0 transition-opacity duration-200" />
+                    )}
+                    
+                    {/* Duotone Fill: visible/shaded when not hovered, fades out on hover */}
+                    {link.solidIcon && (
+                      <link.solidIcon className="absolute inset-0 w-full h-full text-fg-dim/10 opacity-100 group-hover:opacity-0 transition-opacity duration-200" />
+                    )}
+                    
+                    {/* Solid Fill: hidden when not hovered, fully solid on hover */}
+                    {link.solidIcon && (
+                      <link.solidIcon className="absolute inset-0 w-full h-full text-fg-dim opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1">
+                  <span className="text-[13px] font-semibold text-fg group-hover:text-accent transition-colors truncate">
+                    {link.label}
+                  </span>
+                  <ChevronRightIcon className="w-3.5 h-3.5 text-fg-muted/40 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all shrink-0" />
+                </div>
+                <p className="text-[11px] text-fg-dim leading-snug mt-1 font-normal line-clamp-2">
+                  {link.description}
+                </p>
+              </div>
+            </a>
+          ))}
         </div>
-      </SettingsCard>
+      </div>
     </div>
   );
 }
+
 
 const PANELS: Record<LargeTab, React.FC> = {
   general: GeneralPanel, display: DisplayPanel, shortcuts: ShortcutsPanel,
@@ -1736,8 +1988,20 @@ const PANELS: Record<LargeTab, React.FC> = {
 
 export function LargeSettingsModal() {
   const open = useStore((s) => s.largeSettingsOpen);
+  const onlyTab = useStore((s) => s.largeSettingsOnlyTab);
   const themeId = useStore((s) => s.theme);
   const [tab, setTab] = useState<LargeTab>("general");
+
+  useEffect(() => {
+    if (open) {
+      if (onlyTab) {
+        setTab(onlyTab);
+      } else {
+        setTab("general");
+      }
+    }
+  }, [open, onlyTab]);
+
   const logoSrc = `/logo/${encodeURIComponent(getThemeById(themeId).type === "light" ? "Carbon logo dark.png" : "Carbon logo light.png")}`;
   const Panel = PANELS[tab];
 
@@ -1763,41 +2027,50 @@ export function LargeSettingsModal() {
               className="pointer-events-auto w-[960px] max-w-[90vw] h-[75vh] max-h-[800px] rounded-xl border border-border/40 shadow-2xl flex overflow-hidden relative"
               style={{ background: "var(--sidebar-bg)" }}
             >
-              <div className="absolute top-3 right-3 z-20">
-                <Tooltip label="Close" side="bottom">
-                  <button onClick={() => actions.toggleLargeSettings()} className="w-7 h-7 grid place-items-center rounded-md text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)] transition-colors">
-                    <XMarkIcon className="w-4 h-4" />
-                  </button>
-                </Tooltip>
-              </div>
-
-              {/* Left nav */}
-              <div className="w-[200px] shrink-0 border-r border-border/30 flex flex-col p-3 overflow-y-auto">
-                <div className="flex-1">
-                  <SectionLabel>Desktop</SectionLabel>
-                  {DESKTOP_TABS.map((t) => (
-                    <NavItem key={t.id} active={tab === t.id} icon={t.icon} activeIcon={t.activeIcon} label={t.label} onClick={() => setTab(t.id)} />
-                  ))}
-                  <SectionLabel>Server</SectionLabel>
-                  {SERVER_TABS.map((t) => (
-                    <NavItem key={t.id} active={tab === t.id} icon={t.icon} activeIcon={t.activeIcon} label={t.label} onClick={() => setTab(t.id)} />
-                  ))}
-                  <SectionLabel>Information</SectionLabel>
-                  {ABOUT_TABS.map((t) => (
-                    <NavItem key={t.id} active={tab === t.id} icon={t.icon} activeIcon={t.activeIcon} label={t.label} onClick={() => setTab(t.id)} />
-                  ))}
-                </div>
-                <div className="flex items-center gap-2 px-1 pt-3 border-t border-border/20">
-                  <img src={logoSrc} alt="Carbon" className="w-[22px] h-[22px] rounded-sm object-contain shrink-0" />
-                  <div className="min-w-0">
-                    <div className="text-[12px] font-semibold text-fg leading-tight">Carbon settings</div>
-                    <div className="text-[10px] font-mono text-fg-muted/60 leading-tight">v1.1</div>
+              {/* Left nav wrapper */}
+              <div className="w-[200px] shrink-0 border-r border-border/30 flex flex-col h-full bg-[var(--sidebar-bg)]">
+                {/* Sidebar Header: Brand + Exit button */}
+                <div className="flex items-center justify-between pl-3 pr-2 pt-2 pb-2 border-b border-border/20 shrink-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <img src={logoSrc} alt="Carbon" className="w-[17px] h-[17px] rounded-sm object-contain shrink-0" />
+                    <span className="text-[12px] font-semibold text-fg leading-normal truncate">
+                      {onlyTab === "bangs" ? "Bangs" : "Settings"}
+                    </span>
                   </div>
+                  <Tooltip label="Close" side="bottom">
+                    <button onClick={() => actions.toggleLargeSettings()} className="w-7 h-7 grid place-items-center rounded-md text-fg-muted hover:text-fg bg-[var(--command-active-bg)]/40 hover:bg-[var(--command-active-bg)]/80 transition-colors shrink-0">
+                      <XMarkIcon className="w-4 h-4" />
+                    </button>
+                  </Tooltip>
+                </div>
+
+                {/* Inner scrollable navigation area */}
+                <div className="flex-1 overflow-y-auto p-2.5">
+                  {onlyTab === "bangs" ? (
+                    SERVER_TABS.filter((t) => t.id === "bangs").map((t) => (
+                      <NavItem key={t.id} active={tab === t.id} icon={t.icon} activeIcon={t.activeIcon} label={t.label} onClick={() => setTab(t.id)} />
+                    ))
+                  ) : (
+                    <>
+                      <SectionLabel>Desktop</SectionLabel>
+                      {DESKTOP_TABS.map((t) => (
+                        <NavItem key={t.id} active={tab === t.id} icon={t.icon} activeIcon={t.activeIcon} label={t.label} onClick={() => setTab(t.id)} />
+                      ))}
+                      <SectionLabel>Server</SectionLabel>
+                      {SERVER_TABS.map((t) => (
+                        <NavItem key={t.id} active={tab === t.id} icon={t.icon} activeIcon={t.activeIcon} label={t.label} onClick={() => setTab(t.id)} />
+                      ))}
+                      <SectionLabel>Information</SectionLabel>
+                      {ABOUT_TABS.map((t) => (
+                        <NavItem key={t.id} active={tab === t.id} icon={t.icon} activeIcon={t.activeIcon} label={t.label} onClick={() => setTab(t.id)} />
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
 
               {/* Right content */}
-              <div className="flex-1 overflow-y-auto p-6 min-w-0">
+              <div className="flex-1 overflow-y-auto pt-5 pb-6 px-6 min-w-0">
                 <AnimatePresence mode="wait">
                   <motion.div key={tab} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.12 }}>
                     <Panel />

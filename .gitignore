@@ -19,7 +19,13 @@ dist-*
 dist-electron
 dist-electron-out
 dist-ssr
+
+# Generated icon
+build/icon.ico
 .output
+
+# Releases (built installers)
+releases/
 .vinxi
 .tanstack/**
 .nitro
@@ -43,3 +49,6 @@ dist-ssr
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
+
+# Agent cache (local AI working files)
+/agent/cache/

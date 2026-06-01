@@ -10,9 +10,9 @@ const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
 const port = parseInt(process.env.PORT || "3000", 10);
 
-/** Dev-only WS upgrade secret (same-user local threat model). Exposed to the client via NEXT_PUBLIC_. */
+/** Dev-only WS upgrade secret (same-user local threat model). */
 const wsToken = crypto.randomBytes(32).toString("hex");
-process.env.NEXT_PUBLIC_WS_TOKEN = wsToken;
+process.env.INTERNAL_API_TOKEN = wsToken;
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
@@ -31,8 +31,12 @@ app.prepare().then(() => {
 
     // Skip /api/ws for regular HTTP — it's handled via upgrade only
     if (parsedUrl.pathname === "/api/ws") {
-      res.writeHead(200, { "Content-Type": "text/plain" });
-      res.end("ws ok");
+      res.writeHead(426, {
+        "Content-Type": "text/plain",
+        Connection: "Upgrade",
+        Upgrade: "websocket",
+      });
+      res.end("Upgrade Required");
       return;
     }
 

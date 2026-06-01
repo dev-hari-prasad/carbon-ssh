@@ -29,6 +29,8 @@ const SIDEBAR_WIDTH_KEY = "ssh.sidebar-width.v1";
 const CLOSED_TABS_KEY = "ssh.closed-tabs.v1";
 const ONBOARDING_COMPLETED_KEY = "ssh.onboarding-completed.v1";
 const PINCH_ZOOM_ENABLED_KEY = "ssh.pinch-zoom-enabled.v1";
+const MAX_BANG_TRIGGER_LENGTH = 48;
+const MAX_BANG_COMMAND_LENGTH = 512;
 
 const APP_LOCK_BROWSER_PREFIX = "apw1:";
 const PBKDF2_ITERATIONS_BROWSER = 310_000;
@@ -437,6 +439,51 @@ const SAMPLE_BANGS: Bang[] = [
   },
 ];
 
+function sanitizeBangTrigger(raw: unknown): string {
+  return String(raw ?? "")
+    .replace(/^!+/, "")
+    .replace(/[^a-zA-Z0-9_-]/g, "")
+    .trim()
+    .slice(0, MAX_BANG_TRIGGER_LENGTH);
+}
+
+function sanitizeBangCommand(raw: unknown): string {
+  const normalized = String(raw ?? "")
+    .replace(/\r\n?/g, "\n")
+    .trim();
+  if (normalized.length === 0) return "";
+  // Bangs must remain a single terminal command to avoid hidden multi-line payloads.
+  if (/[\n\r]/.test(normalized)) return "";
+  return normalized.slice(0, MAX_BANG_COMMAND_LENGTH);
+}
+
+function sanitizeBangDescription(raw: unknown): string | undefined {
+  const text = String(raw ?? "").trim();
+  if (!text) return undefined;
+  return text.slice(0, 160);
+}
+
+function sanitizeBang(raw: unknown): Bang | null {
+  if (!raw || typeof raw !== "object") return null;
+  const rec = raw as Record<string, unknown>;
+  const trigger = sanitizeBangTrigger(rec.trigger);
+  const command = sanitizeBangCommand(rec.command);
+  if (!trigger || !command) return null;
+  const id = String(rec.id ?? "").trim() || `bang-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  const createdAt =
+    typeof rec.createdAt === "number" && Number.isFinite(rec.createdAt)
+      ? rec.createdAt
+      : Date.now();
+
+  return {
+    id,
+    trigger,
+    command,
+    description: sanitizeBangDescription(rec.description),
+    createdAt,
+  };
+}
+
 export function loadBangs(): Bang[] {
   if (typeof window === "undefined") return SAMPLE_BANGS;
   try {
@@ -444,7 +491,10 @@ export function loadBangs(): Bang[] {
     if (!raw) return SAMPLE_BANGS;
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return SAMPLE_BANGS;
-    return parsed as Bang[];
+    const sanitized = parsed
+      .map((entry) => sanitizeBang(entry))
+      .filter((entry): entry is Bang => Boolean(entry));
+    return sanitized.length > 0 ? sanitized : SAMPLE_BANGS;
   } catch {
     return SAMPLE_BANGS;
   }
@@ -452,7 +502,10 @@ export function loadBangs(): Bang[] {
 
 export function saveBangs(list: Bang[]) {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(BANGS_KEY, JSON.stringify(list));
+  const sanitized = list
+    .map((entry) => sanitizeBang(entry))
+    .filter((entry): entry is Bang => Boolean(entry));
+  window.localStorage.setItem(BANGS_KEY, JSON.stringify(sanitized));
 }
 
 export function loadTheme(): ThemeId {
@@ -631,7 +684,7 @@ export function loadTelemetryEnabled(): boolean {
   if (typeof window === "undefined") return true;
   const v = window.localStorage.getItem(TELEMETRY_ENABLED_KEY);
   if (v === null) return true;
-  return v === "true";
+  return v === "1" || v === "true";
 }
 
 export function saveTelemetryEnabled(enabled: boolean) {

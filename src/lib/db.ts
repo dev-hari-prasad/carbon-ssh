@@ -6,10 +6,11 @@ import { PHASE_PRODUCTION_BUILD } from "next/constants";
 
 import type { LogEntry } from "@/lib/types";
 
-const dbPath =
+const dbPath = process.env.DB_PATH || (
   process.env.NODE_ENV === "production"
     ? path.join(process.cwd(), "database.sqlite")
-    : path.join(os.tmpdir(), "carbon-database.sqlite");
+    : path.join(os.tmpdir(), "carbon-database.sqlite")
+);
 
 const jsonFallbackPath = dbPath.replace(/\.sqlite$/i, "-logs.json");
 
@@ -23,6 +24,8 @@ export interface LogsPersistence {
 }
 
 let persistence: LogsPersistence | null = null;
+let jsonLogsCache: LogEntry[] | null = null;
+let jsonWriteQueue: Promise<void> = Promise.resolve();
 
 function isBindingsMissingError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
@@ -54,22 +57,38 @@ function tryOpenSqlite(): SqliteDatabase {
 }
 
 function readJsonLogs(): LogEntry[] {
+  if (jsonLogsCache) return [...jsonLogsCache];
   try {
-    if (!fs.existsSync(jsonFallbackPath)) return [];
+    if (!fs.existsSync(jsonFallbackPath)) {
+      jsonLogsCache = [];
+      return [];
+    }
     const raw = fs.readFileSync(jsonFallbackPath, "utf8");
     const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? (parsed as LogEntry[]) : [];
+    jsonLogsCache = Array.isArray(parsed) ? (parsed as LogEntry[]) : [];
+    return [...jsonLogsCache];
   } catch {
+    jsonLogsCache = [];
     return [];
   }
 }
 
 function writeJsonLogs(logs: LogEntry[]) {
+  jsonLogsCache = [...logs];
   const dir = path.dirname(jsonFallbackPath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  fs.writeFileSync(jsonFallbackPath, JSON.stringify(logs), "utf8");
+  const serialized = JSON.stringify(logs);
+  const tmp = `${jsonFallbackPath}.tmp`;
+
+  jsonWriteQueue = jsonWriteQueue
+    .catch(() => {})
+    .then(async () => {
+      await fs.promises.mkdir(dir, { recursive: true });
+      await fs.promises.writeFile(tmp, serialized, "utf8");
+      await fs.promises.rename(tmp, jsonFallbackPath);
+    })
+    .catch((error) => {
+      console.error("[db] Failed to persist JSON logs:", error);
+    });
 }
 
 function sqlitePersistence(db: SqliteDatabase): LogsPersistence {
