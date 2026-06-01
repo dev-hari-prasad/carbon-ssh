@@ -21,5 +21,16 @@ export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Pr
   }
   newInit.headers = headers;
 
-  return fetch(input, newInit);
+  const res = await fetch(input, newInit);
+  if (!res.ok) {
+    const originalJson = res.json.bind(res);
+    res.json = async () => {
+      try {
+        return await originalJson();
+      } catch {
+        return { error: res.statusText || "Unauthorized", ok: false };
+      }
+    };
+  }
+  return res;
 }

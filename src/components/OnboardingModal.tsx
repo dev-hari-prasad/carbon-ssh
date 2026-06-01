@@ -752,7 +752,7 @@ function OnboardingThemeSelector({ activeThemeId, onSelect, compact = false }: {
   const [tab, setTab] = useState<"dark" | "light">("dark");
 
   const allowedDark = ["dark_modern", "onedark-pro-darker", "onedark-pro-night-flat"];
-  const allowedLight = ["2026-light", "light_modern", "solarized-light"];
+  const allowedLight = ["2026-light", "light_modern"];
 
   const ordered = tab === "dark" 
     ? allowedDark.map(id => THEMES.find(t => t.id === id)).filter((t): t is AppTheme => Boolean(t))

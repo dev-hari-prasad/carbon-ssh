@@ -71,7 +71,7 @@ export interface AccessSettings {
 }
 
 export const DEFAULT_ACCESS_SETTINGS: AccessSettings = {
-  appLockEnabled: true,
+  appLockEnabled: false,
   method: "passkey",
 };
 
@@ -84,7 +84,10 @@ export function loadAccessSettings(): AccessSettings {
   if (setup === "password") {
     return { appLockEnabled: true, method: "password" };
   }
-  return { appLockEnabled: true, method: "passkey" };
+  if (setup === "biometric") {
+    return { appLockEnabled: true, method: "passkey" };
+  }
+  return { ...DEFAULT_ACCESS_SETTINGS };
 }
 
 function hexFromBytes(bytes: Uint8Array): string {
