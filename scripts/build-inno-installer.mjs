@@ -1,37 +1,17 @@
-/**
- * build-inno-installer.mjs
- *
- * Automates the Inno Setup compilation step and produces a clean release.
- *
- * Pipeline:
- *   1. Validates electron-builder unpacked output exists
- *   2. Compiles the .iss script → releases/{version}/CarbonSSH-Setup-{version}.exe
- *   3. Cleans up all intermediate build artifacts (win-unpacked, dist-electron-out junk)
- *
- * Prerequisites:
- *   - Inno Setup 6 installed  (winget install JRSoftware.InnoSetup)
- *   - electron-builder has produced  dist-electron-out/win-unpacked/
- *
- * Usage:  node scripts/build-inno-installer.mjs
- */
-
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { existsSync, statSync, rmSync, readdirSync } from "node:fs";
-import { readFile, mkdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
+import { existsSync, rmSync, statSync } from "node:fs";
+import { mkdir, readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import process from "node:process";
+import { fileURLToPath } from "node:url";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, "..");
-
-// ---------- Locate ISCC.exe ----------
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const STAGING_DIR_NAMES = ["dist-electron", "dist-electron-out"];
 
 const ISCC_CANDIDATES = [
   join(process.env.ProgramFiles ?? "", "Inno Setup 6", "ISCC.exe"),
   join(process.env["ProgramFiles(x86)"] ?? "", "Inno Setup 6", "ISCC.exe"),
-  // Per-user install (winget default)
   join(process.env.LOCALAPPDATA ?? "", "Programs", "Inno Setup 6", "ISCC.exe"),
-  // Fallback: maybe it's on PATH
   "ISCC.exe",
 ];
 
@@ -41,7 +21,7 @@ function findISCC() {
       return candidate;
     }
   }
-  // Last-ditch: try running ISCC from PATH
+
   try {
     execFileSync("where", ["ISCC.exe"], { stdio: "pipe" });
     return "ISCC.exe";
@@ -50,111 +30,75 @@ function findISCC() {
   }
 }
 
-// ---------- Cleanup ----------
+function cleanElectronStaging() {
+  for (const name of STAGING_DIR_NAMES) {
+    const directory = join(ROOT, name);
+    if (!existsSync(directory)) continue;
 
-function cleanDistElectronOut() {
-  const distDir = join(ROOT, "dist-electron-out");
-  if (!existsSync(distDir)) return;
-
-  console.log("[inno-build] Cleaning up intermediate build artifacts …");
-
-  // Remove the entire dist-electron-out directory — it only contains
-  // intermediate files (win-unpacked/, builder metadata, etc.)
-  // The final .exe is already in releases/{version}/
-  try {
-    rmSync(distDir, { recursive: true, force: true });
-    console.log("[inno-build] ✔ Removed dist-electron-out/");
-  } catch (err) {
-    console.warn(`[inno-build] ⚠ Could not fully remove dist-electron-out: ${err.message}`);
+    try {
+      rmSync(directory, { recursive: true, force: true });
+      console.log(`[inno-build] ✓ Removed ${name}/`);
+    } catch (error) {
+      console.warn(`[inno-build] ⚠ Could not fully remove ${name}: ${error.message}`);
+    }
   }
 }
-
-// ---------- Main ----------
 
 async function main() {
-  // 1. Read version from package.json
-  const pkg = JSON.parse(await readFile(join(ROOT, "package.json"), "utf-8"));
-  const version = pkg.version || "0.1.0";
-  console.log(`[inno-build] App version: ${version}`);
-
-  // 2. Validate electron-builder output exists
-  const unpackedDir = join(ROOT, "dist-electron-out", "win-unpacked");
-  if (!existsSync(unpackedDir)) {
-    console.error(`[inno-build] ✘ Unpacked directory not found: ${unpackedDir}`);
-    console.error(`[inno-build]   Run "pnpm build:electron-release" first.`);
-    process.exit(1);
-  }
-  console.log(`[inno-build] ✔ Found unpacked dir: ${unpackedDir}`);
-
-  // 3. Validate icon file exists
+  const appPackage = JSON.parse(await readFile(join(ROOT, "package.json"), "utf8"));
+  const version = appPackage.version || "0.1.0";
+  const mode =
+    process.argv.find((argument) => argument.startsWith("--mode="))?.slice(7) ?? "production";
+  const releaseChannel = mode === "production" ? "prod" : "dev";
+  const unpackedDirectory = join(ROOT, "dist-electron", "win-unpacked");
   const iconFile = join(ROOT, "build", "icon.ico");
-  if (!existsSync(iconFile)) {
-    console.error(`[inno-build] ✘ Icon file not found: ${iconFile}`);
-    console.error(`[inno-build]   Run "pnpm build:ico" first.`);
-    process.exit(1);
-  }
-  console.log(`[inno-build] ✔ Found icon: ${iconFile}`);
+  const releaseDirectory = join(ROOT, "releases", releaseChannel);
+  const outputFile = join(releaseDirectory, `CarbonSSH-Setup-${version}.exe`);
+  const issFile = join(ROOT, "installer", "carbon-ssh.iss");
 
-  // 4. Locate Inno Setup compiler
+  if (!existsSync(unpackedDirectory)) {
+    throw new Error(`Unpacked directory not found: ${unpackedDirectory}`);
+  }
+
+  if (!existsSync(iconFile)) {
+    throw new Error(`Icon file not found: ${iconFile}. Run "npm run build:ico" first.`);
+  }
+
   const iscc = findISCC();
   if (!iscc) {
-    console.error(`[inno-build] ✘ ISCC.exe not found.`);
-    console.error(`[inno-build]   Install Inno Setup 6: winget install JRSoftware.InnoSetup`);
-    process.exit(1);
-  }
-  console.log(`[inno-build] ✔ ISCC.exe: ${iscc}`);
-
-  // 5. Ensure the releases/{version}/ directory exists
-  const releaseDir = join(ROOT, "releases", version);
-  await mkdir(releaseDir, { recursive: true });
-  console.log(`[inno-build] ✔ Release dir: ${releaseDir}`);
-
-  // 6. Compile
-  const issFile = join(ROOT, "installer", "carbon-ssh.iss");
-  const args = [`/DAppVersion=${version}`, issFile];
-
-  console.log(`[inno-build] Compiling installer …`);
-  console.log(`[inno-build] > ${iscc} ${args.join(" ")}`);
-  console.log("");
-
-  try {
-    execFileSync(iscc, args, {
-      cwd: ROOT,
-      stdio: "inherit",
-      windowsHide: false,
-    });
-  } catch (err) {
-    console.error(`\n[inno-build] ✘ ISCC.exe failed with exit code ${err.status}`);
-    process.exit(err.status || 1);
+    throw new Error(
+      "ISCC.exe not found. Install Inno Setup 6: winget install JRSoftware.InnoSetup",
+    );
   }
 
-  // 7. Verify output
-  const outputExe = join(releaseDir, `CarbonSSH-Setup-${version}.exe`);
-  if (!existsSync(outputExe)) {
-    console.error(`\n[inno-build] ✘ Expected installer not found at: ${outputExe}`);
-    console.error(`[inno-build]   Check ISCC output above for the actual location.`);
-    process.exit(1);
+  await mkdir(releaseDirectory, { recursive: true });
+
+  const args = [
+    `/DAppVersion=${version}`,
+    `/DAppReleaseChannel=${releaseChannel}`,
+    `/DAppCompression=${mode === "production" ? "lzma2/ultra64" : "zip"}`,
+    `/DAppSolidCompression=${mode === "production" ? "yes" : "no"}`,
+    issFile,
+  ];
+
+  console.log(`[inno-build] Building ${mode} installer for version ${version}`);
+  execFileSync(iscc, args, { cwd: ROOT, stdio: "inherit", windowsHide: false });
+
+  if (!existsSync(outputFile)) {
+    throw new Error(`Expected installer not found: ${outputFile}`);
   }
 
-  const size = statSync(outputExe).size;
-  const sizeMB = (size / 1024 / 1024).toFixed(1);
-
-  // 8. Clean up intermediate build artifacts
-  cleanDistElectronOut();
-
-  // 9. Report final output
-  console.log("");
-  console.log(`[inno-build] ═══════════════════════════════════════════════════════`);
-  console.log(`[inno-build] ✔ Release ready!`);
-  console.log(`[inno-build]`);
-  console.log(`[inno-build]   releases/${version}/CarbonSSH-Setup-${version}.exe`);
-  console.log(`[inno-build]   Size: ${sizeMB} MB`);
-  console.log(`[inno-build]`);
-  console.log(`[inno-build]   All intermediate artifacts have been cleaned up.`);
-  console.log(`[inno-build] ═══════════════════════════════════════════════════════`);
+  const sizeMB = (statSync(outputFile).size / 1024 / 1024).toFixed(1);
+  console.log(
+    `[inno-build] ✓ releases/${releaseChannel}/CarbonSSH-Setup-${version}.exe (${sizeMB} MB)`,
+  );
 }
 
-main().catch((err) => {
-  console.error("[inno-build] ✘ Unexpected error:", err);
-  process.exit(1);
-});
+try {
+  await main();
+} catch (error) {
+  console.error(`[inno-build] ✗ ${error.message}`);
+  process.exitCode = typeof error.status === "number" ? error.status : 1;
+} finally {
+  cleanElectronStaging();
+}

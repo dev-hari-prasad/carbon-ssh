@@ -760,9 +760,7 @@ function BottomPanelComponent() {
                 aria-valuemax={viewportMaxLogs}
                 aria-valuenow={logsBodyPx}
                 aria-label="Resize logs height"
-                className={`shrink-0 w-full select-none touch-none bg-border/50 hover:bg-accent/35 active:bg-accent/55 transition-colors outline-none cursor-row-resize relative flex items-center justify-center ${
-                  resizeActive ? "bg-accent/50" : ""
-                }`}
+                className="shrink-0 w-full select-none touch-none bg-transparent outline-none cursor-row-resize relative flex items-center justify-center group/resize"
                 style={{ height: LOGS_RESIZE_HANDLE_PX }}
                 tabIndex={0}
                 onPointerDown={(e) => {
@@ -777,6 +775,7 @@ function BottomPanelComponent() {
                   }
                 }}
               >
+                <div className={`absolute inset-x-0 h-[1px] transition-colors bg-border/40 group-hover/resize:bg-accent/50 group-active/resize:bg-accent/70 ${resizeActive ? "bg-accent" : ""}`} />
               </div>
             </Tooltip>
             <div

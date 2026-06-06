@@ -287,6 +287,26 @@ ipcMain.handle("clear-app-lock-password", async (event) => {
   return true;
 });
 
+ipcMain.handle("save-recovery-metadata", async (event, metadata) => {
+  ensureMainSender(event);
+  if (!metadata || typeof metadata !== "object") {
+    throw new Error("Invalid metadata payload");
+  }
+  await secureStore.saveRecoveryMetadata(app, metadata);
+  return true;
+});
+
+ipcMain.handle("load-recovery-metadata", async (event) => {
+  ensureMainSender(event);
+  return secureStore.loadRecoveryMetadata(app);
+});
+
+ipcMain.handle("delete-recovery-metadata", async (event) => {
+  ensureMainSender(event);
+  await secureStore.deleteRecoveryMetadata(app);
+  return true;
+});
+
 ipcMain.handle("decrypt-string", (event, encryptedBase64) => {
   if (!encryptedBase64) return "";
   if (typeof encryptedBase64 !== "string") {
@@ -980,6 +1000,10 @@ app.whenReady().then(async () => {
     "pin-to-taskbar",
     "maximize-window",
     "factory-reset",
+    "clear-app-lock-password",
+    "save-recovery-metadata",
+    "load-recovery-metadata",
+    "delete-recovery-metadata",
   ]);
 
   const originalHandle = ipcMain.handle.bind(ipcMain);

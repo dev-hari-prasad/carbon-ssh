@@ -13,6 +13,7 @@ function defaultStore() {
     connectionMeta: {},
     aiKeys: {},
     knownHosts: {},
+    recovery: undefined,
   };
 }
 
@@ -28,6 +29,7 @@ function normalizeStore(parsed) {
     connectionMeta: { ...(parsed?.connectionMeta || {}) },
     aiKeys: { ...(parsed?.aiKeys || {}) },
     knownHosts: { ...(parsed?.knownHosts || {}) },
+    recovery: parsed?.recovery ? { ...parsed.recovery } : undefined,
   };
 }
 
@@ -397,6 +399,38 @@ function factoryReset(app) {
   }
 }
 
+function saveRecoveryMetadata(app, metadata) {
+  const store = readStore(app);
+  store.recovery = {
+    version: Number(metadata.version || 1),
+    mode: String(metadata.mode || "standard"),
+    recoveryId: metadata.recoveryId ? String(metadata.recoveryId) : undefined,
+    questions: Array.isArray(metadata.questions) ? metadata.questions.map(String) : undefined,
+    saltAnswersHex: String(metadata.saltAnswersHex),
+    saltVerificationHex: String(metadata.saltVerificationHex),
+    aesIvHex: String(metadata.aesIvHex),
+    aesAuthTagHex: String(metadata.aesAuthTagHex),
+    encryptedVerificationTokenHex: String(metadata.encryptedVerificationTokenHex),
+    verificationTokenHashHex: String(metadata.verificationTokenHashHex),
+    createdAt: Number(metadata.createdAt || Date.now()),
+  };
+  return writeStore(app, store);
+}
+
+function loadRecoveryMetadata(app) {
+  const store = readStore(app);
+  return store.recovery || null;
+}
+
+function deleteRecoveryMetadata(app) {
+  const store = readStore(app);
+  if (store.recovery) {
+    delete store.recovery;
+    return writeStore(app, store);
+  }
+  return Promise.resolve();
+}
+
 module.exports = {
   factoryReset,
   saveConnectionSecrets,
@@ -413,4 +447,7 @@ module.exports = {
   saveAppLockHash,
   verifyAppLockPassword,
   clearAppLockHash,
+  saveRecoveryMetadata,
+  loadRecoveryMetadata,
+  deleteRecoveryMetadata,
 };

@@ -6,7 +6,7 @@ beforeBuild: electron/before-build.cjs
 afterPack: electron/after-pack.cjs
 
 directories:
-  output: dist-electron-out
+  output: dist-electron
   buildResources: build
 
 files:
@@ -57,15 +57,15 @@ mac:
   hardenedRuntime: true
   gatekeeperAssess: false
   # Developer ID + notarization: CSC_LINK / CSC_KEY_PASSWORD / APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID
-  notarize:
-    teamId: ${env.APPLE_TEAM_ID}
+  notarize: true
 
 linux:
   target:
     - AppImage
     - deb
+    - rpm
   icon: build/icon.png
   category: Development
 
 # Inno Setup handles installer creation — see installer/carbon-ssh.iss
-# Build with:  pnpm build:release-win
+# Build with: npm run build:electron

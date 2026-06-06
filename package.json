@@ -24,11 +24,10 @@
   },
   "scripts": {
     "dev": "set NODE_OPTIONS=--max-old-space-size=4096 && tsx server.ts",
-    "dev:electron": "concurrently -k -n server,electron -c cyan,green \"tsx server.ts\" \"wait-on -t 60000 -i 3000 http://localhost:3000 && electron .\"",
+    "dev:electron": "node scripts/build-electron.mjs",
+    "start:electron": "concurrently -k -n server,electron -c cyan,green \"tsx server.ts\" \"wait-on -t 60000 -i 3000 http://localhost:3000 && electron .\"",
     "build": "next build",
-    "clean:electron-dist": "node scripts/clean-electron-dist.mjs",
-    "build:electron": "pnpm clean:electron-dist && next build --turbopack && electron-builder --config electron-builder.yml --dir",
-    "build:electron-release": "pnpm clean:electron-dist && next build --turbopack && electron-builder --config electron-builder.yml --config.compression=maximum",
+    "build:electron": "node scripts/build-electron.mjs",
     "start": "next start",
     "lint": "next lint",
     "audit": "pnpm audit --audit-level=high",
@@ -37,10 +36,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "sbom": "cdxgen -o sbom.json .",
-    "format": "prettier --write .",
-    "build:ico": "node scripts/generate-ico.mjs",
-    "build:installer": "node scripts/build-inno-installer.mjs",
-    "build:release-win": "pnpm build:electron-release && pnpm build:installer"
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "^4.0.98",
@@ -92,6 +88,7 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
     "framer-motion": "^12.38.0",
+    "hash-wasm": "4.12.0",
     "iconoir-react": "^7.11.0",
     "input-otp": "^1.4.2",
     "next": "16.2.6",

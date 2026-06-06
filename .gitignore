@@ -24,8 +24,10 @@ dist-ssr
 build/icon.ico
 .output
 
-# Releases (built installers)
-releases/
+# Release artifacts (keep production folder placeholders for CI)
+releases/dev/
+releases/prod/*
+!releases/prod/.gitkeep
 .vinxi
 .tanstack/**
 .nitro

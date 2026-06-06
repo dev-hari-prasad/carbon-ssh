@@ -53,5 +53,8 @@ interface Window {
       suggestions?: Array<{ command: string; label: string; description: string }>;
     }>;
     aiTestConnection?: (payload: unknown) => Promise<{ ok?: boolean; error?: string }>;
+    saveRecoveryMetadata?: (metadata: import("./features/recovery/types").RecoveryMetadata) => Promise<boolean>;
+    loadRecoveryMetadata?: () => Promise<import("./features/recovery/types").RecoveryMetadata | null>;
+    deleteRecoveryMetadata?: () => Promise<boolean>;
   };
 }

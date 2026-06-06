@@ -32,4 +32,7 @@ contextBridge.exposeInMainWorld("electron", {
   setTitleBarOverlay: (overlay) => ipcRenderer.send("set-title-bar-overlay", overlay),
   pinToTaskbar: () => ipcRenderer.send("pin-to-taskbar"),
   maximizeWindow: () => ipcRenderer.send("maximize-window"),
+  saveRecoveryMetadata: (metadata) => ipcRenderer.invoke("save-recovery-metadata", metadata),
+  loadRecoveryMetadata: () => ipcRenderer.invoke("load-recovery-metadata"),
+  deleteRecoveryMetadata: () => ipcRenderer.invoke("delete-recovery-metadata"),
 });

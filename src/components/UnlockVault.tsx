@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { RecoveryWizard } from "@/features/recovery/components/RecoveryWizard";
 import { actions } from "@/lib/store";
 import { trackOnboardingComplete } from "@/lib/telemetry";
 import { savePasskeyAccess, savePasswordAccess, verifyAppLockPassword } from "@/lib/storage";
@@ -44,6 +45,7 @@ export function UnlockVault() {
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showRecoveryWizard, setShowRecoveryWizard] = useState(false);
 
   const [activeTab, setActiveTab] = useState("biometric");
   const [passwordWarningTime, setPasswordWarningTime] = useState(0);
@@ -438,6 +440,15 @@ export function UnlockVault() {
                       </>
                     )}
                   </Button>
+                  <div className="text-center pt-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowRecoveryWizard(true)}
+                      className="text-[12px] text-accent hover:underline bg-transparent border-none outline-none cursor-pointer font-medium"
+                    >
+                      Forgot password? Recover account
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col gap-4">
@@ -525,6 +536,10 @@ export function UnlockVault() {
           </Button>
         </div>
       )}
+      <RecoveryWizard
+        isOpen={showRecoveryWizard}
+        onClose={() => setShowRecoveryWizard(false)}
+      />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useStore, actions } from "@/lib/store";
+import { ConfigureRecoveryForm } from "@/features/recovery/components/ConfigureRecoveryModal";
 import { THEMES, getThemeById, RECOMMENDED_THEME_IDS, cssVariablesForTheme, type AppTheme } from "@/config/themes";
 import { TITLE_BAR_HEIGHT } from "@/config/titlebar";
 import {
@@ -57,6 +58,7 @@ export function OnboardingModal() {
   const [activeTab, setActiveTab] = useState(access.appLockEnabled ? access.method : "passkey");
   const [setupStatus, setSetupStatus] = useState<'idle' | 'success' | 'error' | 'skipped'>(access.appLockEnabled ? 'success' : 'idle');
   const [showSkipWarning, setShowSkipWarning] = useState(false);
+  const [showRecoverySetup, setShowRecoverySetup] = useState(false);
 
   const onboardingCompleted = useStore((s) => s.onboardingCompleted);
   const tabBarOrientation = useStore((s) => s.tabBarOrientation);
@@ -104,9 +106,20 @@ export function OnboardingModal() {
     await savePasswordAccess(password);
     actions.setAccessSettings({ appLockEnabled: true, method: "password" });
     await actions.unlockApp();
+    setShowRecoverySetup(true);
+  }, [password]);
+
+  const handleRecoveryComplete = useCallback(() => {
+    setShowRecoverySetup(false);
     setSetupStatus('success');
     handleNext();
-  }, [password, handleNext]);
+  }, [handleNext]);
+
+  const handleRecoveryCancel = useCallback(() => {
+    setShowRecoverySetup(false);
+    setSetupStatus('success');
+    handleNext();
+  }, [handleNext]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -363,7 +376,14 @@ export function OnboardingModal() {
                   </div>
 
                   <div className="flex-1 flex flex-col justify-center items-center pb-12 pr-2 w-[70%] mx-auto">
-                    {setupStatus === 'success' ? (
+                    {showRecoverySetup ? (
+                      <div className="w-full text-left">
+                        <ConfigureRecoveryForm
+                          onCancel={handleRecoveryCancel}
+                          onComplete={handleRecoveryComplete}
+                        />
+                      </div>
+                    ) : setupStatus === 'success' ? (
                       <motion.div 
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
