@@ -3,6 +3,7 @@
 The purpose of this skill is to analyze the REAL implementation state of the repository BEFORE generating sub-plans.
 
 This skill exists to prevent:
+
 - invalid implementation sequencing
 - architecture drift
 - unsafe refactors
@@ -13,6 +14,7 @@ This skill exists to prevent:
 The AI must treat the repository as the source of truth.
 
 The original plan document may be:
+
 - outdated
 - partially implemented
 - architecturally incorrect
@@ -81,6 +83,7 @@ The AI must identify:
 ## Runtime Boundaries
 
 Examples:
+
 - renderer process
 - main Electron process
 - backend API
@@ -91,6 +94,7 @@ Examples:
 ## Trust Boundaries
 
 Examples:
+
 - renderer ↔ main
 - frontend ↔ backend
 - local machine ↔ remote SSH host
@@ -99,6 +103,7 @@ Examples:
 ## Security-Critical Systems
 
 Examples:
+
 - credential storage
 - private key handling
 - token management
@@ -133,6 +138,7 @@ The AI must identify:
 
 Example:
 credential storage depends on:
+
 - storage layer
 - encryption utilities
 - session manager
@@ -141,6 +147,7 @@ credential storage depends on:
 
 Example:
 credential storage changes may impact:
+
 - websocket reconnect
 - terminal restore
 - AI memory systems
@@ -164,6 +171,7 @@ The AI must identify:
 - backward compatibility requirements
 
 The AI must identify:
+
 - rollback difficulty
 - corruption risk
 - partial migration failure scenarios
@@ -177,6 +185,7 @@ The AI must identify:
 ## High Blast Radius Areas
 
 Examples:
+
 - auth systems
 - IPC systems
 - SSH execution
@@ -186,6 +195,7 @@ Examples:
 ## Unsafe Refactor Risks
 
 Examples:
+
 - tight coupling
 - circular dependencies
 - duplicated logic
@@ -194,6 +204,7 @@ Examples:
 ## Operational Risks
 
 Examples:
+
 - rollout failures
 - session invalidation
 - credential corruption
@@ -291,12 +302,14 @@ The AI must:
 - identify operational hazards
 
 The AI must think like:
+
 - a staff engineer
 - a security engineer
 - a systems architect
 - a production SRE
 
 The AI must NOT:
+
 - generate shallow summaries
 - blindly trust the plan
 - ignore existing implementation constraints

@@ -15,10 +15,10 @@ if (!existsSync(dir)) {
 const lines = [];
 for (const name of readdirSync(dir)) {
   if (name === "SHA256SUMS.txt") continue;
-  
+
   const filePath = join(dir, name);
   if (!statSync(filePath).isFile()) continue; // Skip directories like "win-unpacked"
-  
+
   const buf = readFileSync(filePath);
   const hash = createHash("sha256").update(buf).digest("hex");
   lines.push(`${hash}  ${name}`);

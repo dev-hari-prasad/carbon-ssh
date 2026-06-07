@@ -1,4 +1,13 @@
-import { memo, useCallback, useEffect, useId, useMemo, useRef, useState, type UIEvent } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type UIEvent,
+} from "react";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -116,7 +125,7 @@ function parseLogCells(message: string): { kind: string; target: string; detail:
         detail && /\bnot found\b|command not found/i.test(detail) ? "Unknown" : "Command";
       return { kind, target, detail: detail || body };
     }
-    
+
     const spaceMatch = body.match(/^(\S+)(?:\s+(.*))?$/s);
     if (spaceMatch) {
       return { kind: "Command", target: spaceMatch[1], detail: spaceMatch[2] || "—" };
@@ -126,11 +135,11 @@ function parseLogCells(message: string): { kind: string; target: string; detail:
   }
 
   const low = t.toLowerCase();
-  
+
   if (low.startsWith("connecting to ")) {
-     return { kind: "Connect", target: t.slice("connecting to ".length).trim(), detail: "—" };
+    return { kind: "Connect", target: t.slice("connecting to ".length).trim(), detail: "—" };
   }
-  
+
   if (low.startsWith("opening session ")) {
     return {
       kind: "Open",
@@ -141,25 +150,36 @@ function parseLogCells(message: string): { kind: string; target: string; detail:
 
   const sessionMatch = t.match(/^Session (.+) (connected|closed)$/i);
   if (sessionMatch) {
-     return { kind: sessionMatch[2].toLowerCase() === "connected" ? "Ready" : "Close", target: sessionMatch[1], detail: "—" };
+    return {
+      kind: sessionMatch[2].toLowerCase() === "connected" ? "Ready" : "Close",
+      target: sessionMatch[1],
+      detail: "—",
+    };
   }
 
   if (low.startsWith("updated ") || low.startsWith("saved ") || low.startsWith("deleted ")) {
-     const space = t.indexOf(" ");
-     return { kind: "Change", target: t.slice(space + 1).trim(), detail: t.slice(0, space) };
+    const space = t.indexOf(" ");
+    return { kind: "Change", target: t.slice(space + 1).trim(), detail: t.slice(0, space) };
   }
-  
-  if (low.startsWith("created group ") || low.startsWith("removed group ") || low.startsWith("renamed group to ")) {
-     const kind = low.startsWith("created") ? "Create" : low.startsWith("removed") ? "Delete" : "Rename";
-     const match = t.match(/"([^"]+)"/);
-     return { kind, target: match ? match[1] : "Group", detail: t };
+
+  if (
+    low.startsWith("created group ") ||
+    low.startsWith("removed group ") ||
+    low.startsWith("renamed group to ")
+  ) {
+    const kind = low.startsWith("created")
+      ? "Create"
+      : low.startsWith("removed")
+        ? "Delete"
+        : "Rename";
+    const match = t.match(/"([^"]+)"/);
+    return { kind, target: match ? match[1] : "Group", detail: t };
   }
 
   if (/\breplay\/ssh\b|offline shell\b|session .* ready/i.test(t))
     return { kind: "System", target: "", detail: t };
 
-  if (/\bnot found\b|command not found/i.test(low))
-    return { kind: "Error", target: "", detail: t };
+  if (/\bnot found\b|command not found/i.test(low)) return { kind: "Error", target: "", detail: t };
 
   if (/deleted|removed|warn:/i.test(t)) return { kind: "Change", target: "", detail: t };
   return { kind: "Info", target: "", detail: t };
@@ -225,7 +245,11 @@ function LogsSourcePicker({
   const activeConn = value === "__all__" ? null : connectionForSource(connections, value);
 
   return (
-    <Tooltip label={value === "__all__" ? "Show all logs" : `Source: ${value}`} side="top" delay={500}>
+    <Tooltip
+      label={value === "__all__" ? "Show all logs" : `Source: ${value}`}
+      side="top"
+      delay={500}
+    >
       <Popover open={menuOpen} onOpenChange={setMenuOpen}>
         <PopoverTrigger asChild>
           <button
@@ -240,61 +264,66 @@ function LogsSourcePicker({
             <ChevronDownIcon className="w-2.5 h-2.5 shrink-0 opacity-70" strokeWidth={2.5} />
           </button>
         </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        side="top"
-        sideOffset={6}
-        className="p-1 min-w-[11rem] max-w-[16rem] max-h-52 overflow-y-auto rounded-md border border-border bg-[var(--menu-bg)] shadow-2xl scrollbar-thin"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
-        <div role="listbox" aria-label="Log source">
-          <button
-            type="button"
-            role="option"
-            aria-selected={value === "__all__"}
-            onClick={() => {
-              onChange("__all__");
-              setMenuOpen(false);
-            }}
-            className={`w-full flex items-center gap-2 px-2 h-7 rounded-sm text-left transition-colors ${
-              value === "__all__"
-                ? "bg-[var(--command-active-bg)] text-fg"
-                : "text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg"
-            }`}
-          >
-            <LogSourceGlyph source="__all__" conn={null} />
-            <span className="flex-1 min-w-0 truncate text-[11px] font-mono">All sources</span>
-            {value === "__all__" ? (
-              <CheckIcon className="w-[11px] h-[11px] text-accent shrink-0" strokeWidth={2.5} />
-            ) : null}
-          </button>
-          {sources.map((s) => {
-            const conn = connectionForSource(connections, s);
-            const active = value === s;
-            return (
-              <button
-                key={s}
-                type="button"
-                role="option"
-                aria-selected={active}
-                onClick={() => {
-                  onChange(s);
-                  setMenuOpen(false);
-                }}
-                className={`w-full flex items-center gap-2 px-2 h-7 rounded-sm text-left transition-colors ${
-                  active
-                    ? "bg-[var(--command-active-bg)] text-fg"
-                    : "text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg"
-                }`}
-              >
-                <LogSourceGlyph source={s} conn={conn} />
-                <span className="flex-1 min-w-0 truncate text-[11px] font-mono">{s}</span>
-                {active ? <CheckIcon className="w-[11px] h-[11px] text-accent shrink-0" strokeWidth={2.5} /> : null}
-              </button>
-            );
-          })}
-        </div>
-      </PopoverContent>
+        <PopoverContent
+          align="end"
+          side="top"
+          sideOffset={6}
+          className="p-1 min-w-[11rem] max-w-[16rem] max-h-52 overflow-y-auto rounded-md border border-border bg-[var(--menu-bg)] shadow-2xl scrollbar-thin"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <div role="listbox" aria-label="Log source">
+            <button
+              type="button"
+              role="option"
+              aria-selected={value === "__all__"}
+              onClick={() => {
+                onChange("__all__");
+                setMenuOpen(false);
+              }}
+              className={`w-full flex items-center gap-2 px-2 h-7 rounded-sm text-left transition-colors ${
+                value === "__all__"
+                  ? "bg-[var(--command-active-bg)] text-fg"
+                  : "text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg"
+              }`}
+            >
+              <LogSourceGlyph source="__all__" conn={null} />
+              <span className="flex-1 min-w-0 truncate text-[11px] font-mono">All sources</span>
+              {value === "__all__" ? (
+                <CheckIcon className="w-[11px] h-[11px] text-accent shrink-0" strokeWidth={2.5} />
+              ) : null}
+            </button>
+            {sources.map((s) => {
+              const conn = connectionForSource(connections, s);
+              const active = value === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  role="option"
+                  aria-selected={active}
+                  onClick={() => {
+                    onChange(s);
+                    setMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2 px-2 h-7 rounded-sm text-left transition-colors ${
+                    active
+                      ? "bg-[var(--command-active-bg)] text-fg"
+                      : "text-fg-muted hover:bg-[var(--menu-hover-bg)] hover:text-fg"
+                  }`}
+                >
+                  <LogSourceGlyph source={s} conn={conn} />
+                  <span className="flex-1 min-w-0 truncate text-[11px] font-mono">{s}</span>
+                  {active ? (
+                    <CheckIcon
+                      className="w-[11px] h-[11px] text-accent shrink-0"
+                      strokeWidth={2.5}
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        </PopoverContent>
       </Popover>
     </Tooltip>
   );
@@ -441,7 +470,9 @@ const LogRow = memo(function LogRow({ row, top }: { row: PreparedLogRow; top: nu
       <div className={`${LOG_ROW_CELL} text-fg-dim whitespace-nowrap font-mono tabular-nums`}>
         {timeStr}
       </div>
-      <div className={`${LOG_ROW_CELL} uppercase text-xxs font-sans tracking-wide ${levelColor[log.level]}`}>
+      <div
+        className={`${LOG_ROW_CELL} uppercase text-xxs font-sans tracking-wide ${levelColor[log.level]}`}
+      >
         {log.level}
       </div>
       <div className={`${LOG_ROW_CELL} text-fg-dim inline-flex items-center gap-1.5`}>
@@ -450,7 +481,9 @@ const LogRow = memo(function LogRow({ row, top }: { row: PreparedLogRow; top: nu
         </span>
         <span className="truncate font-mono">{log.source}</span>
       </div>
-      <div className={`${LOG_ROW_CELL} text-fg-muted uppercase text-xxs font-sans tracking-wide truncate font-semibold`}>
+      <div
+        className={`${LOG_ROW_CELL} text-fg-muted uppercase text-xxs font-sans tracking-wide truncate font-semibold`}
+      >
         {actionKind}
       </div>
       <div
@@ -463,7 +496,9 @@ const LogRow = memo(function LogRow({ row, top }: { row: PreparedLogRow; top: nu
           </span>
         )}
       </div>
-      <div className={`${LOG_ROW_CELL} min-w-0 text-fg font-mono text-[11.5px] sm:text-[12px] truncate`}>
+      <div
+        className={`${LOG_ROW_CELL} min-w-0 text-fg font-mono text-[11.5px] sm:text-[12px] truncate`}
+      >
         {cmdDetail}
       </div>
       <div className="min-w-0 text-fg-dim font-mono truncate uppercase text-xxs tracking-wider">
@@ -580,23 +615,17 @@ function BottomPanelComponent() {
   const resolvedFilter =
     sourceFilter === "__all__" || sources.includes(sourceFilter) ? sourceFilter : "__all__";
 
-  const sourceFilteredLogs = useMemo(
-    () => {
-      if (!open) return logs;
-      return resolvedFilter === "__all__" ? logs : logs.filter((l) => l.source === resolvedFilter);
-    },
-    [logs, open, resolvedFilter],
-  );
+  const sourceFilteredLogs = useMemo(() => {
+    if (!open) return logs;
+    return resolvedFilter === "__all__" ? logs : logs.filter((l) => l.source === resolvedFilter);
+  }, [logs, open, resolvedFilter]);
 
-  const filteredLogs = useMemo(
-    () => {
-      if (!open) return sourceFilteredLogs;
-      return SHOW_LOGS_TOOLBAR_SEARCH
-        ? sourceFilteredLogs.filter((l) => logMatchesSearch(l, logSearchQuery))
-        : sourceFilteredLogs;
-    },
-    [sourceFilteredLogs, logSearchQuery, open],
-  );
+  const filteredLogs = useMemo(() => {
+    if (!open) return sourceFilteredLogs;
+    return SHOW_LOGS_TOOLBAR_SEARCH
+      ? sourceFilteredLogs.filter((l) => logMatchesSearch(l, logSearchQuery))
+      : sourceFilteredLogs;
+  }, [sourceFilteredLogs, logSearchQuery, open]);
 
   const connectionBySource = useMemo(() => {
     const map = new Map<string, Connection>();
@@ -651,21 +680,20 @@ function BottomPanelComponent() {
         {!open ? (
           <>
             <button
-            type="button"
-            aria-expanded={open}
-            aria-controls="logs-scroll-region"
-            onClick={() => actions.toggleBottom()}
-            className="flex-1 min-w-0 pl-3 pr-3 flex items-center gap-1.5 text-xxs uppercase font-sans font-semibold text-fg-muted hover:text-fg hover:bg-[var(--menu-hover-bg)]/50 tracking-wider transition-colors rounded-none text-left !transform-none"
-          >
-            <ChevronUpIcon className="w-[11px] h-[11px]" strokeWidth={2.5} />
-            Activity Logs
-            <span className="text-fg-dim font-mono normal-case tracking-normal">
-              ({filteredLogs.length > 99 ? "99+" : filteredLogs.length}
-              {showTotalInHeader ? `/${logs.length > 99 ? "99+" : logs.length}` : null})
-            </span>
-          </button>
-
-        </>
+              type="button"
+              aria-expanded={open}
+              aria-controls="logs-scroll-region"
+              onClick={() => actions.toggleBottom()}
+              className="flex-1 min-w-0 pl-3 pr-3 flex items-center gap-1.5 text-xxs uppercase font-sans font-semibold text-fg-muted hover:text-fg hover:bg-[var(--menu-hover-bg)]/50 tracking-wider transition-colors rounded-none text-left !transform-none"
+            >
+              <ChevronUpIcon className="w-[11px] h-[11px]" strokeWidth={2.5} />
+              Activity Logs
+              <span className="text-fg-dim font-mono normal-case tracking-normal">
+                ({filteredLogs.length > 99 ? "99+" : filteredLogs.length}
+                {showTotalInHeader ? `/${logs.length > 99 ? "99+" : logs.length}` : null})
+              </span>
+            </button>
+          </>
         ) : (
           <>
             <button
@@ -683,7 +711,11 @@ function BottomPanelComponent() {
               className="col-start-1 row-start-1 z-[2] flex items-center gap-1.5 min-w-0 text-xxs uppercase font-sans font-semibold text-fg-muted tracking-wider pointer-events-none justify-self-start h-full max-w-fit pl-3"
               aria-hidden={true}
             >
-              <ChevronDownIcon className="w-[11px] h-[11px] shrink-0" aria-hidden strokeWidth={2.5} />
+              <ChevronDownIcon
+                className="w-[11px] h-[11px] shrink-0"
+                aria-hidden
+                strokeWidth={2.5}
+              />
               <span>Activity Logs</span>
               <span className="text-fg-dim font-mono normal-case tracking-normal">
                 ({filteredLogs.length > 99 ? "99+" : filteredLogs.length}
@@ -775,7 +807,9 @@ function BottomPanelComponent() {
                   }
                 }}
               >
-                <div className={`absolute inset-x-0 h-[1px] transition-colors bg-border/40 group-hover/resize:bg-accent/50 group-active/resize:bg-accent/70 ${resizeActive ? "bg-accent" : ""}`} />
+                <div
+                  className={`absolute inset-x-0 h-[1px] transition-colors bg-border/40 group-hover/resize:bg-accent/50 group-active/resize:bg-accent/70 ${resizeActive ? "bg-accent" : ""}`}
+                />
               </div>
             </Tooltip>
             <div
@@ -826,77 +860,74 @@ function BottomPanelComponent() {
                   >
                     {visibleRows.map((row, offset) => {
                       const index = virtualStart + offset;
-                      return (
-                        <LogRow
-                          key={row.log.id}
-                          row={row}
-                          top={index * LOG_ROW_HEIGHT_PX}
-                        />
-                      );
+                      return <LogRow key={row.log.id} row={row} top={index * LOG_ROW_HEIGHT_PX} />;
                     })}
                   </div>
-                  {false && [...filteredLogs].reverse().map((l) => {
-                    const rowConn = connectionForSource(connections, l.source);
-                    const timeStr = new Date(l.ts).toLocaleTimeString([], { hour12: false });
-                    const {
-                      kind: actionKind,
-                      target: sessionAddr,
-                      detail: cmdDetail,
-                    } = parseLogCells(l.message);
-                    return (
-                      <div
-                        key={l.id}
-                        className="grid items-start gap-x-4 py-1 border-b border-border/40 text-[11.75px] sm:text-[12px] leading-snug last:border-b-0"
-                        style={{ gridTemplateColumns: LOG_ROW_GRID_TEMPLATE }}
-                      >
+                  {false &&
+                    [...filteredLogs].reverse().map((l) => {
+                      const rowConn = connectionForSource(connections, l.source);
+                      const timeStr = new Date(l.ts).toLocaleTimeString([], { hour12: false });
+                      const {
+                        kind: actionKind,
+                        target: sessionAddr,
+                        detail: cmdDetail,
+                      } = parseLogCells(l.message);
+                      return (
                         <div
-                          className={`${LOG_ROW_CELL} text-fg-dim whitespace-nowrap font-mono tabular-nums`}
+                          key={l.id}
+                          className="grid items-start gap-x-4 py-1 border-b border-border/40 text-[11.75px] sm:text-[12px] leading-snug last:border-b-0"
+                          style={{ gridTemplateColumns: LOG_ROW_GRID_TEMPLATE }}
                         >
-                          {timeStr}
-                        </div>
-                        <div
-                          className={`${LOG_ROW_CELL} uppercase text-xxs font-sans tracking-wide ${levelColor[l.level]}`}
-                        >
-                          {l.level}
-                        </div>
-                        <div
-                          className={`${LOG_ROW_CELL} text-fg-dim inline-flex items-center gap-1.5`}
-                        >
-                          <span className="shrink-0">
-                            <LogSourceGlyph source={l.source} conn={rowConn} />
-                          </span>
-                          <span className="truncate font-mono">{l.source}</span>
-                        </div>
-                        <div
-                          className={`${LOG_ROW_CELL} text-fg-muted uppercase text-xxs font-sans tracking-wide truncate font-semibold`}
-                        >
-                          {actionKind}
-                        </div>
-                        <Tooltip
-                          label={sessionAddr}
-                          disabled={!sessionAddr}
-                          side="top"
-                          className={`${LOG_ROW_CELL} text-fg-dim font-mono truncate block`}
-                        >
-                          {sessionAddr || (
-                            <span className="text-fg-muted/55 select-none" aria-hidden="true">
-                              —
+                          <div
+                            className={`${LOG_ROW_CELL} text-fg-dim whitespace-nowrap font-mono tabular-nums`}
+                          >
+                            {timeStr}
+                          </div>
+                          <div
+                            className={`${LOG_ROW_CELL} uppercase text-xxs font-sans tracking-wide ${levelColor[l.level]}`}
+                          >
+                            {l.level}
+                          </div>
+                          <div
+                            className={`${LOG_ROW_CELL} text-fg-dim inline-flex items-center gap-1.5`}
+                          >
+                            <span className="shrink-0">
+                              <LogSourceGlyph source={l.source} conn={rowConn} />
                             </span>
-                          )}
-                        </Tooltip>
-                        <div className={`${LOG_ROW_CELL} min-w-0 text-fg font-mono text-[11.5px] sm:text-[12px] break-words`}>
-                          {cmdDetail}
+                            <span className="truncate font-mono">{l.source}</span>
+                          </div>
+                          <div
+                            className={`${LOG_ROW_CELL} text-fg-muted uppercase text-xxs font-sans tracking-wide truncate font-semibold`}
+                          >
+                            {actionKind}
+                          </div>
+                          <Tooltip
+                            label={sessionAddr}
+                            disabled={!sessionAddr}
+                            side="top"
+                            className={`${LOG_ROW_CELL} text-fg-dim font-mono truncate block`}
+                          >
+                            {sessionAddr || (
+                              <span className="text-fg-muted/55 select-none" aria-hidden="true">
+                                —
+                              </span>
+                            )}
+                          </Tooltip>
+                          <div
+                            className={`${LOG_ROW_CELL} min-w-0 text-fg font-mono text-[11.5px] sm:text-[12px] break-words`}
+                          >
+                            {cmdDetail}
+                          </div>
+                          <div className="min-w-0 text-fg-dim font-mono truncate uppercase text-xxs tracking-wider">
+                            {rowConn?.username || (
+                              <span className="text-fg-muted/55 select-none" aria-hidden="true">
+                                —
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="min-w-0 text-fg-dim font-mono truncate uppercase text-xxs tracking-wider">
-                          {rowConn?.username || (
-                            <span className="text-fg-muted/55 select-none" aria-hidden="true">
-                              —
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
                 </div>
               )}
             </div>

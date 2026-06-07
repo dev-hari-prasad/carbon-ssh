@@ -58,7 +58,10 @@ export function TabContextMenu({ tabId, children }: TabContextMenuProps) {
               }}
               className="flex items-center gap-2.5 text-[12px]"
             >
-              <ArrowsPointingOutIcon className="w-[15px] h-[15px] text-fg-muted shrink-0" strokeWidth={2} />
+              <ArrowsPointingOutIcon
+                className="w-[15px] h-[15px] text-fg-muted shrink-0"
+                strokeWidth={2}
+              />
               Focus (exit split)
             </ContextMenuItem>
             <ContextMenuItem
@@ -71,13 +74,14 @@ export function TabContextMenu({ tabId, children }: TabContextMenuProps) {
             {splitCount >= 2 && (
               <ContextMenuItem
                 onClick={() =>
-                  actions.setSplitLayout(
-                    splitLayout === "two-columns" ? "two-rows" : "two-columns",
-                  )
+                  actions.setSplitLayout(splitLayout === "two-columns" ? "two-rows" : "two-columns")
                 }
                 className="flex items-center gap-2.5 text-[12px]"
               >
-                <ArrowsRightLeftIcon className="w-[15px] h-[15px] text-fg-muted shrink-0" strokeWidth={2} />
+                <ArrowsRightLeftIcon
+                  className="w-[15px] h-[15px] text-fg-muted shrink-0"
+                  strokeWidth={2}
+                />
                 Toggle layout ({splitLayout === "two-columns" ? "Stacked" : "Side by side"})
               </ContextMenuItem>
             )}
@@ -94,7 +98,10 @@ export function TabContextMenu({ tabId, children }: TabContextMenuProps) {
               }}
               className="flex items-center gap-2.5 text-[12px]"
             >
-              <ViewColumnsIcon className="w-[15px] h-[15px] text-fg-muted shrink-0" strokeWidth={2} />
+              <ViewColumnsIcon
+                className="w-[15px] h-[15px] text-fg-muted shrink-0"
+                strokeWidth={2}
+              />
               Split Right
               <ContextMenuShortcut>Horizontal</ContextMenuShortcut>
             </ContextMenuItem>
@@ -105,7 +112,10 @@ export function TabContextMenu({ tabId, children }: TabContextMenuProps) {
               }}
               className="flex items-center gap-2.5 text-[12px]"
             >
-              <Square2StackIcon className="w-[15px] h-[15px] text-fg-muted shrink-0" strokeWidth={2} />
+              <Square2StackIcon
+                className="w-[15px] h-[15px] text-fg-muted shrink-0"
+                strokeWidth={2}
+              />
               Split Down
               <ContextMenuShortcut>Vertical</ContextMenuShortcut>
             </ContextMenuItem>
@@ -114,7 +124,10 @@ export function TabContextMenu({ tabId, children }: TabContextMenuProps) {
               onClick={handleSplitWithActive}
               className="flex items-center gap-2.5 text-[12px]"
             >
-              <Squares2X2Icon className="w-[15px] h-[15px] text-fg-muted shrink-0" strokeWidth={2} />
+              <Squares2X2Icon
+                className="w-[15px] h-[15px] text-fg-muted shrink-0"
+                strokeWidth={2}
+              />
               Split with active tab
             </ContextMenuItem>
           </>

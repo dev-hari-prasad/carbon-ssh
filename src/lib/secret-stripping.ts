@@ -10,9 +10,7 @@ import type { Connection } from "./types";
  * Strip secrets (password, privateKey, passphrase) from a connection object.
  * Use this before persisting connections to renderer state.
  */
-export function stripConnectionSecrets(
-  conn: Connection,
-): Connection {
+export function stripConnectionSecrets(conn: Connection): Connection {
   return {
     ...conn,
     password: undefined,
@@ -24,9 +22,7 @@ export function stripConnectionSecrets(
 /**
  * Strip secrets from an array of connections.
  */
-export function stripConnectionsSecrets(
-  connections: Connection[],
-): Connection[] {
+export function stripConnectionsSecrets(connections: Connection[]): Connection[] {
   return connections.map(stripConnectionSecrets);
 }
 

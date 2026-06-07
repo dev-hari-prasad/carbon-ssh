@@ -42,13 +42,13 @@ export async function POST(req: Request) {
 
     const body = await req.json();
     const parsed = BodySchema.safeParse(body);
-    
+
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
     const { prompt, settings, context } = parsed.data as any;
-    
+
     const s: AISettings = {
       ...settings,
       apiKey: typeof settings.apiKey === "string" ? settings.apiKey : "",
@@ -102,6 +102,9 @@ Pay close attention to recent errors or filenames mentioned in the output to res
     return NextResponse.json({ suggestions });
   } catch (e) {
     console.error("Autocomplete error:", e);
-    return NextResponse.json({ error: e instanceof Error ? e.message : "Request failed" }, { status: 500 });
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Request failed" },
+      { status: 500 },
+    );
   }
 }

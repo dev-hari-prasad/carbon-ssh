@@ -38,19 +38,21 @@ async function setRestrictivePermissions(appDataPath) {
       } catch {
         return;
       }
-      await Promise.all(entries.map(async (entry) => {
-        const full = path.join(dir, entry.name);
-        try {
-          if (entry.isDirectory()) {
-            await fs.promises.chmod(full, 0o700);
-            await walk(full);
-          } else {
-            await fs.promises.chmod(full, 0o600);
+      await Promise.all(
+        entries.map(async (entry) => {
+          const full = path.join(dir, entry.name);
+          try {
+            if (entry.isDirectory()) {
+              await fs.promises.chmod(full, 0o700);
+              await walk(full);
+            } else {
+              await fs.promises.chmod(full, 0o600);
+            }
+          } catch {
+            /* best effort */
           }
-        } catch {
-          /* best effort */
-        }
-      }));
+        }),
+      );
     }
     await walk(appDataPath);
   } catch (e) {

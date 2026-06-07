@@ -44,7 +44,10 @@ export function applyThemeToDocument(t: ThemeId) {
 
   const isOnboarding = root.getAttribute("data-onboarding") === "true";
   const el = window as Window & {
-    electron?: { platform?: string; setTitleBarOverlay?: (o: { color: string; symbolColor: string; height?: number }) => void };
+    electron?: {
+      platform?: string;
+      setTitleBarOverlay?: (o: { color: string; symbolColor: string; height?: number }) => void;
+    };
   };
   const { electron } = el;
   if (

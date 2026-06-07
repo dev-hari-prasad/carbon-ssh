@@ -1,13 +1,7 @@
 import type { Connection } from "@/lib/types";
 import { HostIcon } from "./HostIcon";
 
-export function TabIcon({
-  conn,
-  size = 18,
-}: {
-  conn: Connection | undefined;
-  size?: number;
-}) {
+export function TabIcon({ conn, size = 18 }: { conn: Connection | undefined; size?: number }) {
   if (!conn) {
     return (
       <div

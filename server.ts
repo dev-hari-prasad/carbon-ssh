@@ -47,7 +47,7 @@ app.prepare().then(() => {
   // Next.js lazily attaches its upgrade listener later, so we must monkey-patch server.on
   const nextListeners: any[] = [];
   const originalOn = server.on.bind(server);
-  
+
   server.on = function (event, listener) {
     if (event === "upgrade") {
       nextListeners.push(listener);

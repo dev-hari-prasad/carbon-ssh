@@ -16,8 +16,7 @@ export function tabStripRawInsertIndex(
     const el = container.querySelector(`[data-tab-strip-item="${CSS.escape(tabs[i].id)}"]`);
     if (!el) continue;
     const r = el.getBoundingClientRect();
-    const mid =
-      orientation === "horizontal" ? r.left + r.width / 2 : r.top + r.height / 2;
+    const mid = orientation === "horizontal" ? r.left + r.width / 2 : r.top + r.height / 2;
     if (coord < mid) return i;
   }
   return tabs.length;

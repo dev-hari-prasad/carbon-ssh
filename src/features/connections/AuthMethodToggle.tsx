@@ -1,9 +1,17 @@
 import { KeyIcon, LockClosedIcon } from "@heroicons/react/24/outline";
-import { KeyIcon as KeyIconSolid, LockClosedIcon as LockClosedIconSolid } from "@heroicons/react/24/solid";
+import {
+  KeyIcon as KeyIconSolid,
+  LockClosedIcon as LockClosedIconSolid,
+} from "@heroicons/react/24/solid";
 import type { AuthType } from "@/lib/types";
 
 const AUTH_METHODS = [
-  { value: "password" as const, label: "Password", Outline: LockClosedIcon, Solid: LockClosedIconSolid },
+  {
+    value: "password" as const,
+    label: "Password",
+    Outline: LockClosedIcon,
+    Solid: LockClosedIconSolid,
+  },
   { value: "privateKey" as const, label: "Private key", Outline: KeyIcon, Solid: KeyIconSolid },
 ] as const satisfies ReadonlyArray<{
   value: AuthType;

@@ -13,27 +13,27 @@ The suggestion engine has a large surface area with many interacting components.
 However, the test infrastructure has constraints:
 
 1. **Vitest runs in Node environment, not jsdom.** The existing `vitest.config.ts` specifies `environment: "node"`. This means React component tests won't work without changing the environment. Core engine tests run fine in Node.
-2. **Test file pattern is `src/**/*.test.ts` only.** No `.test.tsx` support — which means React component integration tests need a different approach or a config update.
+2. **Test file pattern is `src/**/\*.test.ts`only.** No`.test.tsx` support — which means React component integration tests need a different approach or a config update.
 3. **Only 1 existing test file in the entire project.** The test suite is essentially greenfield. There are no test utilities, fixtures, or mocking patterns established.
 
 ### Testing Strategy
 
 Given these constraints, the testing strategy is:
 
-| Layer | Approach | Environment |
-|-------|----------|-------------|
-| Schema validation | Vitest unit tests | Node |
-| Tokenizer | Vitest unit tests | Node |
-| Indexer | Vitest unit tests | Node |
-| Ranker | Vitest unit tests | Node |
-| Context builder | Vitest unit tests | Node |
-| Redaction | Vitest unit tests | Node |
-| Engine (end-to-end) | Vitest unit tests with synthetic contexts | Node |
-| Pack validation (all bundled) | Vitest unit tests loading real JSON | Node |
-| Terminal hooks | Manual QA | Browser |
-| Palette UI | Manual QA | Browser |
-| Ghost text | Manual QA | Browser |
-| Performance | Manual profiling + automated timing assertions | Both |
+| Layer                         | Approach                                       | Environment |
+| ----------------------------- | ---------------------------------------------- | ----------- |
+| Schema validation             | Vitest unit tests                              | Node        |
+| Tokenizer                     | Vitest unit tests                              | Node        |
+| Indexer                       | Vitest unit tests                              | Node        |
+| Ranker                        | Vitest unit tests                              | Node        |
+| Context builder               | Vitest unit tests                              | Node        |
+| Redaction                     | Vitest unit tests                              | Node        |
+| Engine (end-to-end)           | Vitest unit tests with synthetic contexts      | Node        |
+| Pack validation (all bundled) | Vitest unit tests loading real JSON            | Node        |
+| Terminal hooks                | Manual QA                                      | Browser     |
+| Palette UI                    | Manual QA                                      | Browser     |
+| Ghost text                    | Manual QA                                      | Browser     |
+| Performance                   | Manual profiling + automated timing assertions | Both        |
 
 ### Hidden Complexity
 

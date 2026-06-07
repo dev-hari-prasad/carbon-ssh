@@ -64,9 +64,7 @@ function TabFavicon({
 
   if (!conn) {
     return (
-      <CommandLineIcon
-        className={`shrink-0 w-3.5 h-3.5 ${active ? "text-fg" : "text-fg-muted"}`}
-      />
+      <CommandLineIcon className={`shrink-0 w-3.5 h-3.5 ${active ? "text-fg" : "text-fg-muted"}`} />
     );
   }
 
@@ -148,13 +146,15 @@ function TopBarComponent({ isTitleBar }: { isTitleBar?: boolean }) {
   const tabSessionStatus = useStore((s) => s.tabSessionStatus);
   const rawSplitTabIds = useStore((s) => s.splitTabIds);
   const splitLayout = useStore((s) => s.splitLayout);
-  const splitTabIds = useMemo(() => rawSplitTabIds.slice(0, SPLIT_LAYOUT_SLOTS[splitLayout]), [rawSplitTabIds, splitLayout]);
+  const splitTabIds = useMemo(
+    () => rawSplitTabIds.slice(0, SPLIT_LAYOUT_SLOTS[splitLayout]),
+    [rawSplitTabIds, splitLayout],
+  );
   const themeId = useStore((s) => s.theme);
   const tabDnD = useTabStripDnD({ tabs, orientation: "horizontal" });
   const logoSrc = useMemo(() => {
     const kind = getThemeById(themeId).type;
-    const file =
-      kind === "light" ? "Carbon logo dark.png" : "Carbon logo light.png";
+    const file = kind === "light" ? "Carbon logo dark.png" : "Carbon logo light.png";
     return `/logo/${encodeURIComponent(file)}`;
   }, [themeId]);
   const [mounted, setMounted] = useState(false);
@@ -205,9 +205,7 @@ function TopBarComponent({ isTitleBar }: { isTitleBar?: boolean }) {
   const recent = [...connections].sort((a, b) => b.createdAt - a.createdAt).slice(0, 8);
 
   if (!mounted) {
-    return (
-      <div className="bg-[var(--titlebar-bg)] z-40" style={{ height: TITLE_BAR_HEIGHT }} />
-    );
+    return <div className="bg-[var(--titlebar-bg)] z-40" style={{ height: TITLE_BAR_HEIGHT }} />;
   }
 
   return (
@@ -219,7 +217,10 @@ function TopBarComponent({ isTitleBar }: { isTitleBar?: boolean }) {
         className="pl-2.5 pr-1 flex items-stretch gap-1.5 min-w-0 h-full"
         style={{ height: TITLE_BAR_HEIGHT }}
       >
-        <div className="flex items-center pl-0 shrink-0" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
+        <div
+          className="flex items-center pl-0 shrink-0"
+          style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
+        >
           <Tooltip label="This is just a logo, click on it for a surprise" side="bottom">
             <a
               href="https://github.com/CarbonSSH/carbon"
@@ -227,11 +228,7 @@ function TopBarComponent({ isTitleBar }: { isTitleBar?: boolean }) {
               rel="noopener noreferrer"
               className="block"
             >
-              <img
-                src={logoSrc}
-                alt="Logo"
-                className="w-5 h-5 rounded-sm object-contain"
-              />
+              <img src={logoSrc} alt="Logo" className="w-5 h-5 rounded-sm object-contain" />
             </a>
           </Tooltip>
         </div>
@@ -266,9 +263,7 @@ function TopBarComponent({ isTitleBar }: { isTitleBar?: boolean }) {
             <div
               ref={tabDnD.stripRef}
               className={`flex items-center min-w-0 overflow-hidden rounded-sm transition-colors ${
-                tabs.length > 0
-                  ? "bg-[var(--command-bg)] border border-border/40"
-                  : ""
+                tabs.length > 0 ? "bg-[var(--command-bg)] border border-border/40" : ""
               }`}
               style={{
                 height: tabs.length > 0 ? TITLE_BAR_TAB_STRIP_HEIGHT : undefined,
@@ -277,144 +272,172 @@ function TopBarComponent({ isTitleBar }: { isTitleBar?: boolean }) {
               onDrop={tabDnD.handleDrop}
             >
               <AnimatePresence initial={false}>
-              {(() => {
-              type Seg = { kind: "tab"; tab: typeof tabs[number] } | { kind: "group"; tabs: typeof tabs };
-              const segs: Seg[] = [];
-              let i = 0;
-              while (i < tabs.length) {
-                if (splitTabIds.includes(tabs[i].id)) {
-                  const g: typeof tabs = [];
-                  while (i < tabs.length && splitTabIds.includes(tabs[i].id)) {
-                    g.push(tabs[i]);
-                    i++;
+                {(() => {
+                  type Seg =
+                    | { kind: "tab"; tab: (typeof tabs)[number] }
+                    | { kind: "group"; tabs: typeof tabs };
+                  const segs: Seg[] = [];
+                  let i = 0;
+                  while (i < tabs.length) {
+                    if (splitTabIds.includes(tabs[i].id)) {
+                      const g: typeof tabs = [];
+                      while (i < tabs.length && splitTabIds.includes(tabs[i].id)) {
+                        g.push(tabs[i]);
+                        i++;
+                      }
+                      segs.push({ kind: "group", tabs: g });
+                    } else {
+                      segs.push({ kind: "tab", tab: tabs[i] });
+                      i++;
+                    }
                   }
-                  segs.push({ kind: "group", tabs: g });
-                } else {
-                  segs.push({ kind: "tab", tab: tabs[i] });
-                  i++;
-                }
-              }
 
-              const renderTab = (t: typeof tabs[number], inGroup: boolean) => {
-                const active = t.id === activeTabId;
-                const c = connections.find((conn) => conn.id === t.connectionId);
-                return (
-                  <motion.div
-                    initial={{ width: 0, minWidth: 0 }}
-                    animate={{
-                      width: inGroup ? HORIZONTAL_TAB_GROUP_MAX_WIDTH : HORIZONTAL_TAB_MAX_WIDTH,
-                      minWidth: inGroup ? HORIZONTAL_TAB_GROUP_MIN_WIDTH : HORIZONTAL_TAB_MIN_WIDTH,
-                    }}
-                    exit={{ width: 0, minWidth: 0 }}
-                    transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
-                    style={{ overflow: "hidden" }}
-                    key={t.id}
-                    className={`shrink flex ${tabDnD.draggingId === t.id ? "opacity-45" : ""}`}
-                  >
-                    <TabContextMenu tabId={t.id}>
-                      <Tooltip
-                        delay={500}
-                        side="bottom"
-                        multiline
-                        matchAnchorWidth
-                        minWidth={180}
-                        className="flex min-w-0 flex-1 overflow-hidden min-h-[30px]"
-                        label={(() => {
-                          if (!c) return t.title;
-                          const group = c.groupId ? groups.find((g) => g.id === c.groupId) : null;
-                          const groupName = group ? group.name : "Uncategorized";
-                          const started = t.startedAt
-                            ? new Date(t.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                            : "Unknown";
-                          return (
-                            <div className="flex flex-col gap-0.5 w-full min-w-0 text-left">
-                              <span className="font-semibold">{c.name}</span>
-                              <span className="text-fg-dim text-[10.5px]">ssh://{c.username}@{c.host}:{c.port}</span>
-                              <div className="h-px bg-border my-1" />
-                              <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
-                                <span className="text-fg-muted shrink-0">Group</span>
-                                <span className="text-fg-dim text-right truncate">{groupName}</span>
-                              </div>
-                              <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
-                                <span className="text-fg-muted shrink-0">Started</span>
-                                <span className="text-fg-dim tabular-nums">{started}</span>
-                              </div>
-                              <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
-                                <span className="text-fg-muted shrink-0">Commands</span>
-                                <span className="text-fg-dim tabular-nums">{t.commandCount || 0}</span>
-                              </div>
-                            </div>
-                          );
-                        })()}
+                  const renderTab = (t: (typeof tabs)[number], inGroup: boolean) => {
+                    const active = t.id === activeTabId;
+                    const c = connections.find((conn) => conn.id === t.connectionId);
+                    return (
+                      <motion.div
+                        initial={{ width: 0, minWidth: 0 }}
+                        animate={{
+                          width: inGroup
+                            ? HORIZONTAL_TAB_GROUP_MAX_WIDTH
+                            : HORIZONTAL_TAB_MAX_WIDTH,
+                          minWidth: inGroup
+                            ? HORIZONTAL_TAB_GROUP_MIN_WIDTH
+                            : HORIZONTAL_TAB_MIN_WIDTH,
+                        }}
+                        exit={{ width: 0, minWidth: 0 }}
+                        transition={{ duration: 0.18, ease: [0.32, 0.72, 0, 1] }}
+                        style={{ overflow: "hidden" }}
+                        key={t.id}
+                        className={`shrink flex ${tabDnD.draggingId === t.id ? "opacity-45" : ""}`}
                       >
-                        <div
-                          data-tab-strip-item={t.id}
-                          draggable
-                          onDragStart={(e) => tabDnD.handleDragStart(e, t.id)}
-                          onDragEnd={tabDnD.handleDragEnd}
-                          onClick={() => actions.setActiveTab(t.id)}
-                          className={`group relative w-full flex items-center gap-1 rounded-sm pl-2 pr-1 cursor-default text-[12px] font-sans transition-[color,background-color,box-shadow] duration-150 ${
-                            active
-                              ? "bg-[var(--tab-strip-active-bg)] text-fg font-medium shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--border-strong)_55%,transparent)]"
-                              : "text-fg-muted hover:text-fg"
-                          }`}
-                          style={{ height: TITLE_BAR_TAB_STRIP_HEIGHT }}
-                        >
-                          <TabFavicon
-                            conn={c}
-                            state={tabSessionStatus[t.id]?.state}
-                            active={active}
-                          />
-                          <span
-                            className="flex-1 whitespace-nowrap overflow-hidden block min-w-0 pr-4"
-                            style={{
-                              maskImage: "linear-gradient(to right, black calc(100% - 16px), transparent 100%)",
-                              WebkitMaskImage: "linear-gradient(to right, black calc(100% - 16px), transparent 100%)",
-                            }}
+                        <TabContextMenu tabId={t.id}>
+                          <Tooltip
+                            delay={500}
+                            side="bottom"
+                            multiline
+                            matchAnchorWidth
+                            minWidth={180}
+                            className="flex min-w-0 flex-1 overflow-hidden min-h-[30px]"
+                            label={(() => {
+                              if (!c) return t.title;
+                              const group = c.groupId
+                                ? groups.find((g) => g.id === c.groupId)
+                                : null;
+                              const groupName = group ? group.name : "Uncategorized";
+                              const started = t.startedAt
+                                ? new Date(t.startedAt).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })
+                                : "Unknown";
+                              return (
+                                <div className="flex flex-col gap-0.5 w-full min-w-0 text-left">
+                                  <span className="font-semibold">{c.name}</span>
+                                  <span className="text-fg-dim text-[10.5px]">
+                                    ssh://{c.username}@{c.host}:{c.port}
+                                  </span>
+                                  <div className="h-px bg-border my-1" />
+                                  <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
+                                    <span className="text-fg-muted shrink-0">Group</span>
+                                    <span className="text-fg-dim text-right truncate">
+                                      {groupName}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
+                                    <span className="text-fg-muted shrink-0">Started</span>
+                                    <span className="text-fg-dim tabular-nums">{started}</span>
+                                  </div>
+                                  <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
+                                    <span className="text-fg-muted shrink-0">Commands</span>
+                                    <span className="text-fg-dim tabular-nums">
+                                      {t.commandCount || 0}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           >
-                            {t.title}
-                          </span>
-                          <button
-                            type="button"
-                            draggable={false}
-                            onClick={(e) => { e.stopPropagation(); actions.closeTab(t.id); }}
-                            className={`absolute right-0 flex items-center justify-center rounded-sm transition-all duration-150 opacity-0 group-hover:opacity-100 text-fg-dim hover:text-fg hover:bg-[var(--bg-elev)]`}
-                            style={{ width: 18, height: 18 }}
-                            aria-label="Close tab"
-                          >
-                            <span className="text-[14px] leading-none">×</span>
-                          </button>
-                        </div>
-                      </Tooltip>
-                    </TabContextMenu>
-                  </motion.div>
-                );
-              };
+                            <div
+                              data-tab-strip-item={t.id}
+                              draggable
+                              onDragStart={(e) => tabDnD.handleDragStart(e, t.id)}
+                              onDragEnd={tabDnD.handleDragEnd}
+                              onClick={() => actions.setActiveTab(t.id)}
+                              className={`group relative w-full flex items-center gap-1 rounded-sm pl-2 pr-1 cursor-default text-[12px] font-sans transition-[color,background-color,box-shadow] duration-150 ${
+                                active
+                                  ? "bg-[var(--tab-strip-active-bg)] text-fg font-medium shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--border-strong)_55%,transparent)]"
+                                  : "text-fg-muted hover:text-fg"
+                              }`}
+                              style={{ height: TITLE_BAR_TAB_STRIP_HEIGHT }}
+                            >
+                              <TabFavicon
+                                conn={c}
+                                state={tabSessionStatus[t.id]?.state}
+                                active={active}
+                              />
+                              <span
+                                className="flex-1 whitespace-nowrap overflow-hidden block min-w-0 pr-4"
+                                style={{
+                                  maskImage:
+                                    "linear-gradient(to right, black calc(100% - 16px), transparent 100%)",
+                                  WebkitMaskImage:
+                                    "linear-gradient(to right, black calc(100% - 16px), transparent 100%)",
+                                }}
+                              >
+                                {t.title}
+                              </span>
+                              <button
+                                type="button"
+                                draggable={false}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  actions.closeTab(t.id);
+                                }}
+                                className={`absolute right-0 flex items-center justify-center rounded-sm transition-all duration-150 opacity-0 group-hover:opacity-100 text-fg-dim hover:text-fg hover:bg-[var(--bg-elev)]`}
+                                style={{ width: 18, height: 18 }}
+                                aria-label="Close tab"
+                              >
+                                <span className="text-[14px] leading-none">×</span>
+                              </button>
+                            </div>
+                          </Tooltip>
+                        </TabContextMenu>
+                      </motion.div>
+                    );
+                  };
 
-              const orderedTabs: typeof tabs = [];
-              for (const seg of segs) {
-                if (seg.kind === "group") orderedTabs.push(...seg.tabs);
-                else orderedTabs.push(seg.tab);
-              }
+                  const orderedTabs: typeof tabs = [];
+                  for (const seg of segs) {
+                    if (seg.kind === "group") orderedTabs.push(...seg.tabs);
+                    else orderedTabs.push(seg.tab);
+                  }
 
-              const stripItems: React.ReactNode[] = [];
-              for (let i = 0; i < orderedTabs.length; i++) {
-                const t = orderedTabs[i];
-                const prev = i > 0 ? orderedTabs[i - 1] : null;
-                if (prev) {
-                  const showSeparator = prev.id !== activeTabId && t.id !== activeTabId;
-                  stripItems.push(
-                    <TabStripSeparator key={`sep-${prev.id}-${t.id}`} visible={showSeparator} />,
-                  );
-                }
-                stripItems.push(renderTab(t, splitTabIds.includes(t.id)));
-              }
-              return stripItems;
-            })()}
+                  const stripItems: React.ReactNode[] = [];
+                  for (let i = 0; i < orderedTabs.length; i++) {
+                    const t = orderedTabs[i];
+                    const prev = i > 0 ? orderedTabs[i - 1] : null;
+                    if (prev) {
+                      const showSeparator = prev.id !== activeTabId && t.id !== activeTabId;
+                      stripItems.push(
+                        <TabStripSeparator
+                          key={`sep-${prev.id}-${t.id}`}
+                          visible={showSeparator}
+                        />,
+                      );
+                    }
+                    stripItems.push(renderTab(t, splitTabIds.includes(t.id)));
+                  }
+                  return stripItems;
+                })()}
               </AnimatePresence>
             </div>
 
-            <Popover open={open === "machines"} onOpenChange={(o) => setOpen(o ? "machines" : null)}>
+            <Popover
+              open={open === "machines"}
+              onOpenChange={(o) => setOpen(o ? "machines" : null)}
+            >
               <div className="relative flex items-center shrink-0">
                 <Tooltip label="New session" side="bottom">
                   <PopoverTrigger asChild>
@@ -458,7 +481,12 @@ function TopBarComponent({ isTitleBar }: { isTitleBar?: boolean }) {
 
         <div
           className="flex items-center shrink-0 gap-0.5 relative self-center pl-1"
-          style={{ height: TITLE_BAR_TAB_STRIP_HEIGHT, WebkitAppRegion: "no-drag" } as React.CSSProperties}
+          style={
+            {
+              height: TITLE_BAR_TAB_STRIP_HEIGHT,
+              WebkitAppRegion: "no-drag",
+            } as React.CSSProperties
+          }
         >
           <div className="w-px h-3 bg-border opacity-60" />
           <SplitLayoutPicker
@@ -738,7 +766,10 @@ function MachinesPopover({
       <div className="flex-1 flex flex-col min-h-0 bg-bg">
         <div className="h-9 px-2 flex items-center border-b border-border bg-[var(--bg-panel)]/50 shrink-0">
           <div className="flex items-center flex-1 gap-2 h-7 px-2.5 rounded-md bg-bg/40 border border-transparent transition-all focus-within:border-accent/50 focus-within:bg-bg focus-within:ring-2 focus-within:ring-accent/20 group/search">
-            <MagnifyingGlassIcon className="w-[13px] h-[13px] text-fg-muted group-focus-within/search:text-accent transition-colors" strokeWidth={2.25} />
+            <MagnifyingGlassIcon
+              className="w-[13px] h-[13px] text-fg-muted group-focus-within/search:text-accent transition-colors"
+              strokeWidth={2.25}
+            />
             <input
               ref={inputRef}
               autoFocus
@@ -851,14 +882,16 @@ function VerticalTabBarComponent() {
   const tabSessionStatus = useStore((s) => s.tabSessionStatus);
   const rawSplitTabIds = useStore((s) => s.splitTabIds);
   const splitLayout = useStore((s) => s.splitLayout);
-  const splitTabIds = useMemo(() => rawSplitTabIds.slice(0, SPLIT_LAYOUT_SLOTS[splitLayout]), [rawSplitTabIds, splitLayout]);
+  const splitTabIds = useMemo(
+    () => rawSplitTabIds.slice(0, SPLIT_LAYOUT_SLOTS[splitLayout]),
+    [rawSplitTabIds, splitLayout],
+  );
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed);
   const sidebarWidth = useStore((s) => s.sidebarWidth);
   const themeId = useStore((s) => s.theme);
   const logoSrc = useMemo(() => {
     const kind = getThemeById(themeId).type;
-    const file =
-      kind === "light" ? "Carbon logo dark.png" : "Carbon logo light.png";
+    const file = kind === "light" ? "Carbon logo dark.png" : "Carbon logo light.png";
     return `/logo/${encodeURIComponent(file)}`;
   }, [themeId]);
   const [mounted, setMounted] = useState(false);
@@ -928,9 +961,7 @@ function VerticalTabBarComponent() {
 
   if (!mounted) {
     return (
-      <div className="bg-[var(--titlebar-bg)] z-40 shrink-0"
-        style={{ width: animatedWidth }}
-      />
+      <div className="bg-[var(--titlebar-bg)] z-40 shrink-0" style={{ width: animatedWidth }} />
     );
   }
 
@@ -951,9 +982,7 @@ function VerticalTabBarComponent() {
       <button
         onClick={onClick}
         className={`inline-flex items-center gap-2 rounded-sm transition-all duration-200 ease-out shrink-0 ${
-          sidebarCollapsed
-            ? "w-8 h-8 justify-center"
-            : "w-full h-8 px-2.5 justify-start"
+          sidebarCollapsed ? "w-8 h-8 justify-center" : "w-full h-8 px-2.5 justify-start"
         } ${
           active
             ? "bg-[var(--command-active-bg)] text-fg"
@@ -961,9 +990,7 @@ function VerticalTabBarComponent() {
         }`}
       >
         <span className="shrink-0">{icon}</span>
-        {!sidebarCollapsed && (
-          <span className="text-[12px] font-sans truncate">{label}</span>
-        )}
+        {!sidebarCollapsed && <span className="text-[12px] font-sans truncate">{label}</span>}
       </button>
     </Tooltip>
   );
@@ -977,15 +1004,15 @@ function VerticalTabBarComponent() {
         transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
       >
         {/* Logo + Hosts + Collapse toggle */}
-        <div className={`flex items-center shrink-0 pt-0 pb-1 ${sidebarCollapsed ? "flex-col gap-1.5 px-1" : "flex-row gap-2 px-1.5"}`}>
+        <div
+          className={`flex items-center shrink-0 pt-0 pb-1 ${sidebarCollapsed ? "flex-col gap-1.5 px-1" : "flex-row gap-2 px-1.5"}`}
+        >
           <div className={sidebarCollapsed ? "" : "flex-1 min-w-0"}>
             <Tooltip label="Hosts" side={tooltipSide} disabled={!showTooltips}>
               <button
                 onClick={() => actions.goHome()}
                 className={`inline-flex items-center gap-2 rounded-sm transition-all duration-200 ease-out shrink-0 ${
-                  sidebarCollapsed
-                    ? "w-8 h-8 justify-center"
-                    : "w-full h-8 px-2.5 justify-start"
+                  sidebarCollapsed ? "w-8 h-8 justify-center" : "w-full h-8 px-2.5 justify-start"
                 } ${
                   activeTabId === null && !largeSettingsOpen
                     ? "bg-[var(--command-active-bg)] text-fg"
@@ -997,22 +1024,22 @@ function VerticalTabBarComponent() {
                 ) : (
                   <ServerStackIcon className="w-4 h-4 shrink-0" />
                 )}
-                {!sidebarCollapsed && (
-                  <span className="text-[12px] font-sans truncate">Hosts</span>
-                )}
+                {!sidebarCollapsed && <span className="text-[12px] font-sans truncate">Hosts</span>}
               </button>
             </Tooltip>
           </div>
-          <Tooltip 
+          <Tooltip
             label={
               <div className="flex items-center gap-2">
                 <span>{sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}</span>
                 <Kbd>
-                  {typeof window !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl"}
+                  {typeof window !== "undefined" && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
+                    ? "⌘"
+                    : "Ctrl"}
                   +B
                 </Kbd>
               </div>
-            } 
+            }
             side={tooltipSide}
           >
             <button
@@ -1040,177 +1067,209 @@ function VerticalTabBarComponent() {
           onDrop={sidebarTabDnD.handleDrop}
         >
           <AnimatePresence initial={false}>
-          {(() => {
-            type Seg = { kind: "tab"; tab: typeof tabs[number] } | { kind: "group"; tabs: typeof tabs };
-            const segs: Seg[] = [];
-            let si = 0;
-            while (si < tabs.length) {
-              if (splitTabIds.includes(tabs[si].id)) {
-                const g: typeof tabs = [];
-                while (si < tabs.length && splitTabIds.includes(tabs[si].id)) {
-                  g.push(tabs[si]);
+            {(() => {
+              type Seg =
+                | { kind: "tab"; tab: (typeof tabs)[number] }
+                | { kind: "group"; tabs: typeof tabs };
+              const segs: Seg[] = [];
+              let si = 0;
+              while (si < tabs.length) {
+                if (splitTabIds.includes(tabs[si].id)) {
+                  const g: typeof tabs = [];
+                  while (si < tabs.length && splitTabIds.includes(tabs[si].id)) {
+                    g.push(tabs[si]);
+                    si++;
+                  }
+                  segs.push({ kind: "group", tabs: g });
+                } else {
+                  segs.push({ kind: "tab", tab: tabs[si] });
                   si++;
                 }
-                segs.push({ kind: "group", tabs: g });
-              } else {
-                segs.push({ kind: "tab", tab: tabs[si] });
-                si++;
               }
-            }
 
-            const renderSidebarTab = (t: typeof tabs[number]) => {
-              const active = t.id === activeTabId;
-              const c = connections.find((conn) => conn.id === t.connectionId);
-              return (
-                <motion.div
-                  layout
-                  initial={{ opacity: 0, x: -4, height: 0, marginBottom: 0 }}
-                  animate={{ opacity: 1, x: 0, height: "auto", marginBottom: sidebarCollapsed ? 2 : 4 }}
-                  exit={{ opacity: 0, x: -4, height: 0, marginBottom: 0 }}
-                  transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                  key={t.id}
-                  className={`min-w-0 w-full overflow-hidden ${sidebarCollapsed ? "flex justify-center" : ""} ${sidebarTabDnD.draggingId === t.id ? "opacity-45" : ""}`}
-                >
-                  <TabContextMenu tabId={t.id}>
-                    <Tooltip
-                      delay={300}
-                      side={tooltipSide}
-                      disabled={!showTooltips}
-                      className={sidebarCollapsed ? undefined : "w-full"}
-                      label={(() => {
-                        if (!c) return t.title;
-                        const group = c.groupId ? groups.find((g) => g.id === c.groupId) : null;
-                        const groupName = group ? group.name : "Uncategorized";
-                        const started = t.startedAt
-                          ? new Date(t.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                          : "Unknown";
-                        return (
-                          <div className="flex flex-col gap-0.5 w-full min-w-0 text-left">
-                            <span className="font-semibold">{c.name}</span>
-                            <span className="text-fg-dim text-[10.5px]">ssh://{c.username}@{c.host}:{c.port}</span>
-                            <div className="h-px bg-border my-1" />
-                            <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
-                              <span className="text-fg-muted shrink-0">Group</span>
-                              <span className="text-fg-dim text-right truncate">{groupName}</span>
-                            </div>
-                            <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
-                              <span className="text-fg-muted shrink-0">Started</span>
-                              <span className="text-fg-dim tabular-nums">{started}</span>
-                            </div>
-                            <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
-                              <span className="text-fg-muted shrink-0">Commands</span>
-                              <span className="text-fg-dim tabular-nums">{t.commandCount || 0}</span>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                      multiline
-                      minWidth={160}
-                    >
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        draggable
-                        data-tab-strip-item={t.id}
-                        onDragStart={(e) => sidebarTabDnD.handleDragStart(e, t.id)}
-                        onDragEnd={sidebarTabDnD.handleDragEnd}
-                        onClick={() => actions.setActiveTab(t.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            actions.setActiveTab(t.id);
-                          }
-                        }}
-                        className={`group relative rounded-sm cursor-default transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-                          sidebarCollapsed
-                            ? "w-8 h-8 grid place-items-center"
-                            : "w-full h-8 flex items-center gap-1.5 px-2.5 overflow-hidden"
-                        } ${
-                          active
-                            ? "bg-success/10 text-success"
-                            : "bg-[var(--command-bg)] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
-                        }`}
-                      >
-                        <TabFavicon
-                          conn={c}
-                          state={tabSessionStatus[t.id]?.state}
-                          active={active}
-                        />
-                        {!sidebarCollapsed && (
-                          <span
-                            className="flex-1 text-left text-[12px] font-sans truncate min-w-0 pr-4"
-                            style={{
-                              maskImage: "linear-gradient(to right, black calc(100% - 12px), transparent 100%)",
-                              WebkitMaskImage: "linear-gradient(to right, black calc(100% - 12px), transparent 100%)",
-                            }}
-                          >
-                            {t.title}
-                          </span>
-                        )}
-                        {!sidebarCollapsed ? (
-                          <button
-                            type="button"
-                            draggable={false}
-                            onClick={(e) => { e.stopPropagation(); actions.closeTab(t.id); }}
-                            className={`absolute right-1.5 w-5 h-5 flex items-center justify-center rounded-sm transition-all duration-150 opacity-0 group-hover:opacity-100 bg-[var(--bg-elev)] ${
-                              active
-                                ? "text-success/70 hover:text-success hover:bg-[var(--bg-elev)]"
-                                : "text-fg-dim hover:text-fg hover:bg-[var(--bg-elev)]"
-                            }`}
-                            aria-label="Close tab"
-                          >
-                            <span className="text-[14px] leading-none">×</span>
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            draggable={false}
-                            onClick={(e) => { e.stopPropagation(); actions.closeTab(t.id); }}
-                            className={`absolute inset-0 w-full h-full flex items-center justify-center rounded-sm transition-all duration-150 opacity-0 group-hover:opacity-100 z-10 ${
-                              active
-                                ? "bg-[var(--bg-elev)] text-success"
-                                : "bg-[var(--bg-elev)] text-fg hover:bg-[var(--bg-elev)]"
-                            }`}
-                            aria-label="Close tab"
-                          >
-                            <span className="text-[14px] leading-none font-bold">×</span>
-                          </button>
-                        )}
-                      </div>
-                    </Tooltip>
-                  </TabContextMenu>
-                </motion.div>
-              );
-            };
-
-            return segs.map((seg) => {
-              if (seg.kind === "group") {
+              const renderSidebarTab = (t: (typeof tabs)[number]) => {
+                const active = t.id === activeTabId;
+                const c = connections.find((conn) => conn.id === t.connectionId);
                 return (
                   <motion.div
-                    key={`split-group-${seg.tabs[0].id}`}
                     layout
-                    initial={{ opacity: 0, x: -4, marginBottom: 0 }}
-                    animate={{ opacity: 1, x: 0, marginBottom: sidebarCollapsed ? 2 : 4 }}
-                    exit={{ opacity: 0, x: -4, height: 0, marginBottom: 0, paddingTop: 0, paddingBottom: 0 }}
+                    initial={{ opacity: 0, x: -4, height: 0, marginBottom: 0 }}
+                    animate={{
+                      opacity: 1,
+                      x: 0,
+                      height: "auto",
+                      marginBottom: sidebarCollapsed ? 2 : 4,
+                    }}
+                    exit={{ opacity: 0, x: -4, height: 0, marginBottom: 0 }}
                     transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-                    className={`rounded-md bg-[var(--command-active-bg)] w-full overflow-hidden ${
-                      sidebarCollapsed ? "p-0.5 flex flex-col items-center" : "p-1 flex flex-col"
-                    }`}
+                    key={t.id}
+                    className={`min-w-0 w-full overflow-hidden ${sidebarCollapsed ? "flex justify-center" : ""} ${sidebarTabDnD.draggingId === t.id ? "opacity-45" : ""}`}
                   >
-                    <AnimatePresence initial={false}>
-                      {seg.tabs.map((t) => renderSidebarTab(t))}
-                    </AnimatePresence>
+                    <TabContextMenu tabId={t.id}>
+                      <Tooltip
+                        delay={300}
+                        side={tooltipSide}
+                        disabled={!showTooltips}
+                        className={sidebarCollapsed ? undefined : "w-full"}
+                        label={(() => {
+                          if (!c) return t.title;
+                          const group = c.groupId ? groups.find((g) => g.id === c.groupId) : null;
+                          const groupName = group ? group.name : "Uncategorized";
+                          const started = t.startedAt
+                            ? new Date(t.startedAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "Unknown";
+                          return (
+                            <div className="flex flex-col gap-0.5 w-full min-w-0 text-left">
+                              <span className="font-semibold">{c.name}</span>
+                              <span className="text-fg-dim text-[10.5px]">
+                                ssh://{c.username}@{c.host}:{c.port}
+                              </span>
+                              <div className="h-px bg-border my-1" />
+                              <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
+                                <span className="text-fg-muted shrink-0">Group</span>
+                                <span className="text-fg-dim text-right truncate">{groupName}</span>
+                              </div>
+                              <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
+                                <span className="text-fg-muted shrink-0">Started</span>
+                                <span className="text-fg-dim tabular-nums">{started}</span>
+                              </div>
+                              <div className="flex justify-between items-center gap-2 text-[10px] min-w-0">
+                                <span className="text-fg-muted shrink-0">Commands</span>
+                                <span className="text-fg-dim tabular-nums">
+                                  {t.commandCount || 0}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        multiline
+                        minWidth={160}
+                      >
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          draggable
+                          data-tab-strip-item={t.id}
+                          onDragStart={(e) => sidebarTabDnD.handleDragStart(e, t.id)}
+                          onDragEnd={sidebarTabDnD.handleDragEnd}
+                          onClick={() => actions.setActiveTab(t.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              actions.setActiveTab(t.id);
+                            }
+                          }}
+                          className={`group relative rounded-sm cursor-default transition-colors duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                            sidebarCollapsed
+                              ? "w-8 h-8 grid place-items-center"
+                              : "w-full h-8 flex items-center gap-1.5 px-2.5 overflow-hidden"
+                          } ${
+                            active
+                              ? "bg-success/10 text-success"
+                              : "bg-[var(--command-bg)] text-fg-muted hover:text-fg hover:bg-[var(--command-active-bg)]"
+                          }`}
+                        >
+                          <TabFavicon
+                            conn={c}
+                            state={tabSessionStatus[t.id]?.state}
+                            active={active}
+                          />
+                          {!sidebarCollapsed && (
+                            <span
+                              className="flex-1 text-left text-[12px] font-sans truncate min-w-0 pr-4"
+                              style={{
+                                maskImage:
+                                  "linear-gradient(to right, black calc(100% - 12px), transparent 100%)",
+                                WebkitMaskImage:
+                                  "linear-gradient(to right, black calc(100% - 12px), transparent 100%)",
+                              }}
+                            >
+                              {t.title}
+                            </span>
+                          )}
+                          {!sidebarCollapsed ? (
+                            <button
+                              type="button"
+                              draggable={false}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                actions.closeTab(t.id);
+                              }}
+                              className={`absolute right-1.5 w-5 h-5 flex items-center justify-center rounded-sm transition-all duration-150 opacity-0 group-hover:opacity-100 bg-[var(--bg-elev)] ${
+                                active
+                                  ? "text-success/70 hover:text-success hover:bg-[var(--bg-elev)]"
+                                  : "text-fg-dim hover:text-fg hover:bg-[var(--bg-elev)]"
+                              }`}
+                              aria-label="Close tab"
+                            >
+                              <span className="text-[14px] leading-none">×</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              draggable={false}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                actions.closeTab(t.id);
+                              }}
+                              className={`absolute inset-0 w-full h-full flex items-center justify-center rounded-sm transition-all duration-150 opacity-0 group-hover:opacity-100 z-10 ${
+                                active
+                                  ? "bg-[var(--bg-elev)] text-success"
+                                  : "bg-[var(--bg-elev)] text-fg hover:bg-[var(--bg-elev)]"
+                              }`}
+                              aria-label="Close tab"
+                            >
+                              <span className="text-[14px] leading-none font-bold">×</span>
+                            </button>
+                          )}
+                        </div>
+                      </Tooltip>
+                    </TabContextMenu>
                   </motion.div>
                 );
-              }
-              return renderSidebarTab(seg.tab);
-            });
-          })()}
+              };
+
+              return segs.map((seg) => {
+                if (seg.kind === "group") {
+                  return (
+                    <motion.div
+                      key={`split-group-${seg.tabs[0].id}`}
+                      layout
+                      initial={{ opacity: 0, x: -4, marginBottom: 0 }}
+                      animate={{ opacity: 1, x: 0, marginBottom: sidebarCollapsed ? 2 : 4 }}
+                      exit={{
+                        opacity: 0,
+                        x: -4,
+                        height: 0,
+                        marginBottom: 0,
+                        paddingTop: 0,
+                        paddingBottom: 0,
+                      }}
+                      transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+                      className={`rounded-md bg-[var(--command-active-bg)] w-full overflow-hidden ${
+                        sidebarCollapsed ? "p-0.5 flex flex-col items-center" : "p-1 flex flex-col"
+                      }`}
+                    >
+                      <AnimatePresence initial={false}>
+                        {seg.tabs.map((t) => renderSidebarTab(t))}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                }
+                return renderSidebarTab(seg.tab);
+              });
+            })()}
           </AnimatePresence>
 
           {/* New session button */}
           <div className={sidebarCollapsed ? "mt-auto pt-1" : "mt-auto pt-1 w-full"}>
-            <Popover open={open === "machines"} onOpenChange={(o) => setOpen(o ? "machines" : null)}>
+            <Popover
+              open={open === "machines"}
+              onOpenChange={(o) => setOpen(o ? "machines" : null)}
+            >
               {showTooltips ? (
                 <Tooltip label="New session" side={tooltipSide}>
                   <PopoverTrigger asChild>
@@ -1270,9 +1329,11 @@ function VerticalTabBarComponent() {
         </div>
 
         {/* Bottom actions */}
-        <div className={`flex ${sidebarCollapsed ? "flex-col items-center" : "flex-col"} gap-0.5 pb-2 pt-1 ${sidebarCollapsed ? "px-1" : "px-1.5"} shrink-0`}>
+        <div
+          className={`flex ${sidebarCollapsed ? "flex-col items-center" : "flex-col"} gap-0.5 pb-2 pt-1 ${sidebarCollapsed ? "px-1" : "px-1.5"} shrink-0`}
+        >
           <div className={`h-px bg-border mb-0.5 ${sidebarCollapsed ? "w-5 mx-auto" : "mx-1.5"}`} />
-          
+
           <SplitLayoutPicker
             variant={sidebarCollapsed ? "sidebar-collapsed" : "sidebar-expanded"}
             tabsLength={tabs.length}

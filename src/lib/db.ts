@@ -6,11 +6,11 @@ import { PHASE_PRODUCTION_BUILD } from "next/constants";
 
 import type { LogEntry } from "@/lib/types";
 
-const dbPath = process.env.DB_PATH || (
-  process.env.NODE_ENV === "production"
+const dbPath =
+  process.env.DB_PATH ||
+  (process.env.NODE_ENV === "production"
     ? path.join(process.cwd(), "database.sqlite")
-    : path.join(os.tmpdir(), "carbon-database.sqlite")
-);
+    : path.join(os.tmpdir(), "carbon-database.sqlite"));
 
 const jsonFallbackPath = dbPath.replace(/\.sqlite$/i, "-logs.json");
 
@@ -97,12 +97,10 @@ function sqlitePersistence(db: SqliteDatabase): LogsPersistence {
       return db.prepare("SELECT * FROM logs ORDER BY ts ASC LIMIT ?").all(limit) as LogEntry[];
     },
     insert(entry: LogEntry) {
-      db
-        .prepare(
-          `INSERT INTO logs (id, ts, level, source, message)
+      db.prepare(
+        `INSERT INTO logs (id, ts, level, source, message)
            VALUES (?, ?, ?, ?, ?)`,
-        )
-        .run(entry.id, entry.ts, entry.level, String(entry.source), String(entry.message));
+      ).run(entry.id, entry.ts, entry.level, String(entry.source), String(entry.message));
     },
     deleteAll() {
       db.prepare("DELETE FROM logs").run();

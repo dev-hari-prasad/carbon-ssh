@@ -2,11 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { coerceReasonToString } from "@/lib/telemetry-sanitize";
-import {
-  refreshTelemetryConsentFromStorage,
-  trackAppOpen,
-  trackCrash,
-} from "@/lib/telemetry";
+import { refreshTelemetryConsentFromStorage, trackAppOpen, trackCrash } from "@/lib/telemetry";
 
 /**
  * One place to boot analytics after hydration. Keeps PostHog out of SSR and ensures opt-out

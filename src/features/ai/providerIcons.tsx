@@ -1,4 +1,10 @@
-import { AmazonWebServicesDark, AnthropicDark, OpenAIDark, OpenRouterDark, VercelDark } from "@ridemountainpig/svgl-react";
+import {
+  AmazonWebServicesDark,
+  AnthropicDark,
+  OpenAIDark,
+  OpenRouterDark,
+  VercelDark,
+} from "@ridemountainpig/svgl-react";
 import { PuzzlePieceIcon } from "@heroicons/react/24/outline";
 import type { AIProviderId } from "@/lib/ai";
 

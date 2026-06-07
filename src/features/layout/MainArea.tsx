@@ -24,7 +24,14 @@ import {
 } from "@heroicons/react/24/solid";
 import { actions, useStore } from "@/lib/store";
 import { TerminalView } from "@/features/terminal/TerminalView";
-import type { AuthType, Connection, ConnectionRuntimeStatus, HostGroup, SplitLayout, Tab } from "@/lib/types";
+import type {
+  AuthType,
+  Connection,
+  ConnectionRuntimeStatus,
+  HostGroup,
+  SplitLayout,
+  Tab,
+} from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { IconPicker, type IconValue } from "@/features/connections/IconPicker";
@@ -129,19 +136,23 @@ function SplitPane({
       onClick={() => actions.setActiveTab(tab.id)}
     >
       {/* Thin accent line at top of focused pane */}
-      {isFocused && (
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent z-20" />
-      )}
-      <div className={`absolute top-0 left-0 right-0 z-10 flex items-center justify-between h-7 px-2 backdrop-blur-sm border-b ${
-        isFocused
-          ? "bg-accent/10 border-accent/25"
-          : "bg-[var(--titlebar-bg)]/80 border-border/30"
-      }`}>
+      {isFocused && <div className="absolute top-0 left-0 right-0 h-[2px] bg-accent z-20" />}
+      <div
+        className={`absolute top-0 left-0 right-0 z-10 flex items-center justify-between h-7 px-2 backdrop-blur-sm border-b ${
+          isFocused
+            ? "bg-accent/10 border-accent/25"
+            : "bg-[var(--titlebar-bg)]/80 border-border/30"
+        }`}
+      >
         <div className="flex items-center gap-1.5 min-w-0">
           <TabIcon conn={conn} size={14} />
-          <span className={`text-[11px] font-sans font-medium truncate ${
-            isFocused ? "text-fg" : "text-fg-muted"
-          }`}>{tab.title}</span>
+          <span
+            className={`text-[11px] font-sans font-medium truncate ${
+              isFocused ? "text-fg" : "text-fg-muted"
+            }`}
+          >
+            {tab.title}
+          </span>
           {status?.state === "connected" && (
             <span className="w-1.5 h-1.5 rounded-full bg-success shrink-0" />
           )}
@@ -217,13 +228,15 @@ function MainAreaComponent() {
     return <div className="flex-1 bg-bg" />;
   }
 
-  const activeTab = activeTabId ? tabs.find((t) => t.id === activeTabId) ?? null : null;
-  const activeConn = activeTab ? connections.find((c) => c.id === activeTab.connectionId) ?? null : null;
+  const activeTab = activeTabId ? (tabs.find((t) => t.id === activeTabId) ?? null) : null;
+  const activeConn = activeTab
+    ? (connections.find((c) => c.id === activeTab.connectionId) ?? null)
+    : null;
   const showTerminalSurface = Boolean(activeTabId && activeTab && activeConn);
 
   const validSplitTabs = splitTabIds
     .map((id) => tabs.find((t) => t.id === id))
-    .filter((t): t is typeof tabs[number] => t != null);
+    .filter((t): t is (typeof tabs)[number] => t != null);
 
   const isSplitMode = validSplitTabs.length >= 2;
 
@@ -252,13 +265,18 @@ function MainAreaComponent() {
           if (splitLayout === "two-columns" && count === 2) {
             return (
               <div ref={outerSplitRef} className="absolute inset-0 flex flex-row">
-                <div style={{ width: `${splitColRatio * 100}%` }} className="min-w-0 min-h-0 overflow-hidden">
+                <div
+                  style={{ width: `${splitColRatio * 100}%` }}
+                  className="min-w-0 min-h-0 overflow-hidden"
+                >
                   {paneFor(0)}
                 </div>
-                <ResizeHandle direction="col" containerRef={outerSplitRef} onRatioChange={actions.setSplitColRatio} />
-                <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
-                  {paneFor(1)}
-                </div>
+                <ResizeHandle
+                  direction="col"
+                  containerRef={outerSplitRef}
+                  onRatioChange={actions.setSplitColRatio}
+                />
+                <div className="flex-1 min-w-0 min-h-0 overflow-hidden">{paneFor(1)}</div>
               </div>
             );
           }
@@ -266,13 +284,18 @@ function MainAreaComponent() {
           if (splitLayout === "two-rows" && count === 2) {
             return (
               <div ref={outerSplitRef} className="absolute inset-0 flex flex-col">
-                <div style={{ height: `${splitRowRatio * 100}%` }} className="min-w-0 min-h-0 overflow-hidden">
+                <div
+                  style={{ height: `${splitRowRatio * 100}%` }}
+                  className="min-w-0 min-h-0 overflow-hidden"
+                >
                   {paneFor(0)}
                 </div>
-                <ResizeHandle direction="row" containerRef={outerSplitRef} onRatioChange={actions.setSplitRowRatio} />
-                <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
-                  {paneFor(1)}
-                </div>
+                <ResizeHandle
+                  direction="row"
+                  containerRef={outerSplitRef}
+                  onRatioChange={actions.setSplitRowRatio}
+                />
+                <div className="flex-1 min-w-0 min-h-0 overflow-hidden">{paneFor(1)}</div>
               </div>
             );
           }
@@ -280,24 +303,42 @@ function MainAreaComponent() {
           if (splitLayout === "grid-4" && count >= 4) {
             return (
               <div ref={outerSplitRef} className="absolute inset-0 flex flex-col">
-                <div ref={topRowRef} style={{ height: `${splitRowRatio * 100}%` }} className="flex flex-row min-h-0 overflow-hidden">
-                  <div style={{ width: `${splitColRatio * 100}%` }} className="min-w-0 min-h-0 overflow-hidden">
+                <div
+                  ref={topRowRef}
+                  style={{ height: `${splitRowRatio * 100}%` }}
+                  className="flex flex-row min-h-0 overflow-hidden"
+                >
+                  <div
+                    style={{ width: `${splitColRatio * 100}%` }}
+                    className="min-w-0 min-h-0 overflow-hidden"
+                  >
                     {paneFor(0)}
                   </div>
-                  <ResizeHandle direction="col" containerRef={topRowRef} onRatioChange={actions.setSplitColRatio} />
-                  <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
-                    {paneFor(1)}
-                  </div>
+                  <ResizeHandle
+                    direction="col"
+                    containerRef={topRowRef}
+                    onRatioChange={actions.setSplitColRatio}
+                  />
+                  <div className="flex-1 min-w-0 min-h-0 overflow-hidden">{paneFor(1)}</div>
                 </div>
-                <ResizeHandle direction="row" containerRef={outerSplitRef} onRatioChange={actions.setSplitRowRatio} />
+                <ResizeHandle
+                  direction="row"
+                  containerRef={outerSplitRef}
+                  onRatioChange={actions.setSplitRowRatio}
+                />
                 <div className="flex-1 flex flex-row min-h-0 overflow-hidden">
-                  <div style={{ width: `${splitColRatio * 100}%` }} className="min-w-0 min-h-0 overflow-hidden">
+                  <div
+                    style={{ width: `${splitColRatio * 100}%` }}
+                    className="min-w-0 min-h-0 overflow-hidden"
+                  >
                     {paneFor(2)}
                   </div>
-                  <ResizeHandle direction="col" containerRef={topRowRef} onRatioChange={actions.setSplitColRatio} />
-                  <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
-                    {paneFor(3)}
-                  </div>
+                  <ResizeHandle
+                    direction="col"
+                    containerRef={topRowRef}
+                    onRatioChange={actions.setSplitColRatio}
+                  />
+                  <div className="flex-1 min-w-0 min-h-0 overflow-hidden">{paneFor(3)}</div>
                 </div>
               </div>
             );
@@ -306,18 +347,33 @@ function MainAreaComponent() {
           if (splitLayout === "left-main" && count >= 3) {
             return (
               <div ref={outerSplitRef} className="absolute inset-0 flex flex-row">
-                <div style={{ width: `${splitColRatio * 100}%` }} className="min-w-0 min-h-0 overflow-hidden">
+                <div
+                  style={{ width: `${splitColRatio * 100}%` }}
+                  className="min-w-0 min-h-0 overflow-hidden"
+                >
                   {paneFor(0)}
                 </div>
-                <ResizeHandle direction="col" containerRef={outerSplitRef} onRatioChange={actions.setSplitColRatio} />
-                <div ref={rightColRef} className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
-                  <div style={{ height: `${splitRowRatio * 100}%` }} className="min-w-0 min-h-0 overflow-hidden">
+                <ResizeHandle
+                  direction="col"
+                  containerRef={outerSplitRef}
+                  onRatioChange={actions.setSplitColRatio}
+                />
+                <div
+                  ref={rightColRef}
+                  className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden"
+                >
+                  <div
+                    style={{ height: `${splitRowRatio * 100}%` }}
+                    className="min-w-0 min-h-0 overflow-hidden"
+                  >
                     {paneFor(1)}
                   </div>
-                  <ResizeHandle direction="row" containerRef={rightColRef} onRatioChange={actions.setSplitRowRatio} />
-                  <div className="flex-1 min-w-0 min-h-0 overflow-hidden">
-                    {paneFor(2)}
-                  </div>
+                  <ResizeHandle
+                    direction="row"
+                    containerRef={rightColRef}
+                    onRatioChange={actions.setSplitRowRatio}
+                  />
+                  <div className="flex-1 min-w-0 min-h-0 overflow-hidden">{paneFor(2)}</div>
                 </div>
               </div>
             );
@@ -325,13 +381,19 @@ function MainAreaComponent() {
 
           /* Fallback: auto-grid for any other tab count */
           return (
-            <div className="absolute inset-0 grid gap-[2px] bg-border/30" style={
-              count === 2
-                ? { gridTemplateColumns: "1fr 1fr" }
-                : count <= 4
-                  ? { gridTemplateColumns: "1fr 1fr", gridTemplateRows: `repeat(${Math.ceil(count / 2)}, 1fr)` }
-                  : { gridTemplateColumns: `repeat(${Math.ceil(Math.sqrt(count))}, 1fr)` }
-            }>
+            <div
+              className="absolute inset-0 grid gap-[2px] bg-border/30"
+              style={
+                count === 2
+                  ? { gridTemplateColumns: "1fr 1fr" }
+                  : count <= 4
+                    ? {
+                        gridTemplateColumns: "1fr 1fr",
+                        gridTemplateRows: `repeat(${Math.ceil(count / 2)}, 1fr)`,
+                      }
+                    : { gridTemplateColumns: `repeat(${Math.ceil(Math.sqrt(count))}, 1fr)` }
+              }
+            >
               {validSplitTabs.map((t, i) => {
                 const c = connections.find((x) => x.id === t.connectionId);
                 if (!c) return null;
@@ -880,195 +942,195 @@ function HostsView({ connections }: { connections: Connection[] }) {
     <div className="flex-1 min-w-0 relative bg-bg overflow-hidden">
       <LayoutGroup>
         <motion.div
-        layout
-        transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        style={{
-          paddingRight: selected ? "calc(320px + 1.5rem)" : "1.5rem",
-          paddingLeft: "1.5rem",
-          paddingTop: "1.5rem",
-          paddingBottom: "1.5rem",
-        }}
-        className="h-full overflow-y-auto"
-      >
-        <div className="flex items-center justify-between mb-2.5 gap-2">
-          <h2 className="text-[15px] font-sans font-semibold text-fg flex items-center gap-1">
-            <Squares2X2Icon className="w-4 h-4 text-accent/80" />
-            Groups
-          </h2>
-          <AddGroupPopover onBeforeOpen={dismissSidebars} />
-        </div>
-        <motion.div 
           layout
-          initial={false}
-          className={`grid gap-2.5 mb-4 ${sidePanelOpen ? "grid-cols-3" : "grid-cols-4"}`}
+          transition={{ type: "spring", damping: 25, stiffness: 200 }}
+          style={{
+            paddingRight: selected ? "calc(320px + 1.5rem)" : "1.5rem",
+            paddingLeft: "1.5rem",
+            paddingTop: "1.5rem",
+            paddingBottom: "1.5rem",
+          }}
+          className="h-full overflow-y-auto"
         >
-          <motion.div layout className="relative flex items-stretch gap-1.5 min-w-0">
-            <button
-              type="button"
-              onClick={() => {
-                setGroupFilter(null);
-                dismissSidebars();
-              }}
-              className={`flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2.5 rounded-md border transition-colors text-left ${
-                groupFilter === null
-                  ? "bg-[var(--command-active-bg)] border-accent/50 ring-1 ring-accent/30"
-                  : "bg-[var(--bg-panel)] border-border hover:border-[var(--border-strong)]"
-              }`}
-            >
-              <AllGroupIcon />
-              <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-sans font-semibold text-fg truncate">All</div>
-                <div className="text-[11.5px] font-sans text-fg-muted truncate">
-                  {connections.length} {connections.length === 1 ? "Host" : "Hosts"}
-                </div>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setGroupFilter((current) =>
-                  current === "__uncategorized__" ? null : "__uncategorized__",
-                );
-                dismissSidebars();
-              }}
-              className={`flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2.5 rounded-md border transition-colors text-left ${
-                groupFilter === "__uncategorized__"
-                  ? "bg-[var(--command-active-bg)] border-accent/50 ring-1 ring-accent/30"
-                  : "bg-[var(--bg-panel)] border-border hover:border-[var(--border-strong)]"
-              }`}
-            >
-              <UncategorizedGroupIcon />
-              <div className="min-w-0 flex-1">
-                <div className="text-[13px] font-sans font-semibold text-fg truncate">
-                  Uncategorized
-                </div>
-                <div className="text-[11.5px] font-sans text-fg-muted truncate">
-                  {uncategorizedCount} {uncategorizedCount === 1 ? "Host" : "Hosts"}
-                </div>
-              </div>
-            </button>
-
-            {groups.length > 0 ? (
-              <span
-                className="pointer-events-none absolute top-2 bottom-2 -right-[6px] w-px rounded-full bg-[var(--border-strong)] opacity-40"
-                aria-hidden
-              />
-            ) : null}
-          </motion.div>
-
-          {groups.map((g) => {
-            const count = groupCounts[g.id] ?? 0;
-            const active = groupFilter === g.id;
-            return (
-              <motion.div
-                layout
-                key={g.id}
-                className={`group flex items-center gap-1.5 min-w-0 rounded-md border transition-colors ${
-                  active
-                    ? "bg-[var(--command-active-bg)] border-accent/50 ring-1 ring-accent/30"
-                    : "bg-[var(--bg-panel)] border-border hover:border-[var(--border-strong)]"
-                }`}
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    setGroupFilter((current) => (current === g.id ? null : g.id));
-                    dismissSidebars();
-                  }}
-                  className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-md text-left"
-                >
-                  <GroupIcon />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[13px] font-sans font-semibold text-fg truncate">
-                      {g.name}
-                    </div>
-                    <div className="text-[11.5px] font-sans text-fg-muted">
-                      {count} {count === 1 ? "Host" : "Hosts"}
-                    </div>
-                  </div>
-                </button>
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 pr-2 shrink-0">
-                  <EditGroupPopover
-                    group={g}
-                    hostCount={count}
-                    onBeforeOpen={dismissSidebars}
-                    onRemoved={() => {
-                      if (groupFilter === g.id) setGroupFilter(null);
-                    }}
-                  />
-                  <AddHostsToGroupPopover
-                    group={g}
-                    connections={connections}
-                    onBeforeOpen={dismissSidebars}
-                  />
-                </div>
-              </motion.div>
-            );
-          })}
-        </motion.div>
-
-        <div className="h-px bg-gradient-to-r from-transparent via-border-strong/30 to-transparent my-0" />
-
-        <div className="flex items-center justify-between mb-2 gap-2 mt-3">
-          <h2 className="text-[15px] font-sans font-semibold text-fg truncate min-w-0 flex items-center gap-1">
-            <ServerStackIcon className="w-4 h-4 text-accent/80" />
-            Hosts
-          </h2>
-          <div className="flex items-center gap-3 shrink-0">
-            {groupFilter ? (
+          <div className="flex items-center justify-between mb-2.5 gap-2">
+            <h2 className="text-[15px] font-sans font-semibold text-fg flex items-center gap-1">
+              <Squares2X2Icon className="w-4 h-4 text-accent/80" />
+              Groups
+            </h2>
+            <AddGroupPopover onBeforeOpen={dismissSidebars} />
+          </div>
+          <motion.div
+            layout
+            initial={false}
+            className={`grid gap-2.5 mb-4 ${sidePanelOpen ? "grid-cols-3" : "grid-cols-4"}`}
+          >
+            <motion.div layout className="relative flex items-stretch gap-1.5 min-w-0">
               <button
+                type="button"
                 onClick={() => {
                   setGroupFilter(null);
                   dismissSidebars();
                 }}
-                className="text-[11px] font-sans text-fg-muted hover:text-fg flex items-center gap-1"
+                className={`flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2.5 rounded-md border transition-colors text-left ${
+                  groupFilter === null
+                    ? "bg-[var(--command-active-bg)] border-accent/50 ring-1 ring-accent/30"
+                    : "bg-[var(--bg-panel)] border-border hover:border-[var(--border-strong)]"
+                }`}
               >
-                <XMarkIcon className="w-[11px] h-[11px]" strokeWidth={2.5} /> Clear filter
+                <AllGroupIcon />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-sans font-semibold text-fg truncate">All</div>
+                  <div className="text-[11.5px] font-sans text-fg-muted truncate">
+                    {connections.length} {connections.length === 1 ? "Host" : "Hosts"}
+                  </div>
+                </div>
               </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof window !== "undefined") {
-                  window.dispatchEvent(new CustomEvent("tm:new-connection"));
-                }
-              }}
-              className="inline-flex items-center gap-1 px-2.5 h-7 rounded-sm text-[11.5px] font-sans font-medium text-accent border border-accent/40 bg-accent/10 hover:bg-accent/15 hover:border-accent/60 transition-colors"
-            >
-              <PlusIcon className="w-[11px] h-[11px]" aria-hidden strokeWidth={2.5} />
-              Add hosts
-            </button>
-          </div>
-        </div>
 
-        {filteredHosts.length === 0 ? (
-          <EmptyHosts />
-        ) : (
-          <motion.div 
-            layout
-            initial={false}
-            className={`grid gap-2.5 ${sidePanelOpen ? "grid-cols-3" : "grid-cols-4"}`}
-          >
-            {filteredHosts.map((c) => (
-              <motion.div layout key={c.id}>
-                <HostCard
-                  conn={c}
-                active={selectedId === c.id}
-                status={connectionStatus[c.id]}
-                onShowDetails={() => {
-                  actions.setSelectedHostId(c.id);
-                }}
-                onConnect={() => {
+              <button
+                type="button"
+                onClick={() => {
+                  setGroupFilter((current) =>
+                    current === "__uncategorized__" ? null : "__uncategorized__",
+                  );
                   dismissSidebars();
-                  actions.openTab(c.id);
                 }}
-              />
-              </motion.div>
-            ))}
+                className={`flex-1 min-w-0 flex items-center gap-2 px-2.5 py-2.5 rounded-md border transition-colors text-left ${
+                  groupFilter === "__uncategorized__"
+                    ? "bg-[var(--command-active-bg)] border-accent/50 ring-1 ring-accent/30"
+                    : "bg-[var(--bg-panel)] border-border hover:border-[var(--border-strong)]"
+                }`}
+              >
+                <UncategorizedGroupIcon />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-sans font-semibold text-fg truncate">
+                    Uncategorized
+                  </div>
+                  <div className="text-[11.5px] font-sans text-fg-muted truncate">
+                    {uncategorizedCount} {uncategorizedCount === 1 ? "Host" : "Hosts"}
+                  </div>
+                </div>
+              </button>
+
+              {groups.length > 0 ? (
+                <span
+                  className="pointer-events-none absolute top-2 bottom-2 -right-[6px] w-px rounded-full bg-[var(--border-strong)] opacity-40"
+                  aria-hidden
+                />
+              ) : null}
+            </motion.div>
+
+            {groups.map((g) => {
+              const count = groupCounts[g.id] ?? 0;
+              const active = groupFilter === g.id;
+              return (
+                <motion.div
+                  layout
+                  key={g.id}
+                  className={`group flex items-center gap-1.5 min-w-0 rounded-md border transition-colors ${
+                    active
+                      ? "bg-[var(--command-active-bg)] border-accent/50 ring-1 ring-accent/30"
+                      : "bg-[var(--bg-panel)] border-border hover:border-[var(--border-strong)]"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setGroupFilter((current) => (current === g.id ? null : g.id));
+                      dismissSidebars();
+                    }}
+                    className="flex-1 min-w-0 flex items-center gap-3 px-3 py-2.5 rounded-md text-left"
+                  >
+                    <GroupIcon />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[13px] font-sans font-semibold text-fg truncate">
+                        {g.name}
+                      </div>
+                      <div className="text-[11.5px] font-sans text-fg-muted">
+                        {count} {count === 1 ? "Host" : "Hosts"}
+                      </div>
+                    </div>
+                  </button>
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 pr-2 shrink-0">
+                    <EditGroupPopover
+                      group={g}
+                      hostCount={count}
+                      onBeforeOpen={dismissSidebars}
+                      onRemoved={() => {
+                        if (groupFilter === g.id) setGroupFilter(null);
+                      }}
+                    />
+                    <AddHostsToGroupPopover
+                      group={g}
+                      connections={connections}
+                      onBeforeOpen={dismissSidebars}
+                    />
+                  </div>
+                </motion.div>
+              );
+            })}
           </motion.div>
-        )}
-      </motion.div>
+
+          <div className="h-px bg-gradient-to-r from-transparent via-border-strong/30 to-transparent my-0" />
+
+          <div className="flex items-center justify-between mb-2 gap-2 mt-3">
+            <h2 className="text-[15px] font-sans font-semibold text-fg truncate min-w-0 flex items-center gap-1">
+              <ServerStackIcon className="w-4 h-4 text-accent/80" />
+              Hosts
+            </h2>
+            <div className="flex items-center gap-3 shrink-0">
+              {groupFilter ? (
+                <button
+                  onClick={() => {
+                    setGroupFilter(null);
+                    dismissSidebars();
+                  }}
+                  className="text-[11px] font-sans text-fg-muted hover:text-fg flex items-center gap-1"
+                >
+                  <XMarkIcon className="w-[11px] h-[11px]" strokeWidth={2.5} /> Clear filter
+                </button>
+              ) : null}
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(new CustomEvent("tm:new-connection"));
+                  }
+                }}
+                className="inline-flex items-center gap-1 px-2.5 h-7 rounded-sm text-[11.5px] font-sans font-medium text-accent border border-accent/40 bg-accent/10 hover:bg-accent/15 hover:border-accent/60 transition-colors"
+              >
+                <PlusIcon className="w-[11px] h-[11px]" aria-hidden strokeWidth={2.5} />
+                Add hosts
+              </button>
+            </div>
+          </div>
+
+          {filteredHosts.length === 0 ? (
+            <EmptyHosts />
+          ) : (
+            <motion.div
+              layout
+              initial={false}
+              className={`grid gap-2.5 ${sidePanelOpen ? "grid-cols-3" : "grid-cols-4"}`}
+            >
+              {filteredHosts.map((c) => (
+                <motion.div layout key={c.id}>
+                  <HostCard
+                    conn={c}
+                    active={selectedId === c.id}
+                    status={connectionStatus[c.id]}
+                    onShowDetails={() => {
+                      actions.setSelectedHostId(c.id);
+                    }}
+                    onConnect={() => {
+                      dismissSidebars();
+                      actions.openTab(c.id);
+                    }}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </motion.div>
       </LayoutGroup>
 
       <AnimatePresence>
@@ -1852,36 +1914,36 @@ function GroupSelect({ value, onChange }: { value: string; onChange: (v: string)
               borderColor: "var(--border-strong)",
             }}
           >
-          <button
-            type="button"
-            onClick={() => {
-              onChange("");
-              setOpen(false);
-            }}
-            className={`w-full text-left px-2.5 h-8 rounded-sm text-[12.5px] font-sans hover:bg-[var(--neutral-hover-bg)] ${
-              !current ? "text-fg" : "text-fg-muted"
-            }`}
-          >
-            No group
-          </button>
-          {groups.map((g) => (
             <button
-              key={g.id}
               type="button"
               onClick={() => {
-                onChange(g.id);
+                onChange("");
                 setOpen(false);
               }}
               className={`w-full text-left px-2.5 h-8 rounded-sm text-[12.5px] font-sans hover:bg-[var(--neutral-hover-bg)] ${
-                g.id === value
-                  ? "text-fg bg-[var(--neutral-hover-bg)] font-medium"
-                  : "text-fg-muted"
+                !current ? "text-fg" : "text-fg-muted"
               }`}
             >
-              {g.name}
+              No group
             </button>
-          ))}
-        </motion.div>
+            {groups.map((g) => (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => {
+                  onChange(g.id);
+                  setOpen(false);
+                }}
+                className={`w-full text-left px-2.5 h-8 rounded-sm text-[12.5px] font-sans hover:bg-[var(--neutral-hover-bg)] ${
+                  g.id === value
+                    ? "text-fg bg-[var(--neutral-hover-bg)] font-medium"
+                    : "text-fg-muted"
+                }`}
+              >
+                {g.name}
+              </button>
+            ))}
+          </motion.div>
         ) : null}
       </AnimatePresence>
     </div>

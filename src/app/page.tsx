@@ -50,65 +50,67 @@ export default function Page() {
 
         <div className="h-screen w-screen bg-[var(--titlebar-bg)] flex flex-col overflow-hidden">
           {onboardingCompleted && (
-          <div 
-            className="w-full shrink-0 flex items-center z-50 select-none" 
-            style={{ height: TITLE_BAR_HEIGHT, WebkitAppRegion: "drag" } as React.CSSProperties}
-          >
-            {(tabBarOrientation === "horizontal" && isUnlocked) ? (
-              <div className="flex-1 min-w-0 h-full overflow-hidden">
-                <TopBar isTitleBar />
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5 opacity-90 pointer-events-none px-2.5">
-                <img src={logoSrc} alt="" className="h-4 w-4 object-contain" />
-                <div className="text-[12px] font-semibold tracking-tight text-fg-muted">Carbon</div>
-              </div>
-            )}
-            <div className="shrink-0" style={{ width: TITLE_BAR_OS_CONTROLS_WIDTH }} />
-          </div>
-        )}
-
-      <div className="flex-1 w-full flex overflow-hidden text-fg">
-        {showUnlock ? (
-          <UnlockVault />
-        ) : (
-          <>
-            <AnimatePresence initial={false}>
-              {tabBarOrientation === "vertical" && (
-                <motion.div
-                  key="vertical-sidebar"
-                  initial={{ width: 0, opacity: 0 }}
-                  animate={{ width: "auto", opacity: 1 }}
-                  exit={{ width: 0, opacity: 0 }}
-                  transition={transition}
-                  className="shrink-0 overflow-hidden h-full"
-                >
-                  <VerticalTabBar />
-                </motion.div>
-              )}
-            </AnimatePresence>
-            <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-              <div className={`flex-1 min-h-0 ${tabBarOrientation === "horizontal" ? "px-2 pb-2" : "px-2 pb-2 pl-0.5"}`}>
-                <div className="h-full flex flex-col bg-bg rounded-md overflow-hidden border border-border/30">
-                  <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
-                    <MainArea />
-                    {largeSettingsOpen ? (
-                      <Suspense fallback={null}>
-                        <LargeSettingsModal />
-                      </Suspense>
-                    ) : null}
-                  </div>
-                  <BottomPanel />
+            <div
+              className="w-full shrink-0 flex items-center z-50 select-none"
+              style={{ height: TITLE_BAR_HEIGHT, WebkitAppRegion: "drag" } as React.CSSProperties}
+            >
+              {tabBarOrientation === "horizontal" && isUnlocked ? (
+                <div className="flex-1 min-w-0 h-full overflow-hidden">
+                  <TopBar isTitleBar />
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-center gap-1.5 opacity-90 pointer-events-none px-2.5">
+                  <img src={logoSrc} alt="" className="h-4 w-4 object-contain" />
+                  <div className="text-[12px] font-semibold tracking-tight text-fg-muted">
+                    Carbon
+                  </div>
+                </div>
+              )}
+              <div className="shrink-0" style={{ width: TITLE_BAR_OS_CONTROLS_WIDTH }} />
             </div>
-          </>
-        )}
-        <KeyboardShortcuts />
-        <AnimatePresence>
-          {!onboardingCompleted && <OnboardingModal />}
-        </AnimatePresence>
-      </div>
+          )}
+
+          <div className="flex-1 w-full flex overflow-hidden text-fg">
+            {showUnlock ? (
+              <UnlockVault />
+            ) : (
+              <>
+                <AnimatePresence initial={false}>
+                  {tabBarOrientation === "vertical" && (
+                    <motion.div
+                      key="vertical-sidebar"
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: "auto", opacity: 1 }}
+                      exit={{ width: 0, opacity: 0 }}
+                      transition={transition}
+                      className="shrink-0 overflow-hidden h-full"
+                    >
+                      <VerticalTabBar />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+                  <div
+                    className={`flex-1 min-h-0 ${tabBarOrientation === "horizontal" ? "px-2 pb-2" : "px-2 pb-2 pl-0.5"}`}
+                  >
+                    <div className="h-full flex flex-col bg-bg rounded-md overflow-hidden border border-border/30">
+                      <div className="flex-1 min-h-0 flex flex-col relative overflow-hidden">
+                        <MainArea />
+                        {largeSettingsOpen ? (
+                          <Suspense fallback={null}>
+                            <LargeSettingsModal />
+                          </Suspense>
+                        ) : null}
+                      </div>
+                      <BottomPanel />
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+            <KeyboardShortcuts />
+            <AnimatePresence>{!onboardingCompleted && <OnboardingModal />}</AnimatePresence>
+          </div>
         </div>
       </>
     </AppLockMigrationGate>

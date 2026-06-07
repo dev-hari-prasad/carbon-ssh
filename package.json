@@ -23,8 +23,8 @@
     }
   },
   "scripts": {
-    "dev": "set NODE_OPTIONS=--max-old-space-size=4096 && tsx server.ts",
-    "dev:electron": "node scripts/build-electron.mjs",
+    "dev": "node scripts/build-electron.mjs",
+    "dev:web": "set NODE_OPTIONS=--max-old-space-size=4096 && tsx server.ts",
     "start:electron": "concurrently -k -n server,electron -c cyan,green \"tsx server.ts\" \"wait-on -t 60000 -i 3000 http://localhost:3000 && electron .\"",
     "build": "next build",
     "build:electron": "node scripts/build-electron.mjs",

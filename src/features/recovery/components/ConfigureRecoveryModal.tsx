@@ -229,7 +229,9 @@ export function ConfigureRecoveryForm({ onCancel, onComplete }: ConfigureRecover
         errors[i] = "Answer must be at least 4 characters long.";
       }
     }
-    const validatedQuestions = qas.map((qa) => (qa.isCustom ? qa.customText.trim() : qa.question.trim()));
+    const validatedQuestions = qas.map((qa) =>
+      qa.isCustom ? qa.customText.trim() : qa.question.trim(),
+    );
     const uniqueQuestions = new Set(validatedQuestions.map((q) => q.toLowerCase()));
     if (uniqueQuestions.size !== validatedQuestions.length) {
       const seen = new Map<string, number>();
@@ -296,7 +298,9 @@ export function ConfigureRecoveryForm({ onCancel, onComplete }: ConfigureRecover
         errors[i] = "Answer must be at least 4 characters long.";
       }
     }
-    const validatedQuestions = qas.map((qa) => (qa.isCustom ? qa.customText.trim() : qa.question.trim()));
+    const validatedQuestions = qas.map((qa) =>
+      qa.isCustom ? qa.customText.trim() : qa.question.trim(),
+    );
     const uniqueQuestions = new Set(validatedQuestions.map((q) => q.toLowerCase()));
     if (uniqueQuestions.size !== validatedQuestions.length) {
       const seen = new Map<string, number>();
@@ -490,9 +494,7 @@ export function ConfigureRecoveryForm({ onCancel, onComplete }: ConfigureRecover
 
       <div className="space-y-1">
         <div className="flex items-center justify-between pb-1">
-          <span className="text-[12.5px] font-bold text-fg-muted">
-            Security Questions
-          </span>
+          <span className="text-[12.5px] font-bold text-fg-muted">Security Questions</span>
           <button
             type="button"
             onClick={() => setShowAnswers(!showAnswers)}
@@ -522,50 +524,51 @@ export function ConfigureRecoveryForm({ onCancel, onComplete }: ConfigureRecover
                   <div className="absolute left-3 bottom-[-3.5px] w-1.5 h-1.5 bg-destructive rotate-45 border-r border-b border-destructive/20" />
                 </div>
               )}
-            <div className="flex items-center justify-between">
-              <span className="text-[10.5px] font-bold text-accent">
-                Question {index + 1} {index < 2 && <span className="text-danger font-bold">*</span>}
-              </span>
-              {index >= 2 && (
-                <button
-                  type="button"
-                  onClick={() => handleRemoveQuestion(index)}
-                  className="text-[10px] text-danger hover:underline font-medium cursor-pointer"
-                >
-                  Remove
-                </button>
-              )}
-            </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10.5px] font-bold text-accent">
+                  Question {index + 1}{" "}
+                  {index < 2 && <span className="text-danger font-bold">*</span>}
+                </span>
+                {index >= 2 && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveQuestion(index)}
+                    className="text-[10px] text-danger hover:underline font-medium cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
 
-            <div className="space-y-2">
-              <CustomQuestionSelect
-                value={qa.isCustom ? "Write a custom question..." : qa.question}
-                options={PREDEFINED_QUESTIONS}
-                onChange={(val) => handleUpdateQA(index, "question", val)}
-              />
+              <div className="space-y-2">
+                <CustomQuestionSelect
+                  value={qa.isCustom ? "Write a custom question..." : qa.question}
+                  options={PREDEFINED_QUESTIONS}
+                  onChange={(val) => handleUpdateQA(index, "question", val)}
+                />
 
-              {qa.isCustom && (
+                {qa.isCustom && (
+                  <Input
+                    type="text"
+                    value={qa.customText}
+                    onChange={(e) => handleUpdateQA(index, "customText", e.target.value)}
+                    placeholder="Type your own custom security question"
+                    className="bg-[var(--input-bg)] border-border h-8 text-[11.5px] md:text-[11.5px] rounded-sm focus:border-accent"
+                  />
+                )}
+
                 <Input
-                  type="text"
-                  value={qa.customText}
-                  onChange={(e) => handleUpdateQA(index, "customText", e.target.value)}
-                  placeholder="Type your own custom security question"
+                  type={showAnswers ? "text" : "password"}
+                  value={qa.answer}
+                  onChange={(e) => handleUpdateQA(index, "answer", e.target.value)}
+                  placeholder="Enter answer (at least 4 characters)"
                   className="bg-[var(--input-bg)] border-border h-8 text-[11.5px] md:text-[11.5px] rounded-sm focus:border-accent"
                 />
-              )}
-
-              <Input
-                type={showAnswers ? "text" : "password"}
-                value={qa.answer}
-                onChange={(e) => handleUpdateQA(index, "answer", e.target.value)}
-                placeholder="Enter answer (at least 4 characters)"
-                className="bg-[var(--input-bg)] border-border h-8 text-[11.5px] md:text-[11.5px] rounded-sm focus:border-accent"
-              />
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
 
       {qas.length < 5 && (
         <button
@@ -587,7 +590,8 @@ export function ConfigureRecoveryForm({ onCancel, onComplete }: ConfigureRecover
           <div className="p-3 border border-warning/20 bg-warning/8 text-warning rounded-sm flex items-start gap-2 select-none">
             <ExclamationTriangleIcon className="w-4 h-4 shrink-0 mt-0.5 text-warning" />
             <p className="text-[11px] leading-relaxed text-warning">
-              Downloading `carbon-recovery.key` is compulsory. Both answers and this file are required to recover access.
+              Downloading `carbon-recovery.key` is compulsory. Both answers and this file are
+              required to recover access.
             </p>
           </div>
 

@@ -58,9 +58,7 @@ function ensureMainSender(event) {
 }
 
 function internalApiHeaders(extraHeaders = {}) {
-  return wsToken
-    ? { "x-api-token": wsToken, ...extraHeaders }
-    : { ...extraHeaders };
+  return wsToken ? { "x-api-token": wsToken, ...extraHeaders } : { ...extraHeaders };
 }
 
 function sanitizeProxyRequestHeaders(rawHeaders) {
@@ -89,7 +87,9 @@ function toSafePort(value) {
 }
 
 function normalizeKnownHostFingerprint(raw) {
-  return String(raw || "").trim().replace(/^SHA256:/i, "");
+  return String(raw || "")
+    .trim()
+    .replace(/^SHA256:/i, "");
 }
 
 function allowedAppOrigins() {
@@ -150,8 +150,16 @@ ipcMain.on("set-visual-zoom-limits", (event, min, max) => {
   if (!Number.isFinite(minNumber) || !Number.isFinite(maxNumber)) {
     return;
   }
-  const safeMin = clampNumber(Math.min(minNumber, maxNumber), MIN_VISUAL_ZOOM_LEVEL, MAX_VISUAL_ZOOM_LEVEL);
-  const safeMax = clampNumber(Math.max(minNumber, maxNumber), MIN_VISUAL_ZOOM_LEVEL, MAX_VISUAL_ZOOM_LEVEL);
+  const safeMin = clampNumber(
+    Math.min(minNumber, maxNumber),
+    MIN_VISUAL_ZOOM_LEVEL,
+    MAX_VISUAL_ZOOM_LEVEL,
+  );
+  const safeMax = clampNumber(
+    Math.max(minNumber, maxNumber),
+    MIN_VISUAL_ZOOM_LEVEL,
+    MAX_VISUAL_ZOOM_LEVEL,
+  );
   const webContents = event.sender;
   if (webContents) {
     webContents.setVisualZoomLevelLimits(safeMin, safeMax);
@@ -448,7 +456,7 @@ ipcMain.handle("ai-autocomplete", async (event, payload) => {
     settings: {
       ...(payload?.settings || {}),
       apiKey,
-      ...(baseUrl ? { baseUrl } : {}) // Override renderer baseUrl if we safely stored one
+      ...(baseUrl ? { baseUrl } : {}), // Override renderer baseUrl if we safely stored one
     },
   };
   return postLocalJson("/api/ai/autocomplete", body);
@@ -461,14 +469,11 @@ ipcMain.handle("ai-test-connection", async (event, payload) => {
     throw new Error("Invalid AI provider");
   }
   const { apiKey, baseUrl } = secureStore.loadAiApiKey(app, safeStorage, provider);
-  return postLocalJson(
-    "/api/ai/test",
-    {
-      ...payload,
-      apiKey,
-      ...(baseUrl ? { baseUrl } : {}) // Override renderer baseUrl if we safely stored one
-    },
-  );
+  return postLocalJson("/api/ai/test", {
+    ...payload,
+    apiKey,
+    ...(baseUrl ? { baseUrl } : {}), // Override renderer baseUrl if we safely stored one
+  });
 });
 const { createServer } = require("http");
 const http = require("http");
@@ -680,16 +685,21 @@ function createWindow() {
     }
   }
 
-  mainWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL) => {
-    console.error("[main] did-fail-load", { errorCode, errorDescription, validatedURL });
-    if (!mainWindow) return;
-    const html = renderFatalHtml(
-      "Failed to load UI",
-      `URL: ${validatedURL}\nError: ${errorDescription} (${errorCode})`,
-    );
-    mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`).catch(() => {});
-    mainWindow.show();
-  });
+  mainWindow.webContents.on(
+    "did-fail-load",
+    (_event, errorCode, errorDescription, validatedURL) => {
+      console.error("[main] did-fail-load", { errorCode, errorDescription, validatedURL });
+      if (!mainWindow) return;
+      const html = renderFatalHtml(
+        "Failed to load UI",
+        `URL: ${validatedURL}\nError: ${errorDescription} (${errorCode})`,
+      );
+      mainWindow
+        .loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+        .catch(() => {});
+      mainWindow.show();
+    },
+  );
 
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -822,7 +832,7 @@ async function startProductionServer(preferredPort) {
             isResolved = true;
             clearInterval(checkInterval);
             console.log(`[main] Next.js ready on port ${nextPort}`);
-            
+
             // Proxy Setup
             const { WebSocketServer } = require("ws");
             const { handleWsConnection } = require("./ws-handler.cjs");
@@ -940,43 +950,47 @@ app.whenReady().then(async () => {
     "us.posthog.com",
   ]);
 
-  session.defaultSession.webRequest.onBeforeRequest(
-    { urls: ["*://*/*"] },
-    (details, callback) => {
-      try {
-        const url = new URL(details.url);
-        // Loopback egress is restricted to app-owned local ports only.
-        if (url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1" || url.hostname === "[::1]") {
-          const safePort = toSafePort(url.port);
-          const allowedPorts = new Set(
-            [DEFAULT_PORT, appEntryPort].filter((p) => Number.isInteger(p) && p > 0),
+  session.defaultSession.webRequest.onBeforeRequest({ urls: ["*://*/*"] }, (details, callback) => {
+    try {
+      const url = new URL(details.url);
+      // Loopback egress is restricted to app-owned local ports only.
+      if (
+        url.hostname === "localhost" ||
+        url.hostname === "127.0.0.1" ||
+        url.hostname === "::1" ||
+        url.hostname === "[::1]"
+      ) {
+        const safePort = toSafePort(url.port);
+        const allowedPorts = new Set(
+          [DEFAULT_PORT, appEntryPort].filter((p) => Number.isInteger(p) && p > 0),
+        );
+        if (safePort && allowedPorts.has(safePort)) {
+          callback({});
+        } else {
+          console.warn(
+            `[security] Blocked loopback egress to ${url.hostname}:${url.port || "(default)"}`,
           );
-          if (safePort && allowedPorts.has(safePort)) {
-            callback({});
-          } else {
-            console.warn(`[security] Blocked loopback egress to ${url.hostname}:${url.port || "(default)"}`);
-            callback({ cancel: true });
-          }
-          return;
-        }
-        // Only allow HTTPS for external traffic
-        if (url.protocol !== "https:") {
-          console.warn(`[security] Blocked non-HTTPS request to: ${details.url}`);
           callback({ cancel: true });
-          return;
         }
-        // Check against allowlist
-        if (!ALLOWED_ORIGINS.has(url.hostname)) {
-          console.warn(`[security] Blocked outbound request to: ${url.hostname}`);
-          callback({ cancel: true });
-          return;
-        }
-        callback({});
-      } catch {
-        callback({ cancel: true });
+        return;
       }
-    },
-  );
+      // Only allow HTTPS for external traffic
+      if (url.protocol !== "https:") {
+        console.warn(`[security] Blocked non-HTTPS request to: ${details.url}`);
+        callback({ cancel: true });
+        return;
+      }
+      // Check against allowlist
+      if (!ALLOWED_ORIGINS.has(url.hostname)) {
+        console.warn(`[security] Blocked outbound request to: ${url.hostname}`);
+        callback({ cancel: true });
+        return;
+      }
+      callback({});
+    } catch {
+      callback({ cancel: true });
+    }
+  });
 
   // --- SECURITY: IPC channel lockdown ---
   const ALLOWED_IPC_CHANNELS = new Set([
@@ -1054,7 +1068,11 @@ app.whenReady().then(async () => {
     }
   }
 
-  const html = renderFatalHtml("Next.js Standalone Boot Failed", lastError?.message || String(lastError), "");
+  const html = renderFatalHtml(
+    "Next.js Standalone Boot Failed",
+    lastError?.message || String(lastError),
+    "",
+  );
   await mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
   mainWindow.show();
 });

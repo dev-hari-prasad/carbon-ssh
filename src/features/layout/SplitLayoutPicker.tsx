@@ -18,7 +18,8 @@ function LayoutThumb({ className, children }: { className?: string; children: Re
   );
 }
 
-const tileCell = "rounded-sm bg-accent/20 border border-accent/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]";
+const tileCell =
+  "rounded-sm bg-accent/20 border border-accent/20 shadow-[inset_0_1px_1px_rgba(255,255,255,0.05)]";
 
 export function SplitLayoutPicker({
   variant,
@@ -57,7 +58,10 @@ export function SplitLayoutPicker({
         className={`${triggerClassTop} ${splitActive ? activeSplit : inactive}`}
         style={{ width: TITLE_BAR_ACTION_SIZE, height: TITLE_BAR_ACTION_SIZE }}
       >
-        <Squares2X2Icon className={`w-[14px] h-[14px] ${splitActive ? "text-current" : ""}`} strokeWidth={splitActive ? 2.25 : 1.75} />
+        <Squares2X2Icon
+          className={`w-[14px] h-[14px] ${splitActive ? "text-current" : ""}`}
+          strokeWidth={splitActive ? 2.25 : 1.75}
+        />
       </button>
     );
   } else if (variant === "sidebar-collapsed") {
@@ -81,16 +85,16 @@ export function SplitLayoutPicker({
       >
         <Squares2X2Icon className="w-4 h-4 shrink-0" strokeWidth={splitActive ? 2.25 : 1.75} />
         <span className="truncate">Split tabs</span>
-        <ChevronRightIcon className="w-[11px] h-[11px] ml-auto shrink-0 opacity-60" aria-hidden strokeWidth={2.5} />
+        <ChevronRightIcon
+          className="w-[11px] h-[11px] ml-auto shrink-0 opacity-60"
+          aria-hidden
+          strokeWidth={2.5}
+        />
       </button>
     );
   }
 
-  const tileBtn = (
-    layout: SplitLayout,
-    label: string,
-    thumb: React.ReactNode,
-  ) => {
+  const tileBtn = (layout: SplitLayout, label: string, thumb: React.ReactNode) => {
     const slots = SPLIT_LAYOUT_SLOTS[layout];
     const disabled = tabsLength < slots;
     const isActive = splitActive && splitLayout === layout;
@@ -114,7 +118,9 @@ export function SplitLayoutPicker({
           }`}
         >
           {thumb}
-          <span className={`text-[10px] font-sans leading-tight truncate ${isActive ? "text-accent font-medium" : "text-fg-muted group-hover:text-fg"}`}>
+          <span
+            className={`text-[10px] font-sans leading-tight truncate ${isActive ? "text-accent font-medium" : "text-fg-muted group-hover:text-fg"}`}
+          >
             {label}
           </span>
         </button>
@@ -137,8 +143,7 @@ export function SplitLayoutPicker({
         <div className="mb-2 space-y-0.5">
           <div className="text-[12px] font-sans font-semibold text-fg">Split layout</div>
           <p className="text-[10.5px] font-sans leading-snug text-fg-muted">
-            Drag the border between panes to resize.
-            Double-click a border to reset to 50/50.
+            Drag the border between panes to resize. Double-click a border to reset to 50/50.
           </p>
         </div>
 

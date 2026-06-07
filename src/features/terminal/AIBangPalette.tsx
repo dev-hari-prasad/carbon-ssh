@@ -15,7 +15,16 @@ interface Props {
   terminalOutput: string[];
 }
 
-export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQuery = "", conn, history, terminalOutput }: Props) {
+export function AIBangPalette({
+  open,
+  onOpenChange,
+  onSelect,
+  position,
+  initialQuery = "",
+  conn,
+  history,
+  terminalOutput,
+}: Props) {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const historyRef = useRef(history);
@@ -26,7 +35,9 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
 
   // Auto-complete suggestion placeholder logic
   // In a real implementation this would fetch from an AI endpoint
-  const [aiSuggestions, setAiSuggestions] = useState<Array<{ command: string; label: string; description: string }>>([]);
+  const [aiSuggestions, setAiSuggestions] = useState<
+    Array<{ command: string; label: string; description: string }>
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -35,7 +46,7 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
     (b) =>
       b.trigger.toLowerCase().includes(query.replace(/^!/, "").toLowerCase()) ||
       b.description?.toLowerCase().includes(query.replace(/^!/, "").toLowerCase()) ||
-      b.command.toLowerCase().includes(query.replace(/^!/, "").toLowerCase())
+      b.command.toLowerCase().includes(query.replace(/^!/, "").toLowerCase()),
   );
 
   useEffect(() => {
@@ -51,12 +62,12 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
       const rect = containerRef.current.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
       const spaceBelow = viewportHeight - position.top;
-      
+
       if (spaceBelow < rect.height + 40) {
         // Not enough space below, flip it up
         setAdjustedPosition({
           top: position.top - rect.height - 20,
-          left: position.left
+          left: position.left,
         });
       } else {
         setAdjustedPosition(position);
@@ -157,13 +168,12 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
 
   if (!open) return null;
 
-
   if (!open || (!aiEnabled && filteredBangs.length === 0 && query.length > 0)) {
     return null;
   }
 
   return (
-    <div 
+    <div
       ref={containerRef}
       className={`absolute z-50 w-[340px] rounded-md bg-[var(--menu-bg)]/60 backdrop-blur-xl border border-[var(--border-strong)] overflow-hidden flex flex-col font-sans ${
         !adjustedPosition ? "bottom-4 left-4" : ""
@@ -178,11 +188,7 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
         animation: "aiBangIn 160ms cubic-bezier(0.32, 0.72, 0, 1) both",
       }}
     >
-      <Command
-        className="flex flex-col w-full h-full"
-        shouldFilter={false}
-        loop
-      >
+      <Command className="flex flex-col w-full h-full" shouldFilter={false} loop>
         <div className="flex items-center px-2.5 py-2 border-b border-border/40">
           {isLoading ? (
             <div className="w-4 h-4 mr-2 shrink-0">
@@ -208,10 +214,15 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
         </div>
 
         <Command.List className="max-h-[220px] overflow-y-auto p-1 custom-scrollbar">
-
           {aiEnabled && query.length > 0 && (
-            <Command.Group 
-              heading={isLoading ? "Searching AI..." : aiSuggestions.length > 0 ? "AI Suggestions" : "Ask AI"} 
+            <Command.Group
+              heading={
+                isLoading
+                  ? "Searching AI..."
+                  : aiSuggestions.length > 0
+                    ? "AI Suggestions"
+                    : "Ask AI"
+              }
               className="px-1.5 py-1 text-[10px] uppercase font-bold text-fg-muted tracking-wider"
             >
               {aiSuggestions.map((suggestion, i) => (
@@ -237,7 +248,7 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
                   </div>
                 </Command.Item>
               ))}
-              
+
               {!isLoading && aiSuggestions.length === 0 && (
                 <Command.Item
                   value={query}
@@ -249,14 +260,19 @@ export function AIBangPalette({ open, onOpenChange, onSelect, position, initialQ
                   className="flex items-center gap-2 px-2 py-1.5 mt-0.5 rounded-sm text-[12px] text-fg cursor-pointer hover:bg-[var(--menu-hover-bg)] aria-selected:bg-[var(--command-active-bg)] aria-selected:text-fg transition-colors"
                 >
                   <SparklesIcon className="w-3.5 h-3.5 text-fg-dim shrink-0" />
-                  <span className="truncate lowercase first-letter:capitalize">Ask AI: {query.startsWith("!") ? query.slice(1) : query}</span>
+                  <span className="truncate lowercase first-letter:capitalize">
+                    Ask AI: {query.startsWith("!") ? query.slice(1) : query}
+                  </span>
                 </Command.Item>
               )}
             </Command.Group>
           )}
 
           {filteredBangs.length > 0 && (
-            <Command.Group heading="Bangs" className="px-1.5 py-1 mt-1 text-[10px] uppercase font-bold text-fg-muted tracking-wider">
+            <Command.Group
+              heading="Bangs"
+              className="px-1.5 py-1 mt-1 text-[10px] uppercase font-bold text-fg-muted tracking-wider"
+            >
               {filteredBangs.map((bang) => (
                 <Command.Item
                   key={bang.id}

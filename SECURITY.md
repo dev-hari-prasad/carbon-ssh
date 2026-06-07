@@ -12,20 +12,20 @@ Security updates are provided for the **`main`** branch and the **latest release
 
 ## Reporting a vulnerability
 
-To report a security vulnerability, please email the maintainer Hari Prasad at [harii.codess@gmail.com](mailto:harii.codess@gmail.com). 
+To report a security vulnerability, please email the maintainer Hari Prasad at [harii.codess@gmail.com](mailto:harii.codess@gmail.com).
 
 Include the following information in your email:
+
 - A description of the vulnerability
 - Steps to reproduce
 - Potential impact (if any)
 - Proposed fix (if any)
 - Your identity (if you want to be credited for the report)
 
-
 > [!IMPORTANT]
 > Please do not disclose the vulnerability publicly before a fix is released and do not open a public GitHub issue. This is highly dangerous and can put users at risk.
 
-We will investigate the issue and respond quickly. We will keep you updated on the progress of the fix and credit you for the report (unless you opt out). If you want to be credited, please include your identity in your email (like Twitter handle, GitHub username, etc.). 
+We will investigate the issue and respond quickly. We will keep you updated on the progress of the fix and credit you for the report (unless you opt out). If you want to be credited, please include your identity in your email (like Twitter handle, GitHub username, etc.).
 
 ---
 
@@ -39,4 +39,3 @@ We will investigate the issue and respond quickly. We will keep you updated on t
 ---
 
 Thank you to everyone who reports issues, audits the code, or helps keep Carbon and its users safe.
-

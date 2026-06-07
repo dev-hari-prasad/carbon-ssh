@@ -119,7 +119,12 @@ function TerminalViewComponent({ tab, conn }: Props) {
   const [paletteInitial, setPaletteInitial] = useState("");
   const [history, setHistory] = useState<string[]>([]);
   const [terminalOutput, setTerminalOutput] = useState<string[]>([]);
-  const [ghostText, setGhostText] = useState<{ text: string; top: number; left: number; command: string } | null>(null);
+  const [ghostText, setGhostText] = useState<{
+    text: string;
+    top: number;
+    left: number;
+    command: string;
+  } | null>(null);
   const themeId = useStore((s) => s.theme);
   const terminalFontId = useStore((s) => s.terminalFont);
   const terminalCursorStyle = useStore((s) => s.terminalCursorStyle);
@@ -175,13 +180,7 @@ function TerminalViewComponent({ tab, conn }: Props) {
       port: conn.port,
       username: conn.username,
     }),
-    [
-      conn.id,
-      conn.name,
-      conn.host,
-      conn.port,
-      conn.username,
-    ],
+    [conn.id, conn.name, conn.host, conn.port, conn.username],
   );
 
   // Separate effect: update terminal theme/font WITHOUT killing the connection
@@ -190,8 +189,12 @@ function TerminalViewComponent({ tab, conn }: Props) {
     if (!term) return;
     term.options.theme = terminalThemeForTheme(getThemeById(themeId));
     term.options.fontFamily = getTerminalFontById(terminalFontId).stack;
-    
-    const style = terminalCursorStyle.includes("block") ? "block" : terminalCursorStyle.includes("bar") ? "bar" : "underline";
+
+    const style = terminalCursorStyle.includes("block")
+      ? "block"
+      : terminalCursorStyle.includes("bar")
+        ? "bar"
+        : "underline";
     const blink = terminalCursorStyle.includes("blinking");
     term.options.cursorStyle = style;
     term.options.cursorBlink = blink;
@@ -231,10 +234,10 @@ function TerminalViewComponent({ tab, conn }: Props) {
         fontSize: 13,
         lineHeight: 1.0,
         cursorBlink: terminalCursorStyleRef.current.includes("blinking"),
-        cursorStyle: terminalCursorStyleRef.current.includes("block") 
-          ? "block" 
-          : terminalCursorStyleRef.current.includes("bar") 
-            ? "bar" 
+        cursorStyle: terminalCursorStyleRef.current.includes("block")
+          ? "block"
+          : terminalCursorStyleRef.current.includes("bar")
+            ? "bar"
             : "underline",
         cursorWidth: 1,
         allowProposedApi: true,
@@ -264,9 +267,9 @@ function TerminalViewComponent({ tab, conn }: Props) {
       let spinnerIdx = 0;
       let spinnerActive = true;
       const spinnerFrames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
-      
+
       term.write(`\x1b[38;5;244m${spinnerFrames[0]}\x1b[0m ${baseMsg}`);
-      
+
       const spinnerInterval = setInterval(() => {
         if (!spinnerActive) return;
         spinnerIdx = (spinnerIdx + 1) % spinnerFrames.length;
@@ -482,7 +485,8 @@ function TerminalViewComponent({ tab, conn }: Props) {
         setIsClosed(true);
       });
 
-      let kbdSelection: { startX: number; startY: number; endX: number; endY: number } | null = null;
+      let kbdSelection: { startX: number; startY: number; endX: number; endY: number } | null =
+        null;
 
       term.attachCustomKeyEventHandler((e) => {
         const isMac =
@@ -600,41 +604,46 @@ function TerminalViewComponent({ tab, conn }: Props) {
         if (shift && !mod && e.key.startsWith("Arrow")) {
           if (e.type === "keydown") {
             const buffer = term.buffer.active;
-            
+
             if (!kbdSelection) {
-               const hasSelection = term.hasSelection();
-               let pos = term.getSelectionPosition();
-               if (hasSelection && pos) {
-                  kbdSelection = {
-                    startX: pos.start.x,
-                    startY: pos.start.y,
-                    endX: pos.end.x,
-                    endY: pos.end.y,
-                  };
-               } else {
-                  kbdSelection = { startX: buffer.cursorX, startY: buffer.cursorY, endX: buffer.cursorX, endY: buffer.cursorY };
-               }
+              const hasSelection = term.hasSelection();
+              let pos = term.getSelectionPosition();
+              if (hasSelection && pos) {
+                kbdSelection = {
+                  startX: pos.start.x,
+                  startY: pos.start.y,
+                  endX: pos.end.x,
+                  endY: pos.end.y,
+                };
+              } else {
+                kbdSelection = {
+                  startX: buffer.cursorX,
+                  startY: buffer.cursorY,
+                  endX: buffer.cursorX,
+                  endY: buffer.cursorY,
+                };
+              }
             }
 
             if (e.key === "ArrowLeft") {
               kbdSelection.endX -= 1;
               if (kbdSelection.endX < 0) {
-                 if (kbdSelection.endY > 0) {
-                    kbdSelection.endY -= 1;
-                    kbdSelection.endX = term.cols - 1;
-                 } else {
-                    kbdSelection.endX = 0;
-                 }
+                if (kbdSelection.endY > 0) {
+                  kbdSelection.endY -= 1;
+                  kbdSelection.endX = term.cols - 1;
+                } else {
+                  kbdSelection.endX = 0;
+                }
               }
             } else if (e.key === "ArrowRight") {
               kbdSelection.endX += 1;
               if (kbdSelection.endX >= term.cols) {
-                 if (kbdSelection.endY < term.rows - 1) {
-                    kbdSelection.endY += 1;
-                    kbdSelection.endX = 0;
-                 } else {
-                    kbdSelection.endX = term.cols - 1;
-                 }
+                if (kbdSelection.endY < term.rows - 1) {
+                  kbdSelection.endY += 1;
+                  kbdSelection.endX = 0;
+                } else {
+                  kbdSelection.endX = term.cols - 1;
+                }
               }
             } else if (e.key === "ArrowUp") {
               kbdSelection.endY = Math.max(0, kbdSelection.endY - 1);
@@ -648,10 +657,10 @@ function TerminalViewComponent({ tab, conn }: Props) {
             let endCol = kbdSelection.endX;
 
             if (endRow < startRow || (endRow === startRow && endCol < startCol)) {
-               startRow = kbdSelection.endY;
-               startCol = kbdSelection.endX;
-               endRow = kbdSelection.startY;
-               endCol = kbdSelection.startX;
+              startRow = kbdSelection.endY;
+              startCol = kbdSelection.endX;
+              endRow = kbdSelection.startY;
+              endCol = kbdSelection.startX;
             }
 
             const length = (endRow - startRow) * term.cols + (endCol - startCol);
@@ -669,16 +678,19 @@ function TerminalViewComponent({ tab, conn }: Props) {
             const termEl = term.element;
             if (termEl) {
               const core = (term as any)._core;
-              const dimensions = core._renderService?.dimensions || core._renderCoordinator?.dimensions;
-              const cellWidth = dimensions?.css?.cell?.width ?? (termEl.clientWidth / term.cols);
-              const cellHeight = dimensions?.css?.cell?.height ?? (termEl.clientHeight / term.rows);
-              window.dispatchEvent(new CustomEvent("tm:open-ai-bang-at-cursor", {
-                detail: {
-                  top: (cursorY + 1) * cellHeight + 8,
-                  left: cursorX * cellWidth + 8,
-                  query: "!"
-                }
-              }));
+              const dimensions =
+                core._renderService?.dimensions || core._renderCoordinator?.dimensions;
+              const cellWidth = dimensions?.css?.cell?.width ?? termEl.clientWidth / term.cols;
+              const cellHeight = dimensions?.css?.cell?.height ?? termEl.clientHeight / term.rows;
+              window.dispatchEvent(
+                new CustomEvent("tm:open-ai-bang-at-cursor", {
+                  detail: {
+                    top: (cursorY + 1) * cellHeight + 8,
+                    left: cursorX * cellWidth + 8,
+                    query: "!",
+                  },
+                }),
+              );
             }
           }
           return true; // let ! pass through to terminal
@@ -726,7 +738,7 @@ function TerminalViewComponent({ tab, conn }: Props) {
             if (cmd) {
               actions.log("info", connectionSnapshot.name, `$ ${cmd}`);
               actions.incrementCommandCount(tab.id);
-              setHistory(prev => [cmd, ...prev].slice(0, 10));
+              setHistory((prev) => [cmd, ...prev].slice(0, 10));
             }
             commandBuffer = "";
           } else if (char === "\x7f" || char === "\b") {
@@ -744,24 +756,28 @@ function TerminalViewComponent({ tab, conn }: Props) {
 
         if (paletteOpenRef.current) {
           if (commandBuffer.startsWith("!")) {
-            window.dispatchEvent(new CustomEvent("tm:update-ai-bang-query", { detail: commandBuffer }));
-            
+            window.dispatchEvent(
+              new CustomEvent("tm:update-ai-bang-query", { detail: commandBuffer }),
+            );
+
             const query = commandBuffer.replace(/^!/, "").toLowerCase();
-            const match = bangsRef.current.find(b => b.trigger.toLowerCase().startsWith(query));
+            const match = bangsRef.current.find((b) => b.trigger.toLowerCase().startsWith(query));
             if (match && query.length > 0) {
               const suffix = match.trigger.substring(query.length);
               if (suffix.length > 0) {
                 const termEl = term.element;
                 if (termEl) {
                   const core = (term as any)._core;
-                  const dimensions = core._renderService?.dimensions || core._renderCoordinator?.dimensions;
-                  const cellWidth = dimensions?.css?.cell?.width ?? (termEl.clientWidth / term.cols);
-                  const cellHeight = dimensions?.css?.cell?.height ?? (termEl.clientHeight / term.rows);
+                  const dimensions =
+                    core._renderService?.dimensions || core._renderCoordinator?.dimensions;
+                  const cellWidth = dimensions?.css?.cell?.width ?? termEl.clientWidth / term.cols;
+                  const cellHeight =
+                    dimensions?.css?.cell?.height ?? termEl.clientHeight / term.rows;
                   setGhostText({
                     text: suffix,
                     top: term.buffer.active.cursorY * cellHeight + 8,
                     left: term.buffer.active.cursorX * cellWidth + 8,
-                    command: match.command
+                    command: match.command,
                   });
                 }
               } else {
@@ -780,7 +796,11 @@ function TerminalViewComponent({ tab, conn }: Props) {
             terminalOutputUpdateAtRef.current = now;
             const buffer = term.buffer.active;
             const lines: string[] = [];
-            for (let i = Math.max(0, buffer.baseY + buffer.cursorY - 20); i <= buffer.baseY + buffer.cursorY; i++) {
+            for (
+              let i = Math.max(0, buffer.baseY + buffer.cursorY - 20);
+              i <= buffer.baseY + buffer.cursorY;
+              i++
+            ) {
               const line = buffer.getLine(i);
               if (line) lines.push(line.translateToString());
             }
@@ -804,7 +824,10 @@ function TerminalViewComponent({ tab, conn }: Props) {
         resizeSub.dispose();
         ro.disconnect();
         console.trace("[TerminalView] cleanups executing! socket state:", socket?.readyState);
-        if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+        if (
+          socket &&
+          (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)
+        ) {
           console.log("[TerminalView] cleanups calling socket.close()!");
           socket.close();
         }
@@ -957,7 +980,9 @@ function TerminalViewComponent({ tab, conn }: Props) {
         position={palettePos}
         initialQuery={paletteInitial}
         onSelect={(text) => {
-          const command = String(text ?? "").replace(/\r\n?/g, "\n").trim();
+          const command = String(text ?? "")
+            .replace(/\r\n?/g, "\n")
+            .trim();
           if (!command) return;
           if (!isSingleLineCommand(command)) {
             window.alert("Blocked multi-line bang/AI command for safety.");

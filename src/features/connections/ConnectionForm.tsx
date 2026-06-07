@@ -186,8 +186,10 @@ export function ConnectionForm({
                     icon.kind === "brand"
                       ? (BRAND_ICONS.find((item) => item.id === icon.id)?.Icon ?? FallbackBrandIcon)
                       : icon.kind === "iconoir"
-                        ? (ICONOIR_ICONS.find((item) => item.id === icon.id)?.Icon ?? FallbackBrandIcon)
-                        : (SYSTEM_ICONS.find((s) => s.id === icon.id)?.Icon ?? SYSTEM_ICONS[0].Icon);
+                        ? (ICONOIR_ICONS.find((item) => item.id === icon.id)?.Icon ??
+                          FallbackBrandIcon)
+                        : (SYSTEM_ICONS.find((s) => s.id === icon.id)?.Icon ??
+                          SYSTEM_ICONS[0].Icon);
 
                   return (
                     <button

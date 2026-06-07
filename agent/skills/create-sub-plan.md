@@ -23,19 +23,22 @@ The AI must:
 Example:
 
 /plans/sub-plans/security-guard/
-  - credential-hardening.md
-  - websocket-security.md
-  - electron-hardening.md
-  - rollout-strategy.md
-  - migration-plan.md
-  - testing-strategy.md
+
+- credential-hardening.md
+- websocket-security.md
+- electron-hardening.md
+- rollout-strategy.md
+- migration-plan.md
+- testing-strategy.md
 
 The AI should create:
+
 - one file per major initiative/system
 - additional supporting files where needed
 - implementation ordering documentation if complexity is high
 
 The AI must ensure:
+
 - filenames are predictable
 - filenames are human-readable
 - files are scoped properly
@@ -48,6 +51,7 @@ The AI must ensure:
 The AI agent must deeply analyze the plan before generating tasks.
 
 The AI must spend significant effort understanding:
+
 - the architecture
 - intent behind decisions
 - hidden complexity
@@ -59,6 +63,7 @@ The AI must spend significant effort understanding:
 - long-term maintainability
 
 The AI must think through:
+
 - what can break
 - what depends on what
 - what assumptions the original author made
@@ -72,6 +77,7 @@ The AI must NOT immediately generate tasks after reading headings.
 It must first reason about the system as a whole.
 
 The AI should think like:
+
 - a staff engineer
 - a security architect
 - a systems designer
@@ -79,6 +85,7 @@ The AI should think like:
 - and a technical project planner simultaneously.
 
 The AI must:
+
 - reason step-by-step internally before outputting
 - prioritize correctness over speed
 - avoid shallow decomposition
@@ -148,6 +155,7 @@ The AI agent must:
 # Anti-Patterns To Avoid
 
 The AI must avoid:
+
 - vague tasks
 - management fluff
 - generic agile filler
@@ -158,6 +166,7 @@ The AI must avoid:
 - blindly copying sections into tasks
 
 The AI must NOT:
+
 - create meaningless placeholder tasks
 - create impossible parallel workstreams
 - ignore migration complexity
@@ -170,6 +179,7 @@ The AI must NOT:
 # Task Quality Standard
 
 Every task should be:
+
 - concrete
 - testable
 - scoped
@@ -178,6 +188,7 @@ Every task should be:
 - operationally realistic
 
 Tasks should contain:
+
 - implementation details
 - affected systems
 - risk notes
@@ -192,14 +203,15 @@ Tasks should contain:
 Example:
 
 /plans/sub-plans/security-guard/
-  - 00-overview.md
-  - 01-electron-hardening.md
-  - 02-websocket-auth.md
-  - 03-keychain-migration.md
-  - 04-network-egress-filtering.md
-  - 05-rollout-and-migration.md
-  - 06-testing-and-validation.md
-  - 07-incident-response.md
+
+- 00-overview.md
+- 01-electron-hardening.md
+- 02-websocket-auth.md
+- 03-keychain-migration.md
+- 04-network-egress-filtering.md
+- 05-rollout-and-migration.md
+- 06-testing-and-validation.md
+- 07-incident-response.md
 
 ---
 
@@ -214,6 +226,7 @@ Short explanation.
 ## Architectural Analysis
 
 Deep reasoning about:
+
 - why this exists
 - system implications
 - operational impact
@@ -257,6 +270,7 @@ Deep reasoning about:
 # Optimization Goals
 
 The AI should optimize for:
+
 - safe execution
 - low regression risk
 - maintainability

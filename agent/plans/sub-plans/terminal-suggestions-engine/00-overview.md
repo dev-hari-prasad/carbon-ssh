@@ -14,16 +14,16 @@ The terminal suggestions engine is a **deterministic, local-first command sugges
 
 ## Sub-Plan Index
 
-| # | File | Initiative | Depends On | Risk Level |
-|---|------|-----------|------------|------------|
-| 00 | `00-overview.md` | This document | — | — |
-| 01 | `01-core-engine.md` | Types, schema, indexer, ranker, engine | None | Medium |
-| 02 | `02-suggestion-packs.md` | JSON pack authoring (7 packs, ~200 commands) | 01 (schema) |  Low |
-| 03 | `03-terminal-integration.md` | Hook extraction, engine wiring, ghost text | 01 | High |
-| 04 | `04-palette-ui.md` | Deterministic suggestions in AIBangPalette | 01, 03 | Medium |
-| 05 | `05-runtime-packs.md` | Electron IPC for user-installed packs | 01 | Medium |
-| 06 | `06-testing-and-validation.md` | Unit tests, integration tests, manual QA | 01-04 | Low |
-| 07 | `07-safety-and-privacy.md` | Security hardening, data lifecycle, redaction | 01, 03 | High |
+| #   | File                           | Initiative                                    | Depends On  | Risk Level |
+| --- | ------------------------------ | --------------------------------------------- | ----------- | ---------- |
+| 00  | `00-overview.md`               | This document                                 | —           | —          |
+| 01  | `01-core-engine.md`            | Types, schema, indexer, ranker, engine        | None        | Medium     |
+| 02  | `02-suggestion-packs.md`       | JSON pack authoring (7 packs, ~200 commands)  | 01 (schema) | Low        |
+| 03  | `03-terminal-integration.md`   | Hook extraction, engine wiring, ghost text    | 01          | High       |
+| 04  | `04-palette-ui.md`             | Deterministic suggestions in AIBangPalette    | 01, 03      | Medium     |
+| 05  | `05-runtime-packs.md`          | Electron IPC for user-installed packs         | 01          | Medium     |
+| 06  | `06-testing-and-validation.md` | Unit tests, integration tests, manual QA      | 01-04       | Low        |
+| 07  | `07-safety-and-privacy.md`     | Security hardening, data lifecycle, redaction | 01, 03      | High       |
 
 ---
 
@@ -97,16 +97,16 @@ Electron's `main.cjs` enforces an **IPC channel allowlist** (line 798-818). Any 
 
 ### Performance Budget (Non-Negotiable)
 
-| Metric | Target | Hard Limit |
-|--------|--------|------------|
-| Pack load + index build | < 50ms | 100ms |
-| Per-keystroke ranking | < 10ms | 20ms |
-| Debounce interval | 80-150ms | 200ms |
-| AI fallback debounce | 350-500ms | 1000ms |
-| Max candidates scored | 200 | 200 |
-| Max suggestions returned | 8 | 8 |
-| Max recent commands inspected | 10 | 10 |
-| Max output lines inspected | 20 | 20 |
+| Metric                        | Target    | Hard Limit |
+| ----------------------------- | --------- | ---------- |
+| Pack load + index build       | < 50ms    | 100ms      |
+| Per-keystroke ranking         | < 10ms    | 20ms       |
+| Debounce interval             | 80-150ms  | 200ms      |
+| AI fallback debounce          | 350-500ms | 1000ms     |
+| Max candidates scored         | 200       | 200        |
+| Max suggestions returned      | 8         | 8          |
+| Max recent commands inspected | 10        | 10         |
+| Max output lines inspected    | 20        | 20         |
 
 ### Privacy Invariants (Non-Negotiable)
 
@@ -130,15 +130,15 @@ Electron's `main.cjs` enforces an **IPC channel allowlist** (line 798-818). Any 
 
 ## Risk Register
 
-| Risk | Impact | Likelihood | Mitigation |
-|------|--------|-----------|------------|
-| Ghost text during normal typing causes visual jitter | High — degrades terminal UX | Medium | Only show ghost text for high-confidence, short suggestions; debounce rendering |
-| Tab key conflicts with shell completion | High — breaks existing workflow | High | Only intercept Tab when ghost text is visible; pass through otherwise |
-| Terminal output capture perf regression | Medium — affects typing latency | Low | Throttle to 250ms, cap at 20 lines, skip binary/control-heavy data |
-| Pack validation crash takes down engine | High — no suggestions at all | Low | Isolate pack loading; one bad pack must not break others |
-| Stale suggestion cache shows wrong completions | Medium — confusing UX | Medium | Invalidate on every keystroke; use `{buffer, packVersion, hostScope}` cache key |
-| IPC channel forgotten in allowlist | High — runtime packs silently fail in prod | High | Document in sub-plan; add to checklist |
-| Context leaks into AI when host disables AI | Critical — privacy violation | Low | Gate AI path on `hostAllowsAiFeatures(conn)` + `autocompleteEnabled` |
+| Risk                                                 | Impact                                     | Likelihood | Mitigation                                                                      |
+| ---------------------------------------------------- | ------------------------------------------ | ---------- | ------------------------------------------------------------------------------- |
+| Ghost text during normal typing causes visual jitter | High — degrades terminal UX                | Medium     | Only show ghost text for high-confidence, short suggestions; debounce rendering |
+| Tab key conflicts with shell completion              | High — breaks existing workflow            | High       | Only intercept Tab when ghost text is visible; pass through otherwise           |
+| Terminal output capture perf regression              | Medium — affects typing latency            | Low        | Throttle to 250ms, cap at 20 lines, skip binary/control-heavy data              |
+| Pack validation crash takes down engine              | High — no suggestions at all               | Low        | Isolate pack loading; one bad pack must not break others                        |
+| Stale suggestion cache shows wrong completions       | Medium — confusing UX                      | Medium     | Invalidate on every keystroke; use `{buffer, packVersion, hostScope}` cache key |
+| IPC channel forgotten in allowlist                   | High — runtime packs silently fail in prod | High       | Document in sub-plan; add to checklist                                          |
+| Context leaks into AI when host disables AI          | Critical — privacy violation               | Low        | Gate AI path on `hostAllowsAiFeatures(conn)` + `autocompleteEnabled`            |
 
 ---
 

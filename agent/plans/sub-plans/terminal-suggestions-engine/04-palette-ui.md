@@ -58,7 +58,7 @@ Adding a third `Command.Group` for deterministic suggestions is the lowest-risk 
   ```ts
   interface Props {
     // ... existing props ...
-    deterministicSuggestions?: RankedSuggestion[];  // from engine
+    deterministicSuggestions?: RankedSuggestion[]; // from engine
   }
   ```
 - [ ] Import `RankedSuggestion` type from `@/features/suggestions`
@@ -90,22 +90,19 @@ Adding a third `Command.Group` for deterministic suggestions is the lowest-risk 
         props.onOpenChange(false);
       }}
     >
-      <TerminalSquareIcon className="..." />  {/* or CommandLineIcon */}
+      <TerminalSquareIcon className="..." /> {/* or CommandLineIcon */}
       <span className="...">
         <code>{suggestion.command}</code>
       </span>
-      <span className="...">
-        {suggestion.label}
-      </span>
-      {suggestion.risk !== "read" && (
-        <RiskIndicator risk={suggestion.risk} />
-      )}
+      <span className="...">{suggestion.label}</span>
+      {suggestion.risk !== "read" && <RiskIndicator risk={suggestion.risk} />}
     </Command.Item>
     ```
   - [ ] Limit displayed suggestions to 5 items (even if engine returns up to 8 — palette space is limited)
   - [ ] Ensure `value` prop uses `suggestion.id` for unique keying
 
 - [ ] Add risk indicator component (inline or small helper):
+
   ```tsx
   function RiskIndicator({ risk }: { risk: SuggestionRisk }) {
     const styles = {

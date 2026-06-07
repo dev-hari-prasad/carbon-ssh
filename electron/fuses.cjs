@@ -18,15 +18,17 @@ if (!electronPath) {
 
 flipFuses(electronPath, {
   version: FuseVersion.V1,
-  [FuseV1Options.RunAsNode]: false,                             // CRITICAL: prevents ELECTRON_RUN_AS_NODE
-  [FuseV1Options.EnableCookieEncryption]: true,                 // Encrypt cookies
-  [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,  // Block NODE_OPTIONS injection
-  [FuseV1Options.EnableNodeCliInspectArguments]: false,         // Block --inspect/--inspect-brk
-  [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,  // Verify asar integrity
-  [FuseV1Options.OnlyLoadAppFromAsar]: true,                    // Prevent loose-file code injection
-}).then(() => {
-  console.log("[fuses] Security fuses flipped successfully for:", path.basename(electronPath));
-}).catch((err) => {
-  console.error("[fuses] Failed to flip fuses:", err);
-  process.exit(1);
-});
+  [FuseV1Options.RunAsNode]: false, // CRITICAL: prevents ELECTRON_RUN_AS_NODE
+  [FuseV1Options.EnableCookieEncryption]: true, // Encrypt cookies
+  [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false, // Block NODE_OPTIONS injection
+  [FuseV1Options.EnableNodeCliInspectArguments]: false, // Block --inspect/--inspect-brk
+  [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true, // Verify asar integrity
+  [FuseV1Options.OnlyLoadAppFromAsar]: true, // Prevent loose-file code injection
+})
+  .then(() => {
+    console.log("[fuses] Security fuses flipped successfully for:", path.basename(electronPath));
+  })
+  .catch((err) => {
+    console.error("[fuses] Failed to flip fuses:", err);
+    process.exit(1);
+  });

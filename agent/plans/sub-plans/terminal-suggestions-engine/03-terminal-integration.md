@@ -24,13 +24,13 @@ Any regression here breaks the terminal — which is the entire product. Every c
 1. **Command buffer extraction creates a seam.** The current command buffer is a local `let` variable inside a `useEffect` closure. Extracting it to a hook means the buffer state must either be:
    - A ref (non-reactive, requires manual notification) — better for performance
    - A state variable (reactive, causes re-renders) — simpler but potentially expensive
-   
+
    **Recommendation:** Use a ref internally but expose a notification callback that the suggestion engine can subscribe to. This avoids re-rendering the entire terminal component on every keystroke.
 
 2. **Ghost text must work without the palette.** Currently, ghost text visibility is gated on `ghostText && paletteOpen` (line 916). Suggestion ghost text should appear during normal typing (palette closed). This requires splitting ghost text into two concepts:
    - **Bang ghost text:** shown when palette is open and buffer starts with `!`
    - **Suggestion ghost text:** shown during normal typing when engine returns a high-confidence result
-   
+
    Both share the same rendering mechanism but have different lifecycles.
 
 3. **Terminal output capture must become always-on.** Currently, output capture only happens when the palette is open (line 722: `if (!paletteOpenRef.current) return;` inside the output capture logic). The suggestion engine needs output context during normal typing. Change: make output capture always active but keep it throttled (250ms) and bounded (20 lines, 2000 chars/line).
@@ -39,7 +39,7 @@ Any regression here breaks the terminal — which is the entire product. Every c
    - Palette open + ghost text visible → accept ghost text (line 623-636)
    - Palette open + no ghost text → standard Tab (pass through)
    - Palette closed → standard Tab (shell completion)
-   
+
    New mode needed:
    - Palette closed + suggestion ghost text visible → accept suggestion ghost text
    - Palette closed + no suggestion ghost text → standard Tab (shell completion)
@@ -50,7 +50,7 @@ Any regression here breaks the terminal — which is the entire product. Every c
    - Subscribe to `commandBufferRef` changes via a callback
    - Be called from within the existing `onData` handler
    - Listen to a custom event
-   
+
    The cleanest approach is to have the hook return a `notify(buffer: string)` function that the existing `onData` handler calls after updating the buffer.
 
 2. **Ghost text positioning uses internal xterm APIs.** Lines 733-736 access `term._core._renderService.dimensions` for pixel-accurate cell sizing. This is a private API that can break between xterm versions. The extraction should centralize this into a helper function.
@@ -87,6 +87,7 @@ Any regression here breaks the terminal — which is the entire product. Every c
 
 - [ ] Create `src/features/terminal/useTerminalCommandBuffer.ts`
   - [ ] Define the hook interface:
+
     ```ts
     interface UseTerminalCommandBufferOptions {
       onCommandExecuted?: (command: string) => void;
@@ -100,6 +101,7 @@ Any regression here breaks the terminal — which is the entire product. Every c
       resetBuffer: () => void;
     }
     ```
+
   - [ ] Move command buffer tracking logic from `TerminalView.tsx` `onData` handler (lines 692-720):
     - Enter (`\r`): trim buffer, call `onCommandExecuted`, add to history (max 10), reset buffer
     - Backspace (`\x7f`, `\b`): remove last char
@@ -168,22 +170,24 @@ Any regression here breaks the terminal — which is the entire product. Every c
 
 - [ ] Create `src/features/terminal/useTerminalSuggestions.ts`
   - [ ] Define the hook interface:
+
     ```ts
     interface UseTerminalSuggestionsOptions {
-      buffer: string;           // from bufferRef.current (via onBufferChanged)
+      buffer: string; // from bufferRef.current (via onBufferChanged)
       history: string[];
       terminalOutput: string[];
       conn: Connection;
-      enabled?: boolean;        // default true
+      enabled?: boolean; // default true
     }
 
     interface UseTerminalSuggestionsReturn {
       suggestions: RankedSuggestion[];
-      topSuggestion: RankedSuggestion | null;   // for ghost text
-      isActive: boolean;                         // engine loaded and has results
+      topSuggestion: RankedSuggestion | null; // for ghost text
+      isActive: boolean; // engine loaded and has results
       dispose: () => void;
     }
     ```
+
   - [ ] Initialize `SuggestionEngine` with `BUNDLED_PACKS` on first mount (lazy, once)
     - Use a module-level singleton for the engine instance (shared across tabs)
     - Load packs only once — the index is pack-dependent, not session-dependent

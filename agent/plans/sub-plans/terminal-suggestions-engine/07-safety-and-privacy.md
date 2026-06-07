@@ -43,7 +43,7 @@ Safety and privacy are not features — they're constraints that every other sub
 ## Risks
 
 - **Risk: Secret pattern list is incomplete.** Impact: Sensitive data enters caches or AI context. Mitigation: Start with a conservative list (AWS, GCP, Azure, GitHub, generic TOKEN/PASSWORD/SECRET/KEY patterns). Expand over time. Document the pattern list for review.
-- **Risk: Redaction is too aggressive and suppresses normal commands.** Impact: Engine never provides suggestions for certain inputs. Mitigation: Redaction should only suppress *caching* and *AI sending*, not scoring. A command like `TOKEN` without `=` should still get suggestions.
+- **Risk: Redaction is too aggressive and suppresses normal commands.** Impact: Engine never provides suggestions for certain inputs. Mitigation: Redaction should only suppress _caching_ and _AI sending_, not scoring. A command like `TOKEN` without `=` should still get suggestions.
 - **Risk: Data leaks via console.log during development.** Impact: Sensitive terminal text in dev tools. Mitigation: Enforce logging rules in code review. Add a lint rule or runtime assertion that `[suggestions]` logs don't contain buffer text.
 
 ## Epics
@@ -53,6 +53,7 @@ Safety and privacy are not features — they're constraints that every other sub
 #### Tasks
 
 - [ ] Define secret patterns in `src/features/suggestions/core/tokenizer.ts` (or a dedicated `redaction.ts`):
+
   ```ts
   const SECRET_PATTERNS: RegExp[] = [
     // Key-value assignments
@@ -63,7 +64,7 @@ Safety and privacy are not features — they're constraints that every other sub
 
     // CLI flags with secrets
     /--(?:password|token|secret|api-key|auth-token|access-token)\b/i,
-    /-p\s+\S+/,  // -p flag followed by value (common for passwords)
+    /-p\s+\S+/, // -p flag followed by value (common for passwords)
 
     // SSH/TLS key blocks
     /-----BEGIN\s+(?:RSA\s+)?(?:PRIVATE|ENCRYPTED)\s+KEY-----/i,
@@ -72,7 +73,7 @@ Safety and privacy are not features — they're constraints that every other sub
     /(?:Authorization|Bearer|Basic)\s*[:=]\s*\S+/i,
 
     // .env file patterns
-    /^[A-Z_]+=\S+$/,  // Be careful — this is broad. Use only for multi-line pastes.
+    /^[A-Z_]+=\S+$/, // Be careful — this is broad. Use only for multi-line pastes.
   ];
 
   const SECRET_OUTPUT_PATTERNS: RegExp[] = [
@@ -118,15 +119,16 @@ Safety and privacy are not features — they're constraints that every other sub
 
 - [ ] Verify all context data follows the lifecycle table from the plan:
 
-  | Data | Lifetime | Persistence |
-  |------|----------|-------------|
-  | Command buffer | Until submit/cancel/close | Never |
-  | Recent commands (for suggestions) | Current session only | Never (for suggestion context) |
-  | Terminal output tail | Current session only | Never |
-  | Ranked suggestions | Until next keystroke | Never |
-  | Pack indexes | App process lifetime | Bundled packs only |
+  | Data                              | Lifetime                  | Persistence                    |
+  | --------------------------------- | ------------------------- | ------------------------------ |
+  | Command buffer                    | Until submit/cancel/close | Never                          |
+  | Recent commands (for suggestions) | Current session only      | Never (for suggestion context) |
+  | Terminal output tail              | Current session only      | Never                          |
+  | Ranked suggestions                | Until next keystroke      | Never                          |
+  | Pack indexes                      | App process lifetime      | Bundled packs only             |
 
 - [ ] Implement `disposeSuggestionSession()` function:
+
   ```ts
   function disposeSuggestionSession(): void {
     // Clear suggestion cache
@@ -176,11 +178,9 @@ Safety and privacy are not features — they're constraints that every other sub
 - [ ] In `useTerminalSuggestions.ts`, gate AI fallback on two conditions:
   ```ts
   const aiAllowed = useMemo(() => {
-    const aiSettings = useStore(s => s.ai);
+    const aiSettings = useStore((s) => s.ai);
     return (
-      aiSettings.autocompleteEnabled &&
-      isAIConfigured(aiSettings) &&
-      hostAllowsAiFeatures(conn)
+      aiSettings.autocompleteEnabled && isAIConfigured(aiSettings) && hostAllowsAiFeatures(conn)
     );
   }, [conn]);
   ```
@@ -205,6 +205,7 @@ Safety and privacy are not features — they're constraints that every other sub
 #### Tasks
 
 - [ ] Define safe logging function for suggestion engine:
+
   ```ts
   function logSuggestion(metrics: {
     ranked: number;
@@ -215,7 +216,7 @@ Safety and privacy are not features — they're constraints that every other sub
   }): void {
     if (process.env.NODE_ENV !== "development") return;
     console.log(
-      `[suggestions] ranked=${metrics.ranked} candidates=${metrics.candidates} scope=${metrics.scope} durationMs=${metrics.durationMs.toFixed(1)} cache=${metrics.cache}`
+      `[suggestions] ranked=${metrics.ranked} candidates=${metrics.candidates} scope=${metrics.scope} durationMs=${metrics.durationMs.toFixed(1)} cache=${metrics.cache}`,
     );
   }
   ```
@@ -283,6 +284,7 @@ Safety and privacy are not features — they're constraints that every other sub
 #### Tasks
 
 - [ ] Implement the full filtering pipeline in `context.ts`:
+
   ```
   Raw terminal output
     → Strip ANSI/control sequences

@@ -43,13 +43,13 @@ Two constraints are non-negotiable:
 
 Relevant existing code:
 
-| Area | Current file | Why it matters |
-|---|---|---|
-| Terminal session UI | `src/features/terminal/TerminalView.tsx` | Owns xterm.js, command buffer tracking, ghost text, history, and WebSocket input. |
-| Command palette | `src/features/terminal/AIBangPalette.tsx` | Already displays user-defined bangs and AI suggestions. It can become the visible surface for deterministic suggestions. |
-| AI autocomplete API | `src/app/api/ai/autocomplete/route.ts` | Existing AI suggestion endpoint. Keep as optional fallback/rerank, not the primary engine. |
-| AI settings and host consent | `src/lib/ai.ts`, `src/lib/types.ts`, `src/lib/store.ts` | Host-level `aiFeaturesEnabled` already exists and should continue to gate AI usage. |
-| SSH bridge | `src/lib/ws-handler.ts`, `electron/ws-handler.cjs` | Provides terminal I/O. Suggestions should observe user input; they should not alter SSH transport behavior. |
+| Area                         | Current file                                            | Why it matters                                                                                                           |
+| ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Terminal session UI          | `src/features/terminal/TerminalView.tsx`                | Owns xterm.js, command buffer tracking, ghost text, history, and WebSocket input.                                        |
+| Command palette              | `src/features/terminal/AIBangPalette.tsx`               | Already displays user-defined bangs and AI suggestions. It can become the visible surface for deterministic suggestions. |
+| AI autocomplete API          | `src/app/api/ai/autocomplete/route.ts`                  | Existing AI suggestion endpoint. Keep as optional fallback/rerank, not the primary engine.                               |
+| AI settings and host consent | `src/lib/ai.ts`, `src/lib/types.ts`, `src/lib/store.ts` | Host-level `aiFeaturesEnabled` already exists and should continue to gate AI usage.                                      |
+| SSH bridge                   | `src/lib/ws-handler.ts`, `electron/ws-handler.cjs`      | Provides terminal I/O. Suggestions should observe user input; they should not alter SSH transport behavior.              |
 
 Recommended location:
 
@@ -107,13 +107,13 @@ The suggestions engine should feel like a thin layer above the shell:
 
 Initial interactions:
 
-| User action | Behavior |
-|---|---|
-| Type a partial command, e.g. `sys` | Suggest `systemctl`, `systemctl status`, `systemctl restart <service>`. |
-| Type an intent after `!`, e.g. `!ban ssh` | Use current palette flow and show deterministic suggestions plus optional AI. |
-| Press `Tab` with a ghost suggestion visible | Accept the suggestion. |
-| Press arrow keys while palette is open | Move through suggestions. |
-| Press `Escape` | Dismiss palette and ghost text. |
+| User action                                 | Behavior                                                                      |
+| ------------------------------------------- | ----------------------------------------------------------------------------- |
+| Type a partial command, e.g. `sys`          | Suggest `systemctl`, `systemctl status`, `systemctl restart <service>`.       |
+| Type an intent after `!`, e.g. `!ban ssh`   | Use current palette flow and show deterministic suggestions plus optional AI. |
+| Press `Tab` with a ghost suggestion visible | Accept the suggestion.                                                        |
+| Press arrow keys while palette is open      | Move through suggestions.                                                     |
+| Press `Escape`                              | Dismiss palette and ghost text.                                               |
 
 ### Suggestion Sources
 
@@ -541,14 +541,14 @@ electron/main.cjs
 
 All suggestion context should be session-scoped and memory-only by default.
 
-| Data | Allowed lifetime | Persistence | Notes |
-|---|---:|---|---|
-| Current command buffer | Until command submit, cancel, or session close | Never | Clear on Enter, Ctrl+C, Ctrl+U, reconnect, close, and unmount. |
-| Recent command history for suggestions | Current terminal session only | Never for MVP | Existing activity logs may still record commands; do not add a second persistence path. |
-| Terminal output tail | Current terminal session only | Never | Keep only a small ring buffer; clear on close/unmount. |
-| Ranked suggestions | Until next keystroke or dismissal | Never | Cache only in memory and invalidate aggressively. |
-| Pack indexes | App process lifetime | Bundled packs only | Indexes contain static pack data, not user session data. |
-| Optional accepted suggestion counts | Future feature | Aggregate IDs only | Store `packId:commandId` counts, not raw commands or terminal context. |
+| Data                                   |                               Allowed lifetime | Persistence        | Notes                                                                                   |
+| -------------------------------------- | ---------------------------------------------: | ------------------ | --------------------------------------------------------------------------------------- |
+| Current command buffer                 | Until command submit, cancel, or session close | Never              | Clear on Enter, Ctrl+C, Ctrl+U, reconnect, close, and unmount.                          |
+| Recent command history for suggestions |                  Current terminal session only | Never for MVP      | Existing activity logs may still record commands; do not add a second persistence path. |
+| Terminal output tail                   |                  Current terminal session only | Never              | Keep only a small ring buffer; clear on close/unmount.                                  |
+| Ranked suggestions                     |              Until next keystroke or dismissal | Never              | Cache only in memory and invalidate aggressively.                                       |
+| Pack indexes                           |                           App process lifetime | Bundled packs only | Indexes contain static pack data, not user session data.                                |
+| Optional accepted suggestion counts    |                                 Future feature | Aggregate IDs only | Store `packId:commandId` counts, not raw commands or terminal context.                  |
 
 Required cleanup points:
 

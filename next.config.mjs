@@ -24,9 +24,7 @@ function contentSecurityPolicy() {
   const ui = "'unsafe-" + "inline'";
   const ue = "'unsafe-" + "eval'";
   const star = "*";
-  const scriptSrc = isDev
-    ? `'self' ${ui} ${ue} blob:`
-    : "'self'";
+  const scriptSrc = isDev ? `'self' ${ui} ${ue} blob:` : "'self'";
   let policy =
     "default-src 'self'; " +
     `script-src ${scriptSrc}; ` +

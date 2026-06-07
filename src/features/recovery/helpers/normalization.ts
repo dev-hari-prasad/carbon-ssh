@@ -8,20 +8,20 @@
  */
 export function normalizePassphrase(text: string): string {
   if (!text) return "";
-  
+
   // 1. Strip leading/trailing whitespace and apply NFC normalization.
   let normalized = text.trim().normalize("NFC");
-  
+
   // 2. Convert to lowercase.
   normalized = normalized.toLowerCase();
-  
+
   // 3. Remove punctuation, special characters, and non-alphanumeric marks,
   // but keep spaces so word boundaries are preserved.
   normalized = normalized.replace(/[^\p{L}\p{N}\s]/gu, "");
-  
+
   // 4. Replace multiple spaces/whitespace with a single space.
   normalized = normalized.replace(/\s+/g, " ");
-  
+
   return normalized.trim();
 }
 

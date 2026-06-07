@@ -23,7 +23,9 @@ function normalizePrivateKey(privateKey) {
 }
 
 function normalizeFingerprint(value) {
-  return String(value || "").trim().replace(/^SHA256:/i, "");
+  return String(value || "")
+    .trim()
+    .replace(/^SHA256:/i, "");
 }
 
 function formatSshError(error, authMethod) {
@@ -310,7 +312,8 @@ function handleWsConnection(ws) {
               });
               return false;
             }
-            const matches = normalizeFingerprint(known.fingerprint) === normalizeFingerprint(fingerprint);
+            const matches =
+              normalizeFingerprint(known.fingerprint) === normalizeFingerprint(fingerprint);
             if (!matches) {
               console.warn(
                 `[security] SSH host key mismatch blocked for ${connectionMetadata.host}:${connectionMetadata.port}`,

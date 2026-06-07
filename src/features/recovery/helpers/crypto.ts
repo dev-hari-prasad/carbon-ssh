@@ -44,7 +44,7 @@ export async function sha256(data: Uint8Array): Promise<Uint8Array> {
  */
 export async function derivePassphraseKey(
   combinedPassphrases: string,
-  salt: Uint8Array
+  salt: Uint8Array,
 ): Promise<Uint8Array> {
   return await argon2id({
     password: combinedPassphrases,
@@ -64,14 +64,14 @@ export async function derivePassphraseKey(
  */
 export async function deriveVerificationKeyStandard(
   passphraseKey: Uint8Array,
-  salt: Uint8Array
+  salt: Uint8Array,
 ): Promise<Uint8Array> {
   const ikmKey = await globalThis.crypto.subtle.importKey(
     "raw",
     passphraseKey as any,
     "HKDF",
     false,
-    ["deriveBits"]
+    ["deriveBits"],
   );
 
   const derivedBuffer = await globalThis.crypto.subtle.deriveBits(
@@ -82,7 +82,7 @@ export async function deriveVerificationKeyStandard(
       info: new TextEncoder().encode("carbon-standard-recovery-v1"),
     },
     ikmKey,
-    256 // 256 bits = 32 bytes
+    256, // 256 bits = 32 bytes
   );
 
   return new Uint8Array(derivedBuffer);
@@ -97,19 +97,15 @@ export async function deriveVerificationKeyStandard(
 export async function deriveVerificationKeyAdvanced(
   recoverySecret: Uint8Array,
   passphraseKey: Uint8Array,
-  salt: Uint8Array
+  salt: Uint8Array,
 ): Promise<Uint8Array> {
   const ikm = new Uint8Array(recoverySecret.length + passphraseKey.length);
   ikm.set(recoverySecret, 0);
   ikm.set(passphraseKey, recoverySecret.length);
 
-  const ikmKey = await globalThis.crypto.subtle.importKey(
-    "raw",
-    ikm as any,
-    "HKDF",
-    false,
-    ["deriveBits"]
-  );
+  const ikmKey = await globalThis.crypto.subtle.importKey("raw", ikm as any, "HKDF", false, [
+    "deriveBits",
+  ]);
 
   const derivedBuffer = await globalThis.crypto.subtle.deriveBits(
     {
@@ -119,7 +115,7 @@ export async function deriveVerificationKeyAdvanced(
       info: new TextEncoder().encode("carbon-advanced-recovery-v1"),
     },
     ikmKey,
-    256 // 256 bits = 32 bytes
+    256, // 256 bits = 32 bytes
   );
 
   return new Uint8Array(derivedBuffer);
@@ -132,14 +128,14 @@ export async function deriveVerificationKeyAdvanced(
 export async function encryptVerificationToken(
   verificationKey: Uint8Array,
   token: Uint8Array,
-  iv: Uint8Array
+  iv: Uint8Array,
 ): Promise<{ ciphertext: Uint8Array; authTag: Uint8Array }> {
   const aesKey = await globalThis.crypto.subtle.importKey(
     "raw",
     verificationKey as any,
     "AES-GCM",
     false,
-    ["encrypt"]
+    ["encrypt"],
   );
 
   const encryptedBuffer = await globalThis.crypto.subtle.encrypt(
@@ -149,7 +145,7 @@ export async function encryptVerificationToken(
       tagLength: 128, // 16 bytes auth tag
     },
     aesKey,
-    token as any
+    token as any,
   );
 
   const encryptedArray = new Uint8Array(encryptedBuffer);
@@ -166,14 +162,14 @@ export async function decryptVerificationToken(
   verificationKey: Uint8Array,
   ciphertext: Uint8Array,
   authTag: Uint8Array,
-  iv: Uint8Array
+  iv: Uint8Array,
 ): Promise<Uint8Array> {
   const aesKey = await globalThis.crypto.subtle.importKey(
     "raw",
     verificationKey as any,
     "AES-GCM",
     false,
-    ["decrypt"]
+    ["decrypt"],
   );
 
   const cipherWithTag = new Uint8Array(ciphertext.length + authTag.length);
@@ -187,7 +183,7 @@ export async function decryptVerificationToken(
       tagLength: 128,
     },
     aesKey,
-    cipherWithTag as any
+    cipherWithTag as any,
   );
 
   return new Uint8Array(decryptedBuffer);
@@ -199,7 +195,7 @@ export async function decryptVerificationToken(
 export async function calculateChecksum(
   version: number,
   recoveryId: string,
-  recoverySecretHex: string
+  recoverySecretHex: string,
 ): Promise<string> {
   const payload = `${version}:${recoveryId}:${recoverySecretHex}`;
   const data = new TextEncoder().encode(payload);

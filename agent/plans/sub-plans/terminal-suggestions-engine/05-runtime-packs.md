@@ -99,13 +99,13 @@ This must be a separate phase because:
 - [ ] Implement IPC handlers in `electron/main.cjs`:
 
   **`suggestions:list-packs`:**
+
   ```js
   ipcMain.handle("suggestions:list-packs", async (event) => {
     ensureMainSender(event);
     try {
       if (!fs.existsSync(SUGGESTION_PACKS_DIR)) return { packs: [] };
-      const files = fs.readdirSync(SUGGESTION_PACKS_DIR)
-        .filter(f => f.endsWith(".json"));
+      const files = fs.readdirSync(SUGGESTION_PACKS_DIR).filter((f) => f.endsWith(".json"));
       const packs = [];
       for (const file of files) {
         const filePath = path.join(SUGGESTION_PACKS_DIR, file);
@@ -121,7 +121,9 @@ This must be a separate phase because:
             fileName: file,
             sizeBytes: stat.size,
           });
-        } catch { /* skip malformed */ }
+        } catch {
+          /* skip malformed */
+        }
       }
       return { packs };
     } catch (err) {
@@ -131,6 +133,7 @@ This must be a separate phase because:
   ```
 
   **`suggestions:install-pack`:**
+
   ```js
   ipcMain.handle("suggestions:install-pack", async (event, jsonString) => {
     ensureMainSender(event);
@@ -160,6 +163,7 @@ This must be a separate phase because:
   ```
 
   **`suggestions:remove-pack`:**
+
   ```js
   ipcMain.handle("suggestions:remove-pack", async (event, packId) => {
     ensureMainSender(event);

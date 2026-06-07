@@ -28,7 +28,7 @@ The current AI autocomplete is a network-dependent, high-latency suggestion mech
 ### Implementation Traps
 
 - **Don't create a singleton engine instance.** Multiple terminal tabs can be open simultaneously. Each needs its own context, but they can share indexes. Use a shared index singleton with per-session context.
-- **Don't score all commands.** The plan specifies 200 max candidates. But if the prefix `s` matches 300+ commands across all packs, the cap must be enforced *before* scoring, not after.
+- **Don't score all commands.** The plan specifies 200 max candidates. But if the prefix `s` matches 300+ commands across all packs, the cap must be enforced _before_ scoring, not after.
 - **Don't use `Array.prototype.sort` for final ranking.** V8's `sort` is Timsort (O(n log n)). For returning top-8 from 200 candidates, a partial sort or selection algorithm is faster, but the difference is negligible at this scale. Use `sort` for clarity.
 - **Don't forget argument template stripping.** Commands contain `<ip>`, `<service>`, `<container>` templates. These must be stripped from tokens so they don't match literal user input, but preserved in `insertText` for the UI.
 
@@ -160,13 +160,13 @@ The current AI autocomplete is a network-dependent, high-latency suggestion mech
   - [ ] Define `SuggestionIndex` interface:
     ```ts
     interface SuggestionIndex {
-      commandPrefixIndex: Map<string, Set<string>>;   // prefix → command IDs
-      tokenIndex: Map<string, Set<string>>;           // token → command IDs
-      aliasTokenIndex: Map<string, Set<string>>;      // alias word → command IDs
-      tagIndex: Map<string, Set<string>>;             // tag → command IDs
-      commandMap: Map<string, SuggestionCommand>;     // command ID → full command object
-      packMap: Map<string, SuggestionPack>;           // pack ID → full pack object
-      commandToPackId: Map<string, string>;           // command ID → pack ID
+      commandPrefixIndex: Map<string, Set<string>>; // prefix → command IDs
+      tokenIndex: Map<string, Set<string>>; // token → command IDs
+      aliasTokenIndex: Map<string, Set<string>>; // alias word → command IDs
+      tagIndex: Map<string, Set<string>>; // tag → command IDs
+      commandMap: Map<string, SuggestionCommand>; // command ID → full command object
+      packMap: Map<string, SuggestionPack>; // pack ID → full pack object
+      commandToPackId: Map<string, string>; // command ID → pack ID
     }
     ```
   - [ ] `buildIndex(packs: SuggestionPack[]): SuggestionIndex`
@@ -205,16 +205,16 @@ The current AI autocomplete is a network-dependent, high-latency suggestion mech
   - [ ] Define `ScoringWeights` interface with all 10 components:
     ```ts
     interface ScoringWeights {
-      prefix: number;           // 0.32
-      tokenOverlap: number;     // 0.20
-      aliasIntent: number;      // 0.14
-      contextOutput: number;    // 0.10
-      history: number;          // 0.08
-      requirementFit: number;   // 0.07
-      argumentFit: number;      // 0.05
+      prefix: number; // 0.32
+      tokenOverlap: number; // 0.20
+      aliasIntent: number; // 0.14
+      contextOutput: number; // 0.10
+      history: number; // 0.08
+      requirementFit: number; // 0.07
+      argumentFit: number; // 0.05
       recencyPopularity: number; // 0.04
-      riskPenalty: number;      // 0.10
-      lengthPenalty: number;    // 0.05
+      riskPenalty: number; // 0.10
+      lengthPenalty: number; // 0.05
     }
     ```
   - [ ] Export `DEFAULT_WEIGHTS` constant with plan's values
@@ -292,8 +292,8 @@ The current AI autocomplete is a network-dependent, high-latency suggestion mech
   - [ ] `createSuggestionEngine(config?: Partial<SuggestionEngineConfig>): SuggestionEngine`
     ```ts
     interface SuggestionEngine {
-      loadPacks(packs: SuggestionPack[]): void;        // Validate + index
-      addPacks(packs: SuggestionPack[]): void;          // Append without rebuild
+      loadPacks(packs: SuggestionPack[]): void; // Validate + index
+      addPacks(packs: SuggestionPack[]): void; // Append without rebuild
       query(context: SuggestionContext): RankedSuggestion[];
       getPackIds(): string[];
       getCommandCount(): number;
@@ -337,6 +337,7 @@ The current AI autocomplete is a network-dependent, high-latency suggestion mech
     - Truncate all strings to safe AI context limits
 - [ ] Create `src/features/suggestions/index.ts`
   - [ ] Import all bundled packs via direct ES imports:
+
     ```ts
     import linuxPack from "./packs/linux.json";
     import systemdPack from "./packs/systemd.json";
@@ -347,9 +348,16 @@ The current AI autocomplete is a network-dependent, high-latency suggestion mech
     import gitPack from "./packs/git.json";
 
     export const BUNDLED_PACKS = [
-      linuxPack, systemdPack, aptPack, fail2banPack, ufwPack, dockerPack, gitPack,
+      linuxPack,
+      systemdPack,
+      aptPack,
+      fail2banPack,
+      ufwPack,
+      dockerPack,
+      gitPack,
     ];
     ```
+
   - [ ] Re-export engine factory, types, and BUNDLED_PACKS
 
 #### Acceptance Criteria

@@ -31,10 +31,7 @@ import type {
   ThemeId,
 } from "./types";
 import { SPLIT_LAYOUT_SLOTS } from "./types";
-import {
-  applyTelemetryPreference,
-  trackFeatureUsed,
-} from "./telemetry";
+import { applyTelemetryPreference, trackFeatureUsed } from "./telemetry";
 import { grantAppUnlock, consumeUnlockGrant } from "./app-lock-gate";
 import {
   DEFAULT_ACCESS_SETTINGS,
@@ -347,7 +344,9 @@ export const actions = {
   setAccessSettings(access: AccessSettings) {
     ensureInit();
     if (!state.isUnlocked && state.access.appLockEnabled && !access.appLockEnabled) {
-      console.warn("[app-lock] setAccessSettings rejected: cannot disable lock while vault is locked");
+      console.warn(
+        "[app-lock] setAccessSettings rejected: cannot disable lock while vault is locked",
+      );
       return;
     }
     saveAccessSettings(access);
@@ -376,11 +375,12 @@ export const actions = {
     const hasExplicitSecretInput =
       normalizedAuthType === "password"
         ? typeof normalizedInput.password === "string" && normalizedInput.password.length > 0
-        : (typeof normalizedInput.privateKey === "string" && normalizedInput.privateKey.length > 0) || 
+        : (typeof normalizedInput.privateKey === "string" &&
+            normalizedInput.privateKey.length > 0) ||
           typeof normalizedInput.passphrase === "string";
 
     let secretsToPersist: ConnectionSecrets | undefined;
-    
+
     if (adapter.kind === "os-secure-storage" && hasExplicitSecretInput) {
       secretsToPersist = {
         authType: normalizedAuthType,
@@ -403,7 +403,7 @@ export const actions = {
           console.warn("Failed to load existing secrets for merge", e);
         }
       }
-      
+
       try {
         await adapter.saveConnectionSecrets(nextId, secretsToPersist);
       } catch (error) {
@@ -429,9 +429,7 @@ export const actions = {
 
     let next: Connection[];
     if (existing) {
-      next = state.connections.map((c) =>
-        c.id === existing.id ? connectionForState : c,
-      );
+      next = state.connections.map((c) => (c.id === existing.id ? connectionForState : c));
     } else {
       next = [...state.connections, connectionForState];
     }
@@ -853,7 +851,10 @@ export const actions = {
 
   upsertBang(input: Omit<Bang, "id" | "createdAt"> & { id?: string }) {
     ensureInit();
-    const trigger = input.trigger.replace(/^!/, "").replace(/[^a-zA-Z0-9_-]/g, "").trim();
+    const trigger = input.trigger
+      .replace(/^!/, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "")
+      .trim();
     const command = input.command.replace(/\r\n?/g, "\n").trim();
     if (!trigger || !command || /[\n\r]/.test(command)) return;
     const existing = input.id ? state.bangs.find((b) => b.id === input.id) : null;

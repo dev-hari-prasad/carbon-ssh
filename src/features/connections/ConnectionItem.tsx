@@ -1,9 +1,5 @@
 import { useState } from "react";
-import {
-  BoltIcon,
-  EllipsisHorizontalIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
+import { BoltIcon, EllipsisHorizontalIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { PencilSimple } from "@phosphor-icons/react";
 import type { Connection } from "@/lib/types";
 import { actions } from "@/lib/store";

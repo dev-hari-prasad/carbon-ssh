@@ -19,19 +19,14 @@ module.exports = async function afterPack(context) {
       electronBinary = path.join(
         appOutDir,
         `${context.packager.appInfo.productFilename}.app`,
-        "Contents", "MacOS",
+        "Contents",
+        "MacOS",
         context.packager.appInfo.productFilename,
       );
     } else if (electronPlatformName === "win32") {
-      electronBinary = path.join(
-        appOutDir,
-        `${context.packager.appInfo.productFilename}.exe`,
-      );
+      electronBinary = path.join(appOutDir, `${context.packager.appInfo.productFilename}.exe`);
     } else {
-      electronBinary = path.join(
-        appOutDir,
-        context.packager.appInfo.productFilename,
-      );
+      electronBinary = path.join(appOutDir, context.packager.appInfo.productFilename);
     }
 
     if (fs.existsSync(electronBinary)) {

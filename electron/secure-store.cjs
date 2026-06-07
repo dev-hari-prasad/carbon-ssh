@@ -87,7 +87,10 @@ function writeStore(app, store) {
       console.error("[secure-store] Failed to persist secure store", error);
       throw error;
     });
-  storeWriteQueues.set(file, next.catch(() => {}));
+  storeWriteQueues.set(
+    file,
+    next.catch(() => {}),
+  );
   return next;
 }
 
@@ -110,7 +113,9 @@ function decryptJson(safeStorage, encryptedBase64) {
 }
 
 function normalizeHost(host) {
-  return String(host || "").trim().toLowerCase();
+  return String(host || "")
+    .trim()
+    .toLowerCase();
 }
 
 function normalizePort(port) {
@@ -120,7 +125,9 @@ function normalizePort(port) {
 }
 
 function normalizeFingerprint(fingerprint) {
-  return String(fingerprint || "").trim().replace(/^SHA256:/i, "");
+  return String(fingerprint || "")
+    .trim()
+    .replace(/^SHA256:/i, "");
 }
 
 function knownHostKey(host, port, algorithm) {
@@ -183,9 +190,9 @@ function saveAiApiKey(app, safeStorage, provider, apiKey, baseUrl) {
     delete store.aiKeys[providerKey];
     return writeStore(app, store);
   }
-  store.aiKeys[providerKey] = encryptJson(safeStorage, { 
+  store.aiKeys[providerKey] = encryptJson(safeStorage, {
     apiKey: String(apiKey),
-    baseUrl: typeof baseUrl === "string" ? baseUrl : undefined
+    baseUrl: typeof baseUrl === "string" ? baseUrl : undefined,
   });
   return writeStore(app, store);
 }
@@ -196,7 +203,7 @@ function loadAiApiKey(app, safeStorage, provider) {
   const parsed = decryptJson(safeStorage, store.aiKeys[providerKey]);
   return {
     apiKey: typeof parsed?.apiKey === "string" ? parsed.apiKey : "",
-    baseUrl: typeof parsed?.baseUrl === "string" ? parsed.baseUrl : ""
+    baseUrl: typeof parsed?.baseUrl === "string" ? parsed.baseUrl : "",
   };
 }
 
@@ -309,7 +316,7 @@ function readKnownHost(app, safeStorage, host, port, algorithm) {
       normalizeFingerprint(entry.fingerprint),
       entry.trustedAt,
     );
-    const entryBuf    = Buffer.from(entry.mac,   "hex");
+    const entryBuf = Buffer.from(entry.mac, "hex");
     const expectedBuf = Buffer.from(expectedMac, "hex");
     // Guard against length mismatch before calling timingSafeEqual.
     if (entryBuf.length !== expectedBuf.length) {
@@ -369,8 +376,7 @@ async function verifyAppLockPassword(app, safeStorage, candidatePassword) {
     if (payload.alg !== "scrypt-N16384-r8-p1") return false;
     const saltHex = typeof payload.saltHex === "string" ? payload.saltHex : "";
     const storedHashHex = typeof payload.hashHex === "string" ? payload.hashHex : "";
-    if (!/^[0-9a-fA-F]+$/.test(saltHex) || !/^[0-9a-fA-F]+$/.test(storedHashHex))
-      return false;
+    if (!/^[0-9a-fA-F]+$/.test(saltHex) || !/^[0-9a-fA-F]+$/.test(storedHashHex)) return false;
     const salt = Buffer.from(saltHex, "hex");
     const storedHash = Buffer.from(storedHashHex, "hex");
     const candidateBuf = await scryptAsync(candidatePassword, salt, 32, SCRYPT_APP_LOCK_OPTS);

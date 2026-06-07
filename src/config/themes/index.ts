@@ -10,7 +10,6 @@ import theme2026Light from "./2026-light.json";
 import solarizedLight from "./solarized-light-color-theme.json";
 import oneDarkProNightFlat from "./OneDark-Pro-night-flat.json";
 
-
 export const DEFAULT_THEME_ID = "dark_modern";
 export const RECOMMENDED_THEME_IDS = [
   "dark_modern",
@@ -53,7 +52,6 @@ const entries: Array<{ id: string; file: string; raw: RawTheme }> = [
     raw: oneDarkProNightFlat,
   },
   { id: "solarized-light", file: "solarized-light-color-theme.json", raw: solarizedLight },
-
 ];
 
 const byFile = new Map(entries.map((entry) => [entry.file.toLowerCase(), entry]));
@@ -62,7 +60,6 @@ const nameOverrides: Record<string, string> = {
   "2026-light": "2026 Light (default)",
   "onedark-pro-night-flat": "One Dark Pro Night Flat",
 };
-
 
 function includeFile(path: string) {
   return path.replace(/^\.\//, "").toLowerCase();
@@ -96,7 +93,7 @@ function extractSyntaxColors(
       ) {
         continue;
       }
-      
+
       const fg = token.settings.foreground;
       const scopeRaw = (token as { scope?: unknown }).scope;
       const scopes: string[] = Array.isArray(scopeRaw)
@@ -109,11 +106,18 @@ function extractSyntaxColors(
         if (scope === "comment" || scope.startsWith("comment.")) syntax.comment = fg;
         else if (scope === "string" || scope.startsWith("string.")) syntax.string = fg;
         else if (scope === "keyword" || scope.startsWith("keyword.")) syntax.keyword = fg;
-        else if (scope === "entity.name.function" || scope.startsWith("entity.name.function.")) syntax.function = fg;
+        else if (scope === "entity.name.function" || scope.startsWith("entity.name.function."))
+          syntax.function = fg;
         else if (scope === "variable" || scope.startsWith("variable.")) syntax.variable = fg;
         else if (scope === "constant" || scope.startsWith("constant.")) syntax.constant = fg;
-        else if (scope === "entity.name.type" || scope.startsWith("entity.name.type.")) syntax.type = fg;
-        else if (scope === "support.type.property-name" || scope.startsWith("support.type.property-name.") || scope.startsWith("variable.other.property")) syntax.property = fg;
+        else if (scope === "entity.name.type" || scope.startsWith("entity.name.type."))
+          syntax.type = fg;
+        else if (
+          scope === "support.type.property-name" ||
+          scope.startsWith("support.type.property-name.") ||
+          scope.startsWith("variable.other.property")
+        )
+          syntax.property = fg;
       }
     }
   }
@@ -166,7 +170,6 @@ export const THEMES: AppTheme[] = entries
   .filter((entry) => VISIBLE_THEME_IDS.has(entry.id))
   .map((entry) => resolveTheme(entry))
   .sort((a, b) => a.name.localeCompare(b.name));
-
 
 export function getThemeById(id: string): AppTheme {
   return (

@@ -163,7 +163,10 @@ async function hashPasswordBrowser(password: string): Promise<BrowserPwEnvelopeV
   };
 }
 
-async function verifyPasswordBrowser(candidate: string, storedEnvelopeRaw: string): Promise<boolean> {
+async function verifyPasswordBrowser(
+  candidate: string,
+  storedEnvelopeRaw: string,
+): Promise<boolean> {
   const envelope = parseBrowserEnvelope(storedEnvelopeRaw);
   if (!envelope) return false;
   const salt = hexToBytes(envelope.saltHex);
@@ -323,8 +326,8 @@ export async function loadConnectionsAsync(): Promise<Connection[]> {
       };
       const hadLegacySecrets = Boolean(
         normalizedConnection.password ||
-          normalizedConnection.privateKey ||
-          normalizedConnection.passphrase,
+        normalizedConnection.privateKey ||
+        normalizedConnection.passphrase,
       );
 
       if (hadLegacySecrets && adapter.kind === "os-secure-storage") {
@@ -472,7 +475,9 @@ function sanitizeBang(raw: unknown): Bang | null {
   const trigger = sanitizeBangTrigger(rec.trigger);
   const command = sanitizeBangCommand(rec.command);
   if (!trigger || !command) return null;
-  const id = String(rec.id ?? "").trim() || `bang-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  const id =
+    String(rec.id ?? "").trim() ||
+    `bang-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   const createdAt =
     typeof rec.createdAt === "number" && Number.isFinite(rec.createdAt)
       ? rec.createdAt
@@ -576,7 +581,7 @@ export function loadAISettings(): AISettings {
         .saveAiApiKey(
           typeof parsed.provider === "string" ? parsed.provider : DEFAULT_AI_SETTINGS.provider,
           parsed.apiKey,
-          typeof parsed.baseUrl === "string" ? parsed.baseUrl : ""
+          typeof parsed.baseUrl === "string" ? parsed.baseUrl : "",
         )
         .then(() => {
           const { apiKey: _migrated, ...publicSettings } = parsed;

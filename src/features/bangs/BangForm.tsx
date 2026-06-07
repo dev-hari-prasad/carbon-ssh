@@ -41,7 +41,6 @@ export function BangForm({
       title={initial ? "Edit bang" : "New bang"}
       footerAlign="start"
       footer={
-
         <>
           <Button variant="primary" onClick={submit}>
             {initial ? "Save changes" : "Create bang"}
@@ -49,7 +48,6 @@ export function BangForm({
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-
         </>
       }
     >

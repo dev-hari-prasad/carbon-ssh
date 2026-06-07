@@ -52,7 +52,10 @@ function captureInternal(event: string, props?: Record<string, unknown>): void {
   if (!isCaptureAllowed()) return;
 
   try {
-    if (typeof posthog.has_opted_out_capturing === "function" && posthog.has_opted_out_capturing()) {
+    if (
+      typeof posthog.has_opted_out_capturing === "function" &&
+      posthog.has_opted_out_capturing()
+    ) {
       return;
     }
   } catch {

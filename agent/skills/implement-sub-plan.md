@@ -5,6 +5,7 @@ The purpose of this skill is to execute implementation work from an existing sub
 The AI must treat the repository as the source of truth.
 
 The AI must NOT blindly execute tasks from markdown files without validating:
+
 - current implementation state
 - architectural consistency
 - dependency impact
@@ -12,6 +13,7 @@ The AI must NOT blindly execute tasks from markdown files without validating:
 - security implications
 
 This skill exists to:
+
 - safely implement engineering work
 - reduce regression risk
 - preserve architectural integrity
@@ -45,12 +47,14 @@ The AI must:
 The repository is the source of truth.
 
 The AI must NEVER assume:
+
 - the plan is fully accurate
 - the task is still required
 - the architecture still matches the plan
 - the repository structure matches historical assumptions
 
 The AI must:
+
 - inspect current implementation first
 - inspect actual runtime boundaries
 - inspect current abstractions
@@ -86,12 +90,14 @@ The AI must:
 ## 1. Determine Safe Ordering
 
 The AI must identify:
+
 - prerequisite tasks
 - migration dependencies
 - blocking systems
 - high blast radius areas
 
 The AI must execute:
+
 - foundational work first
 - migrations before enforcement
 - compatibility layers before removal
@@ -102,6 +108,7 @@ The AI must execute:
 ## 2. Validate Existing Code
 
 The AI must detect:
+
 - partially implemented systems
 - duplicated implementations
 - dead code
@@ -110,6 +117,7 @@ The AI must detect:
 - unsafe assumptions
 
 The AI must avoid:
+
 - duplicate implementations
 - parallel systems
 - architecture fragmentation
@@ -119,6 +127,7 @@ The AI must avoid:
 ## 3. Preserve Architectural Integrity
 
 The AI must preserve:
+
 - runtime boundaries
 - IPC contracts
 - API contracts
@@ -128,6 +137,7 @@ The AI must preserve:
 - compatibility guarantees
 
 The AI must avoid:
+
 - unnecessary rewrites
 - hidden coupling
 - architecture drift
@@ -151,6 +161,7 @@ The AI must treat the following as high-risk systems:
 - session restoration
 
 For high-risk systems the AI must:
+
 - minimize blast radius
 - avoid large refactors
 - prefer incremental migration
@@ -172,6 +183,7 @@ The AI must detect when changes require:
 - session invalidation
 
 The AI must implement:
+
 - backward compatibility where required
 - rollback mechanisms
 - corruption recovery paths
@@ -208,6 +220,7 @@ The AI must determine required testing levels:
 ## Unit Tests
 
 Required for:
+
 - utilities
 - validation
 - encryption logic
@@ -216,6 +229,7 @@ Required for:
 ## Integration Tests
 
 Required for:
+
 - IPC systems
 - auth systems
 - websocket systems
@@ -225,6 +239,7 @@ Required for:
 ## Security Tests
 
 Required for:
+
 - credential handling
 - encryption
 - token validation
@@ -234,6 +249,7 @@ Required for:
 ## Regression Tests
 
 Required for:
+
 - session restoration
 - reconnect flow
 - terminal persistence
@@ -270,6 +286,7 @@ The AI must maintain:
 ## Blocker Tracking
 
 The AI must identify:
+
 - architecture blockers
 - migration blockers
 - dependency blockers
@@ -294,10 +311,11 @@ The AI should create supporting implementation notes where complexity is high.
 Example:
 
 /plans/sub-plans/security-improvements/
-  - implementation-status.md
-  - migration-notes.md
-  - rollback-plan.md
-  - dependency-analysis.md
+
+- implementation-status.md
+- migration-notes.md
+- rollback-plan.md
+- dependency-analysis.md
 
 ---
 
@@ -315,12 +333,14 @@ The AI must continuously reason about:
 - long-term maintainability
 
 The AI must think like:
+
 - a senior engineer
 - a security engineer
 - a systems architect
 - a production SRE
 
 The AI must NOT:
+
 - blindly follow markdown tasks
 - trust outdated plans
 - ignore repository reality

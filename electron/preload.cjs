@@ -11,15 +11,16 @@ contextBridge.exposeInMainWorld("electron", {
   encryptString: (text) => ipcRenderer.invoke("encrypt-string", text),
   decryptString: (encrypted) => ipcRenderer.invoke("decrypt-string", encrypted),
   setAppLockPassword: (password) => ipcRenderer.invoke("set-app-lock-password", password),
-  verifyAppLockPassword: (candidate) =>
-    ipcRenderer.invoke("verify-app-lock-password", candidate),
+  verifyAppLockPassword: (candidate) => ipcRenderer.invoke("verify-app-lock-password", candidate),
   clearAppLockPassword: () => ipcRenderer.invoke("clear-app-lock-password"),
   factoryReset: () => ipcRenderer.invoke("factory-reset"),
   getWsToken: () => ipcRenderer.invoke("get-ws-token"),
   saveConnectionSecret: (connectionId, secrets) =>
     ipcRenderer.invoke("save-connection-secret", connectionId, secrets),
-  loadConnectionSecret: (connectionId) => ipcRenderer.invoke("load-connection-secret", connectionId),
-  deleteConnectionSecret: (connectionId) => ipcRenderer.invoke("delete-connection-secret", connectionId),
+  loadConnectionSecret: (connectionId) =>
+    ipcRenderer.invoke("load-connection-secret", connectionId),
+  deleteConnectionSecret: (connectionId) =>
+    ipcRenderer.invoke("delete-connection-secret", connectionId),
   saveConnectionMetadata: (connectionId, metadata) =>
     ipcRenderer.invoke("save-connection-metadata", connectionId, metadata),
   deleteConnectionMetadata: (connectionId) =>
