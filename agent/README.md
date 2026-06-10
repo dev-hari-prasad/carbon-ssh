@@ -1,5 +1,5 @@
 # Agent Folder Guidelines
-## This folder contains the skills, tools, and other folders that the AI agent like Cursor, Opencode, Codex, Copilot etc.. work with.
+This folder contains the skills, tools, and other information that the AI agent like Cursor, Opencode, Codex, Copilot etc.. will find useful before working with the repository.
 
 ### Do:
 
