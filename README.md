@@ -22,15 +22,15 @@ Carbon is a modern, fast, and easy-to-use SSH connection manager designed to str
   pnpm install
   ```
 
-  > [!Note]
-  > If you do not have `pnpm` installed, you can install it globally using npm:
+> [!Note]
+> If you do not have `pnpm` installed, you can install it globally using npm:
 
   ```bash
   npm install -g pnpm
   ```
 
-  > [!WARNING]
-  > Do not use `npm install` or `yarn install` as it may cause issues with the lock file. Always use `pnpm` to keep the dependency tree consistent.
+> [!WARNING]
+> Do not use `npm install` or `yarn install` as it may cause issues with the lock file. Always use `pnpm` to keep the dependency tree consistent.
 
 - **Build the app in development mode using**:
   ```bash
@@ -58,11 +58,11 @@ Carbon is a modern, fast, and easy-to-use SSH connection manager designed to str
 
   This will open a cli utlity that will guide you through the process of building the app for your platform (Windows, macOS, or Linux). Follow the cli instructions to complete the build process.
 
-  > [!Note]
-  > The built executable will be in the `/release/dev` folder at the root. Do not forget to test the built version of the app to ensure everything is working as expected.
+> [!Note]
+> The built executable will be in the `/release/dev` folder at the root. Do not forget to test the built version of the app to ensure everything is working as expected.
 
-  > [!WARNING]
-  > Do not send productions builds as pull requests. If you want to contribute, please only submit code changes and let the CI/CD pipeline handle the production build process.
+> [!WARNING]
+> Do not send productions builds as pull requests. If you want to contribute, please only submit code changes and let the CI/CD pipeline handle the production build process.
 
 ## Contributing
 
